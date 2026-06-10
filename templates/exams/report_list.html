@@ -1,0 +1,28 @@
+{% extends "base/base.html" %}{% block title %}Reports{% endblock %}{% block page_title %}Term Reports — {{ term }}{% endblock %}
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+  <select class="form-select" style="max-width:250px" onchange="location.href='{% url 'report_list' 0 %}'.replace('/0/','/'+this.value+'/')">
+    <option>Select term...</option>
+    {% for t in terms %}<option value="{{ t.pk }}" {% if t == term %}selected{% endif %}>{{ t }}</option>{% endfor %}
+  </select>
+  <a href="{% url 'compute_reports' term.pk %}" class="btn btn-warning" onclick="return confirm('Recompute all reports for this term?')"><i class="bi bi-calculator me-1"></i>Compute Reports</a>
+  <a href="{% url 'publish_reports' term.pk %}" class="btn btn-success" onclick="return confirm('Publish all reports?')"><i class="bi bi-send me-1"></i>Publish All</a>
+</div>
+<div class="card"><div class="card-header"><i class="bi bi-file-earmark-person me-2 text-primary"></i>{{ reports|length }} Reports</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead class="table-light"><tr><th>Position</th><th>Student</th><th>Class</th><th>Average</th><th>Status</th><th>View</th></tr></thead>
+<tbody>
+{% for r in reports %}
+<tr>
+  <td><span class="badge bg-{% if r.position == 1 %}warning text-dark{% elif r.position <= 3 %}success{% else %}secondary{% endif %}">{{ r.position }}/{{ r.out_of }}</span></td>
+  <td class="fw-semibold">{{ r.student.full_name }}</td>
+  <td>{{ r.classroom }}</td>
+  <td>{{ r.average_score }}%</td>
+  <td>{% if r.is_published %}<span class="badge bg-success">Published</span>{% else %}<span class="badge bg-secondary">Draft</span>{% endif %}</td>
+  <td><a href="{% url 'student_report' r.pk %}" class="btn btn-sm btn-outline-primary">View Report</a></td>
+</tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No reports yet. <a href="{% url 'compute_reports' term.pk %}">Compute reports</a> first.</td></tr>
+{% endfor %}
+</tbody></table></div></div></div>
+{% endblock %}

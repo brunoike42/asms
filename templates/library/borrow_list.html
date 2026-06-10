@@ -1,0 +1,21 @@
+{% extends "base/base.html" %}{% block title %}Library Loans{% endblock %}{% block page_title %}Library Loans{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <div>{% if overdue > 0 %}<span class="badge bg-danger fs-6 me-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ overdue }} overdue loans</span>{% endif %}</div>
+  <a href="{% url 'borrow_book' %}" class="btn btn-success"><i class="bi bi-arrow-right-circle me-1"></i>Issue Book</a>
+</div>
+<div class="card"><div class="card-header"><i class="bi bi-arrow-left-right me-2 text-primary"></i>All Loan Records</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr><th>Book</th><th>Student</th><th>Borrowed</th><th>Due</th><th>Returned</th><th>Status</th><th>Fine</th><th>Action</th></tr></thead>
+<tbody>{% for r in records %}
+<tr>
+  <td class="fw-semibold">{{ r.book.title|truncatewords:5 }}</td>
+  <td>{{ r.student.full_name }}</td>
+  <td>{{ r.borrow_date|date:"d M Y" }}</td>
+  <td class="{% if r.status == 'overdue' %}text-danger fw-bold{% endif %}">{{ r.due_date|date:"d M Y" }}</td>
+  <td>{{ r.return_date|date:"d M Y"|default:"—" }}</td>
+  <td><span class="badge {% if r.status == 'returned' %}bg-success{% elif r.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ r.status }}</span></td>
+  <td>{% if r.fine_amount %}UGX {{ r.fine_amount|floatformat:0 }}{% else %}—{% endif %}</td>
+  <td>{% if r.status == 'borrowed' or r.status == 'overdue' %}<a href="{% url 'return_book' r.pk %}" class="btn btn-sm btn-outline-success">Return</a>{% endif %}</td>
+</tr>{% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No loan records yet.</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

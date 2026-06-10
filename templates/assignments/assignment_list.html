@@ -1,0 +1,27 @@
+{% extends "base/base.html" %}{% block title %}Assignments{% endblock %}{% block page_title %}Assignments{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><div></div><a href="{% url 'assignment_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Assignment</a></div>
+<div class="row g-3">{% for a in assignments %}
+<div class="col-md-6 col-lg-4">
+<div class="card h-100">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="badge {% if a.status == 'published' %}bg-success{% elif a.status == 'graded' %}bg-primary{% elif a.status == 'closed' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ a.status|upper }}</span>
+      {% if a.is_overdue and a.status == 'published' %}<span class="badge bg-danger">Overdue</span>{% endif %}
+    </div>
+    <h6 class="fw-bold mb-1">{{ a.title }}</h6>
+    <div class="text-muted small mb-2">{{ a.class_subject.classroom }} — {{ a.class_subject.subject }}</div>
+    <p class="text-muted small mb-2">{{ a.description|truncatewords:15 }}</p>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="badge bg-light text-dark"><i class="bi bi-calendar me-1"></i>Due: {{ a.due_date|date:"d M Y" }}</span>
+      <span class="badge bg-light text-dark"><i class="bi bi-award me-1"></i>{{ a.max_marks }} marks</span>
+      <span class="badge bg-light text-dark"><i class="bi bi-people me-1"></i>{{ a.submission_count }} submitted</span>
+    </div>
+  </div>
+  <div class="card-footer bg-transparent d-flex gap-2">
+    <a href="{% url 'assignment_detail' a.pk %}" class="btn btn-sm btn-outline-primary flex-grow-1">View & Grade</a>
+    {% if a.status == 'draft' %}<a href="{% url 'publish_assignment' a.pk %}" class="btn btn-sm btn-success">Publish</a>{% endif %}
+  </div>
+</div></div>
+{% empty %}<div class="col-12 text-center py-5 text-muted"><i class="bi bi-file-earmark-text fs-1 d-block mb-3"></i><p>No assignments yet.</p><a href="{% url 'assignment_create' %}" class="btn btn-primary">Create First Assignment</a></div>
+{% endfor %}</div>{% endblock %}

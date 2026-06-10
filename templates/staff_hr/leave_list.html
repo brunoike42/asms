@@ -1,0 +1,22 @@
+{% extends "base/base.html" %}{% block title %}Leave Requests{% endblock %}{% block page_title %}Leave Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><div></div>
+  <a href="{% url 'leave_apply' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Apply Leave</a></div>
+<div class="card"><div class="card-header"><i class="bi bi-calendar-x me-2 text-primary"></i>All Leave Requests</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr><th>Staff</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>{% for l in leaves %}
+<tr>
+  <td class="fw-semibold">{{ l.staff.user.get_full_name }}</td>
+  <td>{{ l.leave_type }}</td>
+  <td>{{ l.start_date|date:"d M Y" }}</td>
+  <td>{{ l.end_date|date:"d M Y" }}</td>
+  <td>{{ l.days }}</td>
+  <td class="text-muted small">{{ l.reason|truncatewords:8 }}</td>
+  <td><span class="badge {% if l.status == 'approved' %}bg-success{% elif l.status == 'rejected' %}bg-danger{% elif l.status == 'cancelled' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ l.status }}</span></td>
+  <td>{% if l.status == 'pending' %}
+    <a href="{% url 'leave_action' l.pk 'approve' %}" class="btn btn-sm btn-success">Approve</a>
+    <a href="{% url 'leave_action' l.pk 'reject' %}" class="btn btn-sm btn-outline-danger">Reject</a>
+  {% endif %}</td>
+</tr>{% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No leave requests</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

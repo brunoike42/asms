@@ -1,0 +1,213 @@
+"""
+ASMS Core — Multi-Tenant Foundation
+Every model in the system inherits from TenantModel.
+The Tenant IS the school (or school network).
+"""
+
+import uuid
+from django.db import models
+from django.utils import timezone
+
+
+# ══════════════════════════════════════════════════════
+# TENANT — The School Entity
+# ══════════════════════════════════════════════════════
+
+class Tenant(models.Model):
+    """
+    A Tenant is one school (or school network group).
+    Everything in ASMS belongs to a Tenant.
+    """
+
+    class PlanChoices(models.TextChoices):
+        TRIAL      = 'trial',        'Free Trial'
+        STARTER    = 'starter',      'Starter (≤300 students)'
+        GROWTH     = 'growth',       'Growth (≤800 students)'
+        PROFESSIONAL = 'professional', 'Professional (≤2000 students)'
+        NETWORK    = 'network',      'Network / School Group'
+        GOVERNMENT = 'government',   'Government / EMIS'
+
+    class StatusChoices(models.TextChoices):
+        ACTIVE         = 'active',         'Active'
+        TRIAL          = 'trial',          'Trial'
+        GRACE_PERIOD   = 'grace_period',   'Grace Period'
+        SUSPENDED      = 'suspended',      'Suspended'
+        CANCELLED      = 'cancelled',      'Cancelled'
+
+    class SchoolTypeChoices(models.TextChoices):
+        PRIMARY      = 'primary',     'Primary School'
+        SECONDARY    = 'secondary',   'Secondary School'
+        COMBINED     = 'combined',    'Combined (P+S)'
+        UNIVERSITY   = 'university',  'University / College'
+        VOCATIONAL   = 'vocational',  'Vocational / Technical'
+        NURSERY      = 'nursery',     'Nursery / Pre-Primary'
+
+    # Identity
+    id           = models.BigAutoField(primary_key=True)
+    name         = models.CharField(max_length=200, verbose_name='School Name')
+    slug         = models.SlugField(max_length=100, unique=True, verbose_name='Subdomain')
+    logo         = models.ImageField(upload_to='tenants/logos/', null=True, blank=True)
+    motto        = models.CharField(max_length=200, blank=True)
+
+    # Classification
+    school_type  = models.CharField(max_length=20, choices=SchoolTypeChoices.choices,
+                                    default=SchoolTypeChoices.PRIMARY)
+    country      = models.CharField(max_length=50, default='Uganda')
+    region       = models.CharField(max_length=100, blank=True)
+    district     = models.CharField(max_length=100, blank=True)
+    address      = models.TextField(blank=True)
+    phone        = models.CharField(max_length=20, blank=True)
+    email        = models.EmailField(blank=True)
+    website      = models.URLField(blank=True)
+
+    # Branding (white-label)
+    primary_color   = models.CharField(max_length=7, default='#1B3A6B')
+    secondary_color = models.CharField(max_length=7, default='#0A7B8C')
+    custom_domain   = models.CharField(max_length=200, blank=True,
+                                       help_text='Custom domain e.g. sms.stamarys.ac.ug')
+
+    # Subscription
+    plan         = models.CharField(max_length=20, choices=PlanChoices.choices,
+                                    default=PlanChoices.TRIAL)
+    status       = models.CharField(max_length=20, choices=StatusChoices.choices,
+                                    default=StatusChoices.TRIAL)
+    trial_end    = models.DateTimeField(null=True, blank=True)
+    plan_end     = models.DateTimeField(null=True, blank=True)
+
+    # EMIS / Government IDs
+    emis_code    = models.CharField(max_length=50, blank=True, verbose_name='EMIS School Code')
+    registration_number = models.CharField(max_length=100, blank=True)
+
+    # Timestamps
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+    is_active    = models.BooleanField(default=True)
+
+    class Meta:
+        db_table   = 'core_tenant'
+        ordering   = ['name']
+        verbose_name = 'Tenant (School)'
+        verbose_name_plural = 'Tenants (Schools)'
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+    def is_on_trial(self):
+        return self.status == self.StatusChoices.TRIAL
+
+    def trial_days_remaining(self):
+        if self.trial_end:
+            delta = self.trial_end - timezone.now()
+            return max(0, delta.days)
+        return 0
+
+    def get_portal_url(self):
+        from django.conf import settings
+        return f'https://{self.slug}.{settings.PLATFORM_DOMAIN}'
+
+
+# ══════════════════════════════════════════════════════
+# ACADEMIC YEAR & TERM
+# ══════════════════════════════════════════════════════
+
+class AcademicYear(models.Model):
+    tenant      = models.ForeignKey(Tenant, on_delete=models.CASCADE,
+                                    related_name='academic_years')
+    name        = models.CharField(max_length=20, verbose_name='e.g. 2024/2025')
+    start_date  = models.DateField()
+    end_date    = models.DateField()
+    is_current  = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table            = 'core_academic_year'
+        ordering            = ['-start_date']
+        unique_together     = [('tenant', 'name')]
+        verbose_name        = 'Academic Year'
+        verbose_name_plural = 'Academic Years'
+
+    def __str__(self):
+        return f'{self.name} — {self.tenant.name}'
+
+    def save(self, *args, **kwargs):
+        # Only one current year per tenant
+        if self.is_current:
+            AcademicYear.objects.filter(
+                tenant=self.tenant, is_current=True
+            ).exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+
+class Term(models.Model):
+    class TermChoices(models.TextChoices):
+        TERM_1 = 'term_1', 'Term 1'
+        TERM_2 = 'term_2', 'Term 2'
+        TERM_3 = 'term_3', 'Term 3'
+
+    tenant        = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='terms')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='terms')
+    name          = models.CharField(max_length=20, choices=TermChoices.choices)
+    start_date    = models.DateField()
+    end_date      = models.DateField()
+    is_current    = models.BooleanField(default=False)
+
+    class Meta:
+        db_table        = 'core_term'
+        ordering        = ['academic_year', 'name']
+        unique_together = [('academic_year', 'name')]
+
+    def __str__(self):
+        return f'{self.get_name_display()} — {self.academic_year.name}'
+
+    def save(self, *args, **kwargs):
+        if self.is_current:
+            Term.objects.filter(
+                tenant=self.tenant, is_current=True
+            ).exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+
+# ══════════════════════════════════════════════════════
+# TENANT-AWARE BASE MODEL
+# ══════════════════════════════════════════════════════
+
+class TenantModel(models.Model):
+    """
+    Abstract base class for ALL models in ASMS.
+    Provides automatic tenant scoping and the TenantManager.
+    Every concrete model must inherit this.
+    """
+    tenant     = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='+',
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+# ── Phase 2 compatibility additions ─────────────────────────────────────
+import threading as _threading
+
+_thread_locals = _threading.local()
+
+def get_current_tenant():
+    return getattr(_thread_locals, 'tenant', None)
+
+def set_current_tenant(tenant):
+    _thread_locals.tenant = tenant
+
+
+class TenantManager(models.Manager):
+    """Automatically filters querysets by the current request tenant."""
+    def get_queryset(self):
+        qs = super().get_queryset()
+        tenant = get_current_tenant()
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs
+
+

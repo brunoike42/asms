@@ -1,0 +1,217 @@
+{% extends "base/base.html" %}
+{% block title %}{{ invoice.invoice_number }}{% endblock %}
+{% block page_title %}Fee Invoice{% endblock %}
+
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'finance:invoice_list' %}" style="color:#0A7B8C;text-decoration:none;">Finance</a>
+  <span class="text-muted"> / {{ invoice.invoice_number }}</span>
+</nav>
+
+<div class="row g-3">
+  <!-- Invoice Card -->
+  <div class="col-md-8">
+    <div class="asms-card mb-3">
+      <div class="asms-card-header">
+        <div>
+          <h6 class="mb-0">Invoice <code>{{ invoice.invoice_number }}</code></h6>
+          <small class="text-muted">Issued {{ invoice.issued_date|date:"d M Y" }}{% if invoice.due_date %} &middot; Due {{ invoice.due_date|date:"d M Y" }}{% endif %}</small>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          {% if invoice.status == 'paid' %}
+            <span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.78rem;padding:5px 12px;">PAID</span>
+          {% elif invoice.status == 'partial' %}
+            <span class="badge rounded-pill" style="background:#fefcbf;color:#744210;font-size:.78rem;padding:5px 12px;">PARTIAL</span>
+          {% elif invoice.status == 'overdue' %}
+            <span class="badge rounded-pill" style="background:#fed7d7;color:#9b2c2c;font-size:.78rem;padding:5px 12px;">OVERDUE</span>
+          {% else %}
+            <span class="badge rounded-pill" style="background:#bee3f8;color:#2a69ac;font-size:.78rem;padding:5px 12px;">{{ invoice.get_status_display }}</span>
+          {% endif %}
+          <button class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;">
+            <i class="bi bi-printer me-1"></i>Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Student Info -->
+      <div class="asms-card-body" style="background:#f7fafc;padding:1rem 1.5rem;">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center"
+               style="width:44px;height:44px;background:#EBF8FF;font-size:1rem;font-weight:700;color:#2B6CB0;flex-shrink:0;">
+            {{ invoice.student.first_name.0 }}{{ invoice.student.last_name.0 }}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:.95rem;">{{ invoice.student.get_full_name }}</div>
+            <div style="font-size:.8rem;color:#718096;">
+              <code>{{ invoice.student.student_id }}</code>
+              &middot; {{ invoice.term }} &middot; {{ invoice.academic_year.name }}
+              {% with cls=invoice.student.current_class %}{% if cls %}&middot; {{ cls }}{% endif %}{% endwith %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="table-responsive">
+        <table class="table asms-table mb-0">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="text-end">Amount (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in invoice.items.all %}
+            <tr>
+              <td>
+                {{ item.description }}
+                {% if item.is_optional %}<span class="badge bg-secondary ms-1" style="font-size:.65rem;">Optional</span>{% endif %}
+              </td>
+              <td class="text-end" style="font-weight:500;">{{ item.amount|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="2" class="text-center text-muted py-3" style="font-size:.85rem;">
+                No line items — invoice total recorded directly.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f7fafc;">
+              <td style="font-weight:700;font-size:.9rem;">Total Invoiced</td>
+              <td class="text-end" style="font-weight:700;font-size:.9rem;">UGX {{ invoice.total_amount|floatformat:0 }}</td>
+            </tr>
+            {% if invoice.discount > 0 %}
+            <tr style="background:#f7fafc;">
+              <td style="color:#276749;font-size:.875rem;">Bursary / Discount</td>
+              <td class="text-end" style="color:#276749;font-size:.875rem;">(UGX {{ invoice.discount|floatformat:0 }})</td>
+            </tr>
+            {% endif %}
+            <tr style="background:#f7fafc;">
+              <td style="font-size:.875rem;color:#0A7B8C;">Total Paid</td>
+              <td class="text-end" style="font-size:.875rem;color:#0A7B8C;">UGX {{ invoice.amount_paid|floatformat:0 }}</td>
+            </tr>
+            <tr style="background:{% if invoice.balance_due > 0 %}#fff5f5{% else %}#f0fff4{% endif %}">
+              <td style="font-weight:700;font-size:1rem;color:{% if invoice.balance_due > 0 %}#C53030{% else %}#276749{% endif %};">
+                Balance Due
+              </td>
+              <td class="text-end" style="font-weight:700;font-size:1rem;color:{% if invoice.balance_due > 0 %}#C53030{% else %}#276749{% endif %};">
+                UGX {{ invoice.balance_due|floatformat:0 }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-clock-history me-2" style="color:#0A7B8C;"></i>Payment History</h6>
+      </div>
+      {% if payments %}
+      <div class="table-responsive">
+        <table class="table asms-table mb-0">
+          <thead>
+            <tr><th>Receipt #</th><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount (UGX)</th><th>Recorded By</th></tr>
+          </thead>
+          <tbody>
+            {% for pmt in payments %}
+            <tr>
+              <td><code style="font-size:.8rem;">{{ pmt.receipt_number }}</code></td>
+              <td style="font-size:.85rem;">{{ pmt.payment_date|date:"d M Y" }}</td>
+              <td>
+                <span class="badge rounded-pill" style="background:#EBF8FF;color:#2B6CB0;font-size:.72rem;">
+                  {{ pmt.get_method_display }}
+                </span>
+              </td>
+              <td style="font-size:.82rem;color:#718096;">{{ pmt.reference|default:"—" }}</td>
+              <td class="text-end" style="font-weight:600;color:#276749;">{{ pmt.amount|floatformat:0 }}</td>
+              <td style="font-size:.82rem;color:#718096;">{{ pmt.recorded_by.get_full_name|default:"System" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-4 text-muted" style="font-size:.875rem;">
+        <i class="bi bi-cash fs-2 d-block mb-2" style="color:#cbd5e0;"></i>
+        No payments recorded yet.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Record Payment Panel -->
+  <div class="col-md-4">
+    {% if invoice.status != 'paid' and invoice.status != 'waived' %}
+    <div class="asms-card mb-3">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-plus-circle me-2" style="color:#276749;"></i>Record Payment</h6>
+      </div>
+      <div class="asms-card-body">
+        <!-- Balance summary -->
+        <div class="text-center mb-4 p-3 rounded" style="background:#f0fff4;border:1px solid #c6f6d5;">
+          <div style="font-size:.78rem;color:#718096;font-weight:600;text-transform:uppercase;">Balance Due</div>
+          <div style="font-size:2rem;font-weight:800;color:#276749;">UGX {{ invoice.balance_due|floatformat:0 }}</div>
+        </div>
+        <form method="post" action="{% url 'finance:record_payment' invoice.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Amount Paid (UGX) *</label>
+            <input type="number" name="amount" class="form-control" min="1"
+                   max="{{ invoice.balance_due }}" placeholder="0" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Payment Method *</label>
+            <select name="method" class="form-select" required>
+              {% for val, label in method_choices %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reference / Transaction ID</label>
+            <input type="text" name="reference" class="form-control"
+                   placeholder="Bank ref, MoMo ID, cheque no.">
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-success w-100" style="background:#276749;border-color:#276749;font-weight:600;">
+            <i class="bi bi-check-lg me-2"></i>Confirm Payment
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Student Fee Summary -->
+    <div class="asms-card">
+      <div class="asms-card-header"><h6><i class="bi bi-person me-2" style="color:#0A7B8C;"></i>Student Fee History</h6></div>
+      <div class="asms-card-body p-0">
+        {% for prev_inv in invoice.student.fee_invoices.all|slice:":5" %}
+        <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom" style="font-size:.82rem;">
+          <div>
+            <div style="font-weight:600;">{{ prev_inv.term }}</div>
+            <code style="font-size:.75rem;">{{ prev_inv.invoice_number }}</code>
+          </div>
+          <div class="text-end">
+            <div>{{ prev_inv.total_amount|floatformat:0 }}</div>
+            {% if prev_inv.balance_due > 0 %}
+              <span style="color:#C53030;font-size:.75rem;">UGX {{ prev_inv.balance_due|floatformat:0 }} due</span>
+            {% else %}
+              <span style="color:#276749;font-size:.75rem;"><i class="bi bi-check-circle me-1"></i>Paid</span>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-3 text-muted" style="font-size:.85rem;">First invoice for this student.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

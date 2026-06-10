@@ -1,0 +1,19 @@
+{% extends "base/base.html" %}{% block title %}Create Lesson Plan{% endblock %}{% block page_title %}Create Lesson Plan{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="card"><div class="card-header"><i class="bi bi-journal-bookmark me-2 text-primary"></i>Lesson Plan Details</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12"><label class="form-label fw-semibold">Class Subject *</label>
+    <select name="class_subject" class="form-select" required><option value="">Select...</option>
+    {% for cs in class_subjects %}<option value="{{ cs.pk }}">{{ cs.classroom }} — {{ cs.subject }}</option>{% endfor %}</select></div>
+    <div class="col-md-8"><label class="form-label fw-semibold">Lesson Title *</label><input type="text" name="title" class="form-control" required placeholder="e.g. Introduction to Photosynthesis"></div>
+    <div class="col-md-2"><label class="form-label fw-semibold">Week #</label><input type="number" name="week_number" class="form-control" value="1" min="1" max="40" required></div>
+    <div class="col-md-2"><label class="form-label fw-semibold">Lesson #</label><input type="number" name="lesson_number" class="form-control" value="1" min="1" max="10"></div>
+    <div class="col-12"><label class="form-label fw-semibold">Learning Objectives</label><textarea name="objectives" class="form-control" rows="2" placeholder="By the end of this lesson, students should be able to..."></textarea></div>
+    <div class="col-12"><label class="form-label fw-semibold">Content / Notes *</label><textarea name="content" class="form-control" rows="4" required placeholder="Main lesson content and key points..."></textarea></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Activities</label><textarea name="activities" class="form-control" rows="2" placeholder="Classroom activities, group work, exercises..."></textarea></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Resources Needed</label><textarea name="resources_needed" class="form-control" rows="2" placeholder="Textbooks, charts, lab equipment..."></textarea></div>
+    <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-primary">Save Lesson Plan</button><a href="{% url 'lesson_plan_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+  </div>
+</form></div></div></div></div>{% endblock %}

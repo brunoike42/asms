@@ -1,0 +1,167 @@
+{% extends "base/base.html" %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:#1a202c;">All Students</h5>
+    <small class="text-muted">{{ total_count }} enrolled student{{ total_count|pluralize }}</small>
+  </div>
+  <a href="{% url 'students:create' %}" class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+    <i class="bi bi-person-plus me-2"></i>Add Student
+  </a>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="asms-card mb-4">
+  <div class="asms-card-body" style="padding:1rem 1.5rem;">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+      <div class="flex-grow-1" style="min-width:200px;">
+        <label class="form-label mb-1" style="font-size:.78rem;font-weight:600;">Search</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background:#f7fafc;border-color:#e2e8f0;">
+            <i class="bi bi-search" style="font-size:.85rem;color:#718096;"></i>
+          </span>
+          <input type="text" name="q" value="{{ search_query }}" class="form-control"
+                 placeholder="Name, student ID, or NSIN..." style="border-color:#e2e8f0;">
+        </div>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.78rem;font-weight:600;">Class</label>
+        <select name="classroom" class="form-select" style="border-color:#e2e8f0;min-width:160px;">
+          <option value="">All Classes</option>
+          {% for cls in classrooms %}
+          <option value="{{ cls.pk }}" {% if selected_class == cls.pk|stringformat:"s" %}selected{% endif %}>
+            {{ cls }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search_query or selected_class %}
+        <a href="{% url 'students:list' %}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Student Table -->
+<div class="asms-card">
+  <div class="table-responsive">
+    <table class="table asms-table mb-0">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Student ID</th>
+          <th>Class</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Status</th>
+          <th>Admitted</th>
+          <th style="width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in page_obj %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              {% if student.photo %}
+                <img src="{{ student.photo.url }}" class="rounded-circle" style="width:34px;height:34px;object-fit:cover;">
+              {% else %}
+                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                     style="width:34px;height:34px;background:#EBF8FF;font-size:.75rem;font-weight:700;color:#2B6CB0;flex-shrink:0;">
+                  {{ student.first_name.0 }}{{ student.last_name.0 }}
+                </div>
+              {% endif %}
+              <div>
+                <div style="font-weight:600;font-size:.875rem;">{{ student.get_full_name }}</div>
+                {% if student.nsin %}<div style="font-size:.72rem;color:#718096;">NSIN: {{ student.nsin }}</div>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td><code style="font-size:.8rem;background:#f7fafc;padding:2px 6px;border-radius:4px;">{{ student.student_id }}</code></td>
+          <td>
+            {% with cls=student.current_class %}
+              {% if cls %}<span style="font-size:.85rem;">{{ cls }}</span>
+              {% else %}<span class="text-muted" style="font-size:.8rem;">Not enrolled</span>{% endif %}
+            {% endwith %}
+          </td>
+          <td style="font-size:.85rem;">{{ student.get_gender_display }}</td>
+          <td style="font-size:.85rem;">{% if student.age %}{{ student.age }}{% else %}—{% endif %}</td>
+          <td>
+            {% if student.status == 'active' %}
+              <span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.72rem;">Active</span>
+            {% elif student.status == 'graduated' %}
+              <span class="badge rounded-pill" style="background:#bee3f8;color:#2a69ac;font-size:.72rem;">Graduated</span>
+            {% else %}
+              <span class="badge rounded-pill" style="background:#fed7d7;color:#9b2c2c;font-size:.72rem;">{{ student.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td style="color:#718096;font-size:.8rem;">{{ student.admission_date|date:"d M Y" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'students:detail' student.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;padding:3px 8px;" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'students:edit' student.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 8px;" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-people fs-1 d-block mb-2" style="color:#cbd5e0;"></i>
+            {% if search_query %}
+              No students found matching "<strong>{{ search_query }}</strong>".
+            {% else %}
+              No students enrolled yet.
+              <a href="{% url 'students:create' %}" class="d-block mt-2">Add your first student</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      ({{ page_obj.paginator.count }} total)
+    </small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0 gap-1">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+          <span class="page-link" style="background:#1B3A6B;border-color:#1B3A6B;">{{ page_obj.number }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

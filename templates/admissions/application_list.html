@@ -1,0 +1,83 @@
+{% extends "base/base.html" %}
+{% block title %}Admissions{% endblock %}
+{% block page_title %}Admissions Pipeline{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Admissions Pipeline</h5>
+    <small class="text-muted">{{ page_obj.paginator.count }} application{{ page_obj.paginator.count|pluralize }}</small>
+  </div>
+  <a href="{% url 'admissions:create' %}" class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+    <i class="bi bi-plus-lg me-2"></i>New Application
+  </a>
+</div>
+<!-- Status cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#EBF8FF;"><i class="bi bi-inbox" style="color:#2B6CB0;"></i></div>
+      <div><div class="stat-value">{{ status_counts.submitted }}</div><div class="stat-label">Awaiting Review</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FEFCBF;"><i class="bi bi-star" style="color:#B7791F;"></i></div>
+      <div><div class="stat-value">{{ status_counts.shortlisted }}</div><div class="stat-label">Shortlisted</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#C6F6D5;"><i class="bi bi-check-circle" style="color:#276749;"></i></div>
+      <div><div class="stat-value">{{ status_counts.accepted }}</div><div class="stat-label">Accepted</div></div>
+    </div>
+  </div>
+</div>
+<!-- Filter bar -->
+<div class="asms-card mb-3">
+  <div class="asms-card-body" style="padding:0.75rem 1.5rem;">
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <select name="status" class="form-select form-select-sm" style="width:200px;border-color:#e2e8f0;">
+        <option value="">All Statuses</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">Filter</button>
+      {% if status_filter %}<a href="{% url 'admissions:list' %}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}
+    </form>
+  </div>
+</div>
+<div class="asms-card">
+  <div class="table-responsive">
+    <table class="table asms-table mb-0">
+      <thead><tr><th>Applicant</th><th>App No.</th><th>Applying For</th><th>Guardian</th><th>Status</th><th>Applied</th><th></th></tr></thead>
+      <tbody>
+        {% for app in page_obj %}
+        <tr>
+          <td><strong style="font-size:.875rem;">{{ app.get_full_name }}</strong></td>
+          <td><code style="font-size:.8rem;">{{ app.application_number }}</code></td>
+          <td style="font-size:.85rem;">{{ app.applying_for_level|default:"—" }}</td>
+          <td style="font-size:.85rem;">{{ app.guardian_name }}<br><small class="text-muted">{{ app.guardian_phone }}</small></td>
+          <td>
+            {% if app.status == 'accepted' or app.status == 'enrolled' %}
+              <span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.72rem;">{{ app.get_status_display }}</span>
+            {% elif app.status == 'rejected' %}
+              <span class="badge rounded-pill" style="background:#fed7d7;color:#9b2c2c;font-size:.72rem;">{{ app.get_status_display }}</span>
+            {% else %}
+              <span class="badge rounded-pill" style="background:#fefcbf;color:#744210;font-size:.72rem;">{{ app.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.8rem;color:#718096;">{{ app.applied_date|date:"d M Y" }}</td>
+          <td>
+            <a href="{% url 'admissions:detail' app.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;padding:3px 8px;"><i class="bi bi-eye"></i></a>
+            <a href="{% url 'admissions:edit' app.pk %}" class="btn btn-sm btn-outline-secondary ms-1" style="font-size:.75rem;padding:3px 8px;"><i class="bi bi-pencil"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2" style="color:#cbd5e0;"></i>No applications yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

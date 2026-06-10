@@ -1,0 +1,24 @@
+{% extends "base/base.html" %}{% block title %}Add Staff{% endblock %}{% block page_title %}Add Staff Member{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="card"><div class="card-header"><i class="bi bi-person-plus me-2 text-primary"></i>New Staff Details</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label fw-semibold">First Name</label><input type="text" name="first_name" class="form-control" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Last Name</label><input type="text" name="last_name" class="form-control" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Username</label><input type="text" name="username" class="form-control" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Password</label><input type="password" name="password" class="form-control" value="Staff@2025" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Email</label><input type="email" name="email" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Phone</label><input type="text" name="phone" class="form-control" placeholder="+256..."></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Role</label>
+    <select name="role" class="form-select" required>{% for v,l in roles %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Department</label>
+    <select name="department" class="form-select"><option value="">— None —</option>{% for d in departments %}<option value="{{ d.pk }}">{{ d }}</option>{% endfor %}</select></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Designation</label><input type="text" name="designation" class="form-control" placeholder="e.g. Senior Teacher"></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Staff Number</label><input type="text" name="staff_no" class="form-control" placeholder="e.g. STF-001"></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Employment Type</label>
+    <select name="employment_type" class="form-select"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="probation">Probation</option></select></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Date Joined</label><input type="date" name="date_joined" class="form-control"></div>
+    <div class="col-12 d-flex gap-2 mt-2"><button type="submit" class="btn btn-primary">Add Staff Member</button><a href="{% url 'staff_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+  </div>
+</form></div></div></div></div>{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base/base.html" %}{% block title %}Create Exam{% endblock %}{% block page_title %}Create New Exam{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="card"><div class="card-header"><i class="bi bi-clipboard2-plus me-2 text-primary"></i>Exam Details</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-12"><label class="form-label fw-semibold">Exam Name</label>
+    <input type="text" name="name" class="form-control" placeholder="e.g. Mathematics CA 1 — Term 1 2025" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Exam Type</label>
+    <select name="exam_type" class="form-select" required>
+    {% for v,l in exam_types %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+    </select></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Max Score</label>
+    <input type="number" name="max_score" class="form-control" value="100" min="1" max="1000"></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Class</label>
+    <select name="classroom" class="form-select" required>
+    <option value="">Select class...</option>
+    {% for c in classrooms %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}
+    </select></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Subject</label>
+    <select name="subject" class="form-select" required>
+    <option value="">Select subject...</option>
+    {% for s in subjects %}<option value="{{ s.pk }}">{{ s }}</option>{% endfor %}
+    </select></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Term</label>
+    <select name="term" class="form-select" required>
+    <option value="">Select term...</option>
+    {% for t in terms %}<option value="{{ t.pk }}">{{ t }}</option>{% endfor %}
+    </select></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Exam Date</label>
+    <input type="date" name="exam_date" class="form-control"></div>
+    <div class="col-12 d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Create & Enter Marks</button>
+    <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+</form></div></div></div></div>
+{% endblock %}

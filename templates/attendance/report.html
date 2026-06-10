@@ -1,0 +1,88 @@
+{% extends "base/base.html" %}
+{% block title %}Attendance Report — {{ classroom }}{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'attendance:home' %}" style="color:#0A7B8C;text-decoration:none;">Attendance</a>
+  <span class="text-muted"> / {{ classroom }} / Report</span>
+</nav>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">{{ classroom }} — Attendance Report</h5>
+    <small class="text-muted">{{ start_date|date:"d M" }} – {{ end_date|date:"d M Y" }} (30 days)</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'attendance:mark' classroom.pk %}" class="btn btn-primary btn-sm"
+       style="background:#1B3A6B;border-color:#1B3A6B;font-size:.82rem;">
+      <i class="bi bi-check2-square me-1"></i>Mark Today
+    </a>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="d-flex gap-3 mb-3" style="font-size:.78rem;">
+  <span><span style="display:inline-block;width:14px;height:14px;background:#c6f6d5;border-radius:3px;vertical-align:middle;margin-right:3px;"></span>Present</span>
+  <span><span style="display:inline-block;width:14px;height:14px;background:#fed7d7;border-radius:3px;vertical-align:middle;margin-right:3px;"></span>Absent</span>
+  <span><span style="display:inline-block;width:14px;height:14px;background:#fefcbf;border-radius:3px;vertical-align:middle;margin-right:3px;"></span>Late</span>
+  <span><span style="display:inline-block;width:14px;height:14px;background:#bee3f8;border-radius:3px;vertical-align:middle;margin-right:3px;"></span>Excused</span>
+  <span><span style="display:inline-block;width:14px;height:14px;background:#e2e8f0;border-radius:3px;vertical-align:middle;margin-right:3px;"></span>Not marked</span>
+</div>
+
+<div class="asms-card" style="overflow:auto;">
+  <table class="table mb-0" style="font-size:.75rem;min-width:800px;">
+    <thead>
+      <tr style="background:#f7fafc;">
+        <th style="position:sticky;left:0;background:#f7fafc;z-index:2;min-width:180px;padding:.5rem 1rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#4a5568;">
+          Student
+        </th>
+        {% for d in date_range %}
+        <th style="text-align:center;padding:4px 2px;min-width:30px;font-weight:600;
+          {% if d.weekday >= 5 %}color:#cbd5e0;{% else %}color:#4a5568;{% endif %}">
+          <div>{{ d|date:"D"|slice:":1" }}</div>
+          <div style="font-size:.65rem;font-weight:400;">{{ d|date:"d" }}</div>
+        </th>
+        {% endfor %}
+        <th style="text-align:center;padding:.5rem;min-width:55px;font-size:.7rem;font-weight:700;color:#276749;">Pres.</th>
+        <th style="text-align:center;padding:.5rem;min-width:55px;font-size:.7rem;font-weight:700;color:#C53030;">Abs.</th>
+        <th style="text-align:center;padding:.5rem;min-width:55px;font-size:.7rem;font-weight:700;color:#0A7B8C;">%</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in grid %}
+      <tr>
+        <td style="position:sticky;left:0;background:#fff;z-index:1;padding:.5rem 1rem;font-weight:600;white-space:nowrap;">
+          {{ row.student.get_full_name }}
+        </td>
+        {% for day, status in row.days %}
+        <td style="text-align:center;padding:3px 2px;">
+          {% if status == 'P' %}
+            <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:#c6f6d5;" title="Present"></span>
+          {% elif status == 'A' %}
+            <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:#fed7d7;" title="Absent"></span>
+          {% elif status == 'L' %}
+            <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:#fefcbf;" title="Late"></span>
+          {% elif status == 'E' %}
+            <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:#bee3f8;" title="Excused"></span>
+          {% else %}
+            <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:#e2e8f0;" title="Not marked"></span>
+          {% endif %}
+        </td>
+        {% endfor %}
+        <td style="text-align:center;font-weight:600;color:#276749;">{{ row.present }}</td>
+        <td style="text-align:center;font-weight:600;color:#C53030;">{{ row.absent }}</td>
+        <td style="text-align:center;font-weight:700;
+          {% if row.pct >= 85 %}color:#276749;{% elif row.pct >= 70 %}color:#B7791F;{% else %}color:#C53030;{% endif %}">
+          {{ row.pct }}%
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="34" class="text-center py-4 text-muted">No students enrolled in this class.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

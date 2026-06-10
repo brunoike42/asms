@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}{% block title %}Grade Submission{% endblock %}{% block page_title %}Grade Submission{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card mb-3"><div class="card-header fw-semibold small">Student Work</div>
+    <div class="card-body">
+      <div class="fw-bold mb-1">{{ submission.student.full_name }}</div>
+      <div class="text-muted small mb-2">Submitted: {{ submission.submitted_at|date:"d M Y H:i" }}</div>
+      {% if submission.file %}<a href="{{ submission.file.url }}" class="btn btn-outline-primary btn-sm mb-3" target="_blank"><i class="bi bi-paperclip me-1"></i>Download File</a>{% endif %}
+      {% if submission.content %}<div class="border rounded p-3 bg-light" style="white-space:pre-wrap;font-size:.875rem">{{ submission.content }}</div>{% endif %}
+    </div></div>
+    <div class="card"><div class="card-header fw-semibold small">Assignment</div>
+    <div class="card-body small text-muted">{{ submission.assignment.title }}<br>{{ submission.assignment.class_subject }}<br>Max: {{ submission.assignment.max_marks }} marks</div></div>
+  </div>
+  <div class="col-md-7">
+    <div class="card"><div class="card-header fw-semibold"><i class="bi bi-pencil-fill me-2 text-primary"></i>Grade This Submission</div>
+    <div class="card-body"><form method="post">{% csrf_token %}
+      <div class="mb-3"><label class="form-label fw-semibold">Marks Awarded <small class="text-muted">/ {{ submission.assignment.max_marks }}</small></label>
+      <input type="number" name="marks" class="form-control form-control-lg" value="{{ submission.marks|default:'' }}" min="0" max="{{ submission.assignment.max_marks }}" step="0.5" required></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Feedback Comment</label>
+      <textarea name="teacher_comment" class="form-control" rows="5" placeholder="Provide detailed feedback to the student...">{{ submission.teacher_comment }}</textarea></div>
+      {% with rubrics=submission.assignment.rubrics.all %}{% if rubrics %}<div class="mb-3"><label class="form-label fw-semibold small text-muted">Rubric Criteria:</label>
+      {% for r in rubrics %}<div class="text-muted small mb-1">• {{ r.criterion }} ({{ r.max_marks }} marks)</div>{% endfor %}</div>{% endif %}{% endwith %}
+      <div class="d-flex gap-2"><button type="submit" class="btn btn-primary flex-grow-1">Save Grade & Feedback</button><a href="{% url 'assignment_detail' submission.assignment.pk %}" class="btn btn-outline-secondary">Cancel</a></div>
+    </form></div></div>
+    {% if submission.status == 'graded' %}
+    <div class="card mt-3"><div class="card-body d-flex align-items-center gap-3">
+      <div class="display-6 fw-bold text-primary">{{ submission.grade }}</div>
+      <div><div class="fw-bold">{{ submission.marks }} / {{ submission.assignment.max_marks }}</div><div class="text-muted small">Graded by {{ submission.graded_by.get_full_name|default:"—" }}</div></div>
+    </div></div>{% endif %}
+  </div>
+</div></div></div>{% endblock %}

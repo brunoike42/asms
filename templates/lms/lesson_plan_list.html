@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}{% block title %}Lesson Plans{% endblock %}{% block page_title %}Lesson Plans{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><div></div><a href="{% url 'lesson_plan_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Plan</a></div>
+<div class="card"><div class="card-header"><i class="bi bi-journal-bookmark me-2 text-primary"></i>All Lesson Plans</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr><th>Week</th><th>Lesson</th><th>Title</th><th>Class / Subject</th><th>Status</th></tr></thead>
+<tbody>{% for p in plans %}
+<tr>
+  <td>Wk {{ p.week_number }}</td><td>{{ p.lesson_number }}</td>
+  <td class="fw-semibold">{{ p.title }}</td>
+  <td>{{ p.class_subject.classroom }} — {{ p.class_subject.subject }}</td>
+  <td>{% if p.is_completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
+</tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No lesson plans yet.</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

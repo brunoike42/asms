@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block page_title %}Daily Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Mark Attendance</h5>
+    <small class="text-muted">{{ today|date:"l, d F Y" }}</small>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for classroom in classrooms %}
+  <div class="col-md-4">
+    <div class="asms-card">
+      <div class="asms-card-body">
+        <div class="d-flex align-items-start justify-content-between mb-3">
+          <div>
+            <h6 class="fw-bold mb-1" style="font-size:1.05rem;">{{ classroom }}</h6>
+            <small class="text-muted">
+              <i class="bi bi-people me-1"></i>{{ classroom.student_count }} students
+              {% if classroom.class_teacher %}
+              &middot; <i class="bi bi-person-badge me-1"></i>{{ classroom.class_teacher.get_full_name }}
+              {% endif %}
+            </small>
+          </div>
+          {% if marked_today|default_if_none:"" %}
+            {% if classroom.pk in marked_today and marked_today|dictsort:classroom.pk %}
+            <span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.72rem;padding:4px 10px;">
+              <i class="bi bi-check me-1"></i>Marked
+            </span>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        {% if marked_today and classroom.pk in marked_today %}
+          {% if marked_today|stringformat:"s" %}
+          {% endif %}
+        {% endif %}
+
+        <div class="d-grid gap-2">
+          <a href="{% url 'attendance:mark' classroom.pk %}?date={{ today|date:'Y-m-d' }}"
+             class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;font-size:.875rem;">
+            <i class="bi bi-check2-square me-2"></i>
+            {% if classroom.pk in marked_today %}Re-open Register{% else %}Mark Today's Attendance{% endif %}
+          </a>
+          <a href="{% url 'attendance:report' classroom.pk %}"
+             class="btn btn-outline-secondary" style="font-size:.82rem;">
+            <i class="bi bi-bar-chart me-2"></i>View Report
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="asms-card text-center py-5">
+      <i class="bi bi-building fs-1 d-block mb-3" style="color:#cbd5e0;"></i>
+      <h6 class="text-muted">No classes assigned</h6>
+      <p class="text-muted" style="font-size:.875rem;">
+        {% if user.role == 'teacher' %}
+        You have not been assigned as class teacher to any class yet.
+        {% else %}
+        No classes have been configured. <a href="{% url 'students:classrooms' %}">Set up classes first.</a>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

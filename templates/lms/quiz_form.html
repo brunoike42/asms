@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}{% block title %}Create Quiz{% endblock %}{% block page_title %}Create New Quiz{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-7">
+<div class="card"><div class="card-header"><i class="bi bi-patch-question me-2 text-primary"></i>Quiz Details</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12"><label class="form-label fw-semibold">Quiz Title *</label><input type="text" name="title" class="form-control" required placeholder="e.g. Chapter 3 Review Quiz"></div>
+    <div class="col-12"><label class="form-label fw-semibold">Class Subject *</label>
+    <select name="class_subject" class="form-select" required><option value="">Select class subject...</option>
+    {% for cs in class_subjects %}<option value="{{ cs.pk }}">{{ cs.classroom }} — {{ cs.subject }}</option>{% endfor %}</select></div>
+    <div class="col-12"><label class="form-label fw-semibold">Description</label><textarea name="description" class="form-control" rows="2" placeholder="Optional instructions for students"></textarea></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Duration (mins)</label><input type="number" name="duration_minutes" class="form-control" value="30" min="5" max="180"></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Max Attempts</label><input type="number" name="max_attempts" class="form-control" value="1" min="1" max="5"></div>
+    <div class="col-md-4 d-flex align-items-end"><div class="form-check mb-2"><input type="checkbox" name="shuffle_questions" class="form-check-input" id="shuffle"><label for="shuffle" class="form-check-label">Shuffle Questions</label></div></div>
+    <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-primary">Create Quiz & Add Questions</button><a href="{% url 'quiz_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+  </div>
+</form></div></div></div></div>{% endblock %}

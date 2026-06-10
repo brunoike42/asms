@@ -1,0 +1,50 @@
+{% extends "base/base.html" %}{% block title %}Quiz Questions{% endblock %}{% block page_title %}{{ quiz.title }} — Questions{% endblock %}
+{% block content %}
+<div class="row g-3">
+<div class="col-md-5">
+<div class="card mb-3"><div class="card-header"><i class="bi bi-plus-circle me-2 text-primary"></i>Add Question</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="mb-3"><label class="form-label fw-semibold">Question Text *</label><textarea name="question_text" class="form-control" rows="3" required placeholder="Type your question here..."></textarea></div>
+  <div class="row g-2 mb-3">
+    <div class="col-6"><label class="form-label fw-semibold">Type</label>
+    <select name="question_type" class="form-select" id="q_type" onchange="toggleOptions()">
+      <option value="mcq">Multiple Choice</option><option value="true_false">True / False</option><option value="short_answer">Short Answer</option>
+    </select></div>
+    <div class="col-6"><label class="form-label fw-semibold">Marks</label><input type="number" name="marks" class="form-control" value="1" min="0.5" step="0.5"></div>
+  </div>
+  <div id="mcq_options">
+    <label class="form-label fw-semibold">Options (mark correct):</label>
+    {% for i in "1234" %}<div class="input-group mb-2">
+      <div class="input-group-text"><input type="radio" name="correct_option" value="{{ forloop.counter }}" {% if forloop.first %}checked{% endif %}></div>
+      <input type="text" name="option_{{ forloop.counter }}" class="form-control" placeholder="Option {{ forloop.counter }}">
+    </div>{% endfor %}
+  </div>
+  <div id="tf_options" style="display:none">
+    <label class="form-label fw-semibold">Correct Answer:</label>
+    <select name="tf_answer" class="form-select mb-2"><option value="True">True</option><option value="False">False</option></select>
+  </div>
+  <button type="submit" class="btn btn-primary w-100 mt-2">Add Question</button>
+</form></div></div>
+</div>
+<div class="col-md-7">
+  <div class="card"><div class="card-header d-flex justify-content-between align-items-center">
+    <span>{{ questions|length }} Questions</span>
+    {% if not quiz.is_published %}<a href="{% url 'quiz_publish' quiz.pk %}" class="btn btn-sm btn-success">Publish Quiz</a>{% else %}<span class="badge bg-success">Live</span>{% endif %}
+  </div>
+  <div class="card-body p-0">
+  {% for q in questions %}<div class="p-3 border-bottom">
+    <div class="d-flex justify-content-between mb-1">
+      <span class="fw-semibold small">Q{{ forloop.counter }}. {{ q.question_text }}</span>
+      <span class="badge bg-light text-dark">{{ q.marks }} mk</span>
+    </div>
+    {% for opt in q.options.all %}<div class="text-muted small ps-3">{% if opt.is_correct %}<i class="bi bi-check-circle-fill text-success me-1"></i>{% else %}<i class="bi bi-circle me-1"></i>{% endif %}{{ opt.option_text }}</div>{% endfor %}
+  </div>{% empty %}<div class="text-center text-muted py-4">No questions yet. Add the first one.</div>{% endfor %}
+  </div></div>
+</div></div>
+<script>
+function toggleOptions(){
+  var t=document.getElementById('q_type').value;
+  document.getElementById('mcq_options').style.display=t=='mcq'?'block':'none';
+  document.getElementById('tf_options').style.display=t=='true_false'?'block':'none';
+}
+</script>{% endblock %}

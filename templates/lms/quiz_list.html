@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}{% block title %}Quizzes{% endblock %}{% block page_title %}Online Quizzes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><div></div><a href="{% url 'quiz_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Quiz</a></div>
+<div class="row g-3">{% for q in quizzes %}
+<div class="col-md-6">
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <h6 class="fw-bold mb-0">{{ q.title }}</h6>
+      {% if q.is_published %}<span class="badge bg-success">Live</span>{% else %}<span class="badge bg-secondary">Draft</span>{% endif %}
+    </div>
+    <div class="text-muted small mb-2">{{ q.class_subject.classroom }} — {{ q.class_subject.subject }}</div>
+    {% if q.description %}<p class="text-muted small">{{ q.description|truncatewords:12 }}</p>{% endif %}
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="badge bg-light text-dark"><i class="bi bi-question-circle me-1"></i>{{ q.question_count }} questions</span>
+      <span class="badge bg-light text-dark"><i class="bi bi-clock me-1"></i>{{ q.duration_minutes }} min</span>
+      <span class="badge bg-light text-dark"><i class="bi bi-arrow-repeat me-1"></i>{{ q.max_attempts }} attempt(s)</span>
+    </div>
+  </div>
+  <div class="card-footer bg-transparent d-flex gap-2">
+    <a href="{% url 'quiz_add_questions' q.pk %}" class="btn btn-sm btn-outline-primary flex-grow-1">Questions</a>
+    {% if not q.is_published %}<a href="{% url 'quiz_publish' q.pk %}" class="btn btn-sm btn-success">Publish</a>{% endif %}
+  </div>
+</div></div>
+{% empty %}<div class="col-12 text-center py-5 text-muted"><i class="bi bi-patch-question fs-1 d-block mb-3"></i><p>No quizzes yet.</p><a href="{% url 'quiz_create' %}" class="btn btn-primary">Create First Quiz</a></div>
+{% endfor %}</div>{% endblock %}

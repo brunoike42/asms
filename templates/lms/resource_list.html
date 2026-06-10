@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}{% block title %}Resources{% endblock %}{% block page_title %}LMS Resources{% endblock %}
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+  <select class="form-select" style="max-width:250px" onchange="if(this.value)location.href='{% url 'resource_list' %}'+this.value+'/'">
+    <option value="">All subjects</option>{% for cs in class_subjects %}<option value="{{ cs.pk }}" {% if selected_cs and selected_cs.pk == cs.pk %}selected{% endif %}>{{ cs.classroom }} — {{ cs.subject }}</option>{% endfor %}
+  </select>
+  <a href="{% url 'resource_create' %}" class="btn btn-primary ms-auto"><i class="bi bi-upload me-1"></i>Upload Resource</a>
+</div>
+<div class="row g-3">
+{% for r in resources %}
+<div class="col-md-6 col-lg-4">
+<div class="card h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3 mb-2">
+      <div class="rounded p-2 {% if r.resource_type == 'document' %}bg-primary{% elif r.resource_type == 'video_link' %}bg-danger{% elif r.resource_type == 'past_paper' %}bg-warning{% else %}bg-success{% endif %} bg-opacity-10">
+        <i class="bi {% if r.resource_type == 'document' %}bi-file-earmark-pdf{% elif r.resource_type == 'video_link' %}bi-play-circle{% elif r.resource_type == 'link' %}bi-link-45deg{% else %}bi-file-text{% endif %} fs-4 text-{% if r.resource_type == 'document' %}primary{% elif r.resource_type == 'video_link' %}danger{% elif r.resource_type == 'past_paper' %}warning{% else %}success{% endif %}"></i>
+      </div>
+      <div><div class="fw-semibold">{{ r.title }}</div><div class="text-muted small">{{ r.class_subject }}</div></div>
+    </div>
+    {% if r.description %}<p class="text-muted small">{{ r.description|truncatewords:12 }}</p>{% endif %}
+    <div class="d-flex gap-2 mt-2">
+      <span class="badge bg-secondary">{{ r.get_resource_type_display }}</span>
+      {% if r.week_number %}<span class="badge bg-light text-dark">Week {{ r.week_number }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="card-footer bg-transparent d-flex gap-2">
+    {% if r.file %}<a href="{{ r.file.url }}" class="btn btn-sm btn-outline-primary flex-grow-1" target="_blank">Download</a>{% endif %}
+    {% if r.external_url %}<a href="{{ r.external_url }}" class="btn btn-sm btn-outline-success flex-grow-1" target="_blank">Open Link</a>{% endif %}
+  </div>
+</div></div>
+{% empty %}<div class="col-12 text-center py-5 text-muted"><i class="bi bi-folder-x fs-1 d-block mb-3"></i><p>No resources yet.</p><a href="{% url 'resource_create' %}" class="btn btn-primary">Upload First Resource</a></div>
+{% endfor %}
+</div>{% endblock %}

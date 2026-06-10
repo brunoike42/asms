@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+{% load academic_filters %}{% block title %}Timetable{% endblock %}{% block page_title %}Class Timetable{% endblock %}
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+<form method="get" class="d-flex gap-2">
+  <select name="class" class="form-select" style="max-width:220px">
+    <option value="">Select class...</option>{% for c in classrooms %}<option value="{{ c.pk }}" {% if selected_class and c.pk == selected_class.pk %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">View Timetable</button>
+</form></div>
+{% if selected_class %}
+<div class="card"><div class="card-header"><i class="bi bi-calendar3 me-2 text-primary"></i>{{ selected_class }} — Weekly Timetable</div>
+<div class="card-body p-0 overflow-auto">
+<table class="table table-bordered mb-0 text-center" style="min-width:700px">
+<thead class="table-primary"><tr><th style="width:70px">Period</th>{% for d in days %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+<tbody>{% for period in periods %}
+<tr>
+  <td class="fw-bold text-muted bg-light">{{ period }}</td>
+  {% for day in days %}
+  <td class="align-middle">
+    {% if grid|get_item:day %}{% with slot=grid|get_item:day|get_item:period %}{% if slot %}
+    <div class="rounded p-2" style="background:#f0f7ff;border-left:3px solid #4f8ef7">
+      <div class="fw-bold small">{{ slot.class_subject.subject.name }}</div>
+      <div class="text-muted" style="font-size:.7rem">{{ slot.class_subject.teacher.get_full_name|default:"—" }}</div>
+      {% if slot.room %}<div class="text-muted" style="font-size:.65rem">{{ slot.room }}</div>{% endif %}
+    </div>{% else %}<span class="text-muted" style="font-size:.8rem">—</span>{% endif %}{% endwith %}{% endif %}
+  </td>{% endfor %}
+</tr>{% endfor %}
+</tbody></table></div></div>
+{% else %}
+<div class="card"><div class="card-body text-center py-5 text-muted"><i class="bi bi-calendar3 fs-1 d-block mb-3"></i><p>Select a class above to view its timetable.</p></div></div>
+{% endif %}{% endblock %}

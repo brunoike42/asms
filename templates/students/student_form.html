@@ -1,0 +1,103 @@
+{% extends "base/base.html" %}
+{% block title %}{{ action }}{% endblock %}
+{% block page_title %}{{ action }}{% endblock %}
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'students:list' %}" style="color:#0A7B8C;text-decoration:none;">Students</a>
+  {% if student %}<span> / <a href="{% url 'students:detail' student.pk %}" style="color:#0A7B8C;text-decoration:none;">{{ student.get_full_name }}</a></span>{% endif %}
+  <span class="text-muted"> / {{ action }}</span>
+</nav>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <!-- Personal Info -->
+  <div class="form-section">
+    <div class="form-section-title">Personal Information</div>
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label">First Name *</label>{{ form.first_name }}</div>
+      <div class="col-md-4"><label class="form-label">Middle Name</label>{{ form.middle_name }}</div>
+      <div class="col-md-4"><label class="form-label">Last Name *</label>{{ form.last_name }}</div>
+      <div class="col-md-4"><label class="form-label">Preferred Name</label>{{ form.preferred_name }}</div>
+      <div class="col-md-4"><label class="form-label">Date of Birth</label>{{ form.date_of_birth }}</div>
+      <div class="col-md-4"><label class="form-label">Gender</label>{{ form.gender }}</div>
+      <div class="col-md-4"><label class="form-label">Nationality</label>{{ form.nationality }}</div>
+      <div class="col-md-4"><label class="form-label">Religion</label>{{ form.religion }}</div>
+      <div class="col-md-4"><label class="form-label">Photo</label>{{ form.photo }}</div>
+    </div>
+  </div>
+
+  <!-- Location -->
+  <div class="form-section">
+    <div class="form-section-title">Location &amp; Origin</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Home District</label>{{ form.home_district }}</div>
+      <div class="col-md-6"><label class="form-label">Home Village</label>{{ form.home_village }}</div>
+    </div>
+  </div>
+
+  <!-- EMIS / IDs -->
+  <div class="form-section">
+    <div class="form-section-title">National IDs &amp; EMIS Data</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">NSIN (National Student ID)</label>{{ form.nsin }}</div>
+      <div class="col-md-6"><label class="form-label">Birth Certificate Number</label>{{ form.birth_cert_number }}</div>
+    </div>
+  </div>
+
+  <!-- Welfare Flags -->
+  <div class="form-section">
+    <div class="form-section-title">Welfare &amp; EMIS Flags</div>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="form-check form-switch mt-4">{{ form.has_disability }} <label class="form-check-label fw-600">Has Disability</label></div>
+      </div>
+      <div class="col-md-4"><label class="form-label">Disability Type</label>{{ form.disability_type }}</div>
+      <div class="col-md-3">
+        <div class="form-check form-switch mt-4">{{ form.is_orphan }} <label class="form-check-label fw-600">Is Orphan</label></div>
+      </div>
+      <div class="col-md-2"><label class="form-label">Orphan Type</label>{{ form.orphan_type }}</div>
+      <div class="col-md-3">
+        <div class="form-check form-switch mt-2">{{ form.is_refugee }} <label class="form-check-label fw-600">Is Refugee</label></div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-check form-switch mt-2">{{ form.receives_bursary }} <label class="form-check-label fw-600">Receives Bursary</label></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Medical -->
+  <div class="form-section">
+    <div class="form-section-title">Medical Information</div>
+    <div class="row g-3">
+      <div class="col-md-3"><label class="form-label">Blood Group</label>{{ form.blood_group }}</div>
+      <div class="col-md-9"><label class="form-label">Allergies</label>{{ form.allergies }}</div>
+      <div class="col-12"><label class="form-label">Medical Notes</label>{{ form.medical_notes }}</div>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <div class="form-section">
+    <div class="form-section-title">Student Contact (Secondary School)</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Student Phone</label>{{ form.student_phone }}</div>
+      <div class="col-md-6"><label class="form-label">Student Email</label>{{ form.student_email }}</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="form-section">
+    <div class="form-section-title">Enrolment Status</div>
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label">Status</label>{{ form.status }}</div>
+      <div class="col-md-4"><label class="form-label">Admission Date</label>{{ form.admission_date }}</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-3">
+    <button type="submit" class="btn btn-primary px-4" style="background:#1B3A6B;border-color:#1B3A6B;">
+      <i class="bi bi-check-lg me-2"></i>Save Student
+    </button>
+    <a href="{% url 'students:list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+  </div>
+</form>
+{% endblock %}

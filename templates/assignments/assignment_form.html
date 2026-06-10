@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}{% block title %}Create Assignment{% endblock %}{% block page_title %}Create Assignment{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="card"><div class="card-header"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>Assignment Details</div>
+<div class="card-body"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12"><label class="form-label fw-semibold">Title *</label><input type="text" name="title" class="form-control" required placeholder="e.g. Essay on Climate Change"></div>
+    <div class="col-12"><label class="form-label fw-semibold">Class Subject *</label>
+    <select name="class_subject" class="form-select" required><option value="">Select class subject...</option>
+    {% for cs in class_subjects %}<option value="{{ cs.pk }}">{{ cs.classroom }} — {{ cs.subject }}</option>{% endfor %}</select></div>
+    <div class="col-12"><label class="form-label fw-semibold">Description / Task *</label><textarea name="description" class="form-control" rows="3" required placeholder="What must students do?"></textarea></div>
+    <div class="col-12"><label class="form-label fw-semibold">Detailed Instructions</label><textarea name="instructions" class="form-control" rows="2" placeholder="Formatting guidelines, submission requirements..."></textarea></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Max Marks</label><input type="number" name="max_marks" class="form-control" value="100" min="1"></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Due Date & Time *</label><input type="datetime-local" name="due_date" class="form-control" required></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Status</label>
+    <select name="status" class="form-select"><option value="draft">Save as Draft</option><option value="published">Publish Now</option></select></div>
+    <div class="col-md-6 d-flex align-items-center gap-3">
+      <div class="form-check"><input type="checkbox" name="allow_late" class="form-check-input" id="late"><label for="late" class="form-check-label">Allow late submissions</label></div>
+      <div class="form-check"><input type="checkbox" name="allow_resubmit" class="form-check-input" id="resub"><label for="resub" class="form-check-label">Allow resubmission</label></div>
+    </div>
+    <div class="col-md-6"><label class="form-label fw-semibold">Attachment (optional)</label><input type="file" name="attachment" class="form-control"></div>
+    <div class="col-12"><label class="form-label fw-semibold">Rubric Criteria (optional)</label>
+    <div id="rubric_rows"><div class="row g-2 mb-2"><div class="col-8"><input type="text" name="criterion" class="form-control form-control-sm" placeholder="e.g. Content & Accuracy"></div><div class="col-4"><input type="number" name="criterion_marks" class="form-control form-control-sm" placeholder="Marks"></div></div></div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRubricRow()">+ Add Criterion</button></div>
+    <div class="col-12 d-flex gap-2 mt-2"><button type="submit" class="btn btn-primary">Save Assignment</button><a href="{% url 'assignment_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+  </div>
+</form></div></div></div></div>
+<script>
+function addRubricRow(){
+  var d=document.getElementById('rubric_rows');
+  var r=document.createElement('div');r.className='row g-2 mb-2';
+  r.innerHTML='<div class="col-8"><input type="text" name="criterion" class="form-control form-control-sm" placeholder="Criterion"></div><div class="col-4"><input type="number" name="criterion_marks" class="form-control form-control-sm" placeholder="Marks"></div>';
+  d.appendChild(r);
+}
+</script>{% endblock %}

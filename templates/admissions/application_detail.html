@@ -1,0 +1,54 @@
+{% extends "base/base.html" %}
+{% block title %}{{ application.application_number }}{% endblock %}
+{% block page_title %}Application Detail{% endblock %}
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'admissions:list' %}" style="color:#0A7B8C;text-decoration:none;">Admissions</a>
+  <span class="text-muted"> / {{ application.application_number }}</span>
+</nav>
+<div class="asms-card mb-4">
+  <div class="asms-card-body">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h4 class="fw-bold mb-1">{{ application.get_full_name }}</h4>
+        <code style="font-size:.85rem;">{{ application.application_number }}</code>
+        <span class="badge ms-2 rounded-pill" style="background:#fefcbf;color:#744210;">{{ application.get_status_display }}</span>
+      </div>
+      <a href="{% url 'admissions:edit' application.pk %}" class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;font-size:.85rem;">
+        <i class="bi bi-pencil me-1"></i>Update Status
+      </a>
+    </div>
+    <hr style="border-color:#edf2f7;">
+    <div class="row g-3" style="font-size:.875rem;">
+      <div class="col-md-6">
+        <strong class="text-muted d-block mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Applicant</strong>
+        <p class="mb-1">DOB: {{ application.date_of_birth|date:"d M Y"|default:"—" }}</p>
+        <p class="mb-1">Gender: {{ application.get_gender_display }}</p>
+        <p class="mb-0">Nationality: {{ application.nationality }}</p>
+      </div>
+      <div class="col-md-6">
+        <strong class="text-muted d-block mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Parent / Guardian</strong>
+        <p class="mb-1 fw-600">{{ application.guardian_name }}</p>
+        <p class="mb-1"><i class="bi bi-phone me-1" style="color:#0A7B8C;"></i>{{ application.guardian_phone }}</p>
+        <p class="mb-0">{{ application.guardian_email|default:"No email" }}</p>
+      </div>
+      <div class="col-md-6">
+        <strong class="text-muted d-block mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Applying For</strong>
+        <p class="mb-1">{{ application.applying_for_level|default:"—" }}</p>
+        <p class="mb-0">{{ application.applying_for_year|default:"—" }}</p>
+      </div>
+      <div class="col-md-6">
+        <strong class="text-muted d-block mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Previous School</strong>
+        <p class="mb-1">{{ application.previous_school|default:"Not provided" }}</p>
+        <p class="mb-0">Last class: {{ application.previous_class|default:"—" }}</p>
+      </div>
+      {% if application.decision_notes %}
+      <div class="col-12">
+        <strong class="text-muted d-block mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Notes</strong>
+        <p class="mb-0">{{ application.decision_notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

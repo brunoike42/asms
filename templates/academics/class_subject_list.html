@@ -1,0 +1,12 @@
+{% extends "base/base.html" %}{% block title %}Class Subjects{% endblock %}{% block page_title %}Class Subject Assignments{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><div></div><a href="{% url 'class_subject_assign' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Assign Subject</a></div>
+<div class="card"><div class="card-header"><i class="bi bi-journal-text me-2 text-primary"></i>Subject Assignments per Class</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr><th>Class</th><th>Subject</th><th>Teacher</th><th>Term</th><th>Periods/Week</th></tr></thead>
+<tbody>{% for cs in class_subjects %}
+<tr>
+  <td class="fw-semibold">{{ cs.classroom }}</td><td>{{ cs.subject }}</td>
+  <td>{{ cs.teacher.get_full_name|default:"— Unassigned —" }}</td><td>{{ cs.term }}</td><td>{{ cs.periods_per_week }}</td>
+</tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No subject assignments yet. <a href="{% url 'class_subject_assign' %}">Assign first subject.</a></td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

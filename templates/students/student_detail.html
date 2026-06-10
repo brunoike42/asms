@@ -1,0 +1,186 @@
+{% extends "base/base.html" %}
+{% block title %}{{ student.get_full_name }}{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'students:list' %}" style="color:#0A7B8C;text-decoration:none;">Students</a>
+  <i class="bi bi-chevron-right mx-1" style="font-size:.7rem;color:#a0aec0;"></i>
+  <span class="text-muted">{{ student.get_full_name }}</span>
+</nav>
+
+<!-- Profile Header -->
+<div class="asms-card mb-4">
+  <div class="asms-card-body" style="padding:2rem;">
+    <div class="d-flex flex-wrap gap-4 align-items-start">
+      <!-- Avatar -->
+      <div class="text-center" style="flex-shrink:0;">
+        {% if student.photo %}
+          <img src="{{ student.photo.url }}" class="rounded-circle" style="width:90px;height:90px;object-fit:cover;border:3px solid #e2e8f0;">
+        {% else %}
+          <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto"
+               style="width:90px;height:90px;background:#EBF8FF;font-size:2rem;font-weight:700;color:#2B6CB0;border:3px solid #e2e8f0;">
+            {{ student.first_name.0 }}{{ student.last_name.0 }}
+          </div>
+        {% endif %}
+        <div class="mt-2">
+          {% if student.status == 'active' %}
+            <span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.72rem;">Active</span>
+          {% else %}
+            <span class="badge rounded-pill" style="background:#fed7d7;color:#9b2c2c;font-size:.72rem;">{{ student.get_status_display }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Info -->
+      <div class="flex-grow-1">
+        <h4 class="fw-bold mb-1" style="color:#1a202c;">{{ student.get_full_name }}</h4>
+        <div class="d-flex flex-wrap gap-3 mb-3" style="font-size:.85rem;color:#718096;">
+          <span><i class="bi bi-credit-card me-1"></i><code style="background:#f7fafc;padding:2px 6px;border-radius:4px;">{{ student.student_id }}</code></span>
+          <span><i class="bi bi-person me-1"></i>{{ student.get_gender_display }}</span>
+          {% if student.age %}<span><i class="bi bi-calendar me-1"></i>{{ student.age }} years old</span>{% endif %}
+          {% if enrollment %}<span><i class="bi bi-building me-1"></i>{{ enrollment.classroom }}</span>{% endif %}
+          {% if student.nsin %}<span><i class="bi bi-fingerprint me-1"></i>NSIN: {{ student.nsin }}</span>{% endif %}
+        </div>
+        {% if enrollment %}
+        <div class="d-flex flex-wrap gap-2" style="font-size:.8rem;">
+          <span class="badge" style="background:#EBF8FF;color:#2B6CB0;font-weight:500;padding:5px 10px;">
+            {{ enrollment.classroom.level.name }}
+          </span>
+          <span class="badge" style="background:#E6FFFA;color:#2C7A7B;font-weight:500;padding:5px 10px;">
+            {{ enrollment.academic_year.name }}
+          </span>
+          {% if enrollment.is_repeating %}
+          <span class="badge" style="background:#FEFCBF;color:#744210;font-weight:500;padding:5px 10px;">Repeating</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <!-- Actions -->
+      <div class="d-flex flex-column gap-2" style="flex-shrink:0;">
+        <a href="{% url 'students:edit' student.pk %}" class="btn btn-sm btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;font-size:.82rem;">
+          <i class="bi bi-pencil me-1"></i>Edit Profile
+        </a>
+        <button class="btn btn-sm btn-outline-secondary" style="font-size:.82rem;">
+          <i class="bi bi-printer me-1"></i>Print ID Card
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Personal Details -->
+  <div class="col-md-6">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-person-lines-fill me-2" style="color:#0A7B8C;"></i>Personal Details</h6>
+      </div>
+      <div class="asms-card-body">
+        {% include "students/_detail_row.html" with label="Date of Birth" value=student.date_of_birth|date:"d F Y"|default:"Not set" %}
+        {% include "students/_detail_row.html" with label="Nationality" value=student.nationality %}
+        {% include "students/_detail_row.html" with label="Religion" value=student.get_religion_display|default:"—" %}
+        {% include "students/_detail_row.html" with label="Home District" value=student.home_district|default:"—" %}
+        {% include "students/_detail_row.html" with label="Home Village" value=student.home_village|default:"—" %}
+        {% include "students/_detail_row.html" with label="Birth Cert No." value=student.birth_cert_number|default:"—" %}
+        {% include "students/_detail_row.html" with label="Admitted" value=student.admission_date|date:"d M Y" %}
+      </div>
+    </div>
+  </div>
+
+  <!-- EMIS & Welfare Flags -->
+  <div class="col-md-6">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-shield-check me-2" style="color:#0A7B8C;"></i>EMIS &amp; Welfare Flags</h6>
+      </div>
+      <div class="asms-card-body">
+        {% include "students/_detail_row.html" with label="NSIN" value=student.nsin|default:"Not assigned" %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Disability</span>
+          <span>
+            {% if student.has_disability %}
+              <span class="badge" style="background:#FED7D7;color:#9B2C2C;">Yes — {{ student.disability_type|default:"Type not specified" }}</span>
+            {% else %}<span class="text-muted">No</span>{% endif %}
+          </span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Orphan Status</span>
+          <span>
+            {% if student.is_orphan %}
+              <span class="badge" style="background:#FEFCBF;color:#744210;">{{ student.get_orphan_type_display }}</span>
+            {% else %}<span class="text-muted">No</span>{% endif %}
+          </span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Refugee</span>
+          <span>{% if student.is_refugee %}<span class="badge bg-warning text-dark">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Bursary</span>
+          <span>{% if student.receives_bursary %}<span class="badge bg-success">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Medical -->
+  <div class="col-md-6">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-heart-pulse me-2" style="color:#E53E3E;"></i>Medical Information</h6>
+      </div>
+      <div class="asms-card-body">
+        {% include "students/_detail_row.html" with label="Blood Group" value=student.blood_group|default:"Not recorded" %}
+        <div class="py-2 border-bottom" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Allergies</span>
+          <div class="mt-1">{{ student.allergies|default:"None recorded"|linebreaksbr }}</div>
+        </div>
+        <div class="py-2" style="font-size:.85rem;">
+          <span style="color:#718096;font-weight:500;">Medical Notes</span>
+          <div class="mt-1 text-muted">{{ student.medical_notes|default:"None recorded"|linebreaksbr }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guardians -->
+  <div class="col-md-6">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-house-heart me-2" style="color:#0A7B8C;"></i>Parents / Guardians</h6>
+        <button class="btn btn-sm btn-outline-primary" style="font-size:.75rem;">
+          <i class="bi bi-plus me-1"></i>Add Guardian
+        </button>
+      </div>
+      <div class="asms-card-body p-0">
+        {% for guardian in guardians %}
+        <div class="d-flex align-items-start gap-3 px-4 py-3 border-bottom">
+          <div class="rounded-circle d-flex align-items-center justify-content-center"
+               style="width:36px;height:36px;background:#E6FFFA;font-size:.75rem;font-weight:700;color:#2C7A7B;flex-shrink:0;">
+            {{ guardian.first_name.0 }}{{ guardian.last_name.0 }}
+          </div>
+          <div class="flex-grow-1">
+            <div style="font-weight:600;font-size:.875rem;">{{ guardian.get_full_name }}</div>
+            <div style="font-size:.78rem;color:#718096;">{{ guardian.get_relationship_display }}</div>
+            <div style="font-size:.8rem;margin-top:2px;">
+              <i class="bi bi-phone me-1" style="color:#0A7B8C;"></i>{{ guardian.phone_primary }}
+              {% if guardian.email %}<span class="ms-2"><i class="bi bi-envelope me-1" style="color:#0A7B8C;"></i>{{ guardian.email }}</span>{% endif %}
+            </div>
+          </div>
+          <div>
+            {% if guardian.is_primary %}<span class="badge" style="background:#C6F6D5;color:#276749;font-size:.68rem;">Primary</span>{% endif %}
+            {% if guardian.is_fee_payer %}<span class="badge ms-1" style="background:#FEFCBF;color:#744210;font-size:.68rem;">Fee Payer</span>{% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4" style="font-size:.85rem;">
+          <i class="bi bi-people d-block mb-1 fs-3" style="color:#cbd5e0;"></i>
+          No guardians added yet.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

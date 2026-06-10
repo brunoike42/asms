@@ -1,0 +1,180 @@
+{% extends "base/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:#1a202c;">
+      Good day, {{ user.first_name }} &#128075;
+    </h5>
+    <small class="text-muted">
+      {% if current_term %}{{ current_term }} — {% endif %}
+      {% if current_year %}{{ current_year.name }}{% endif %}
+    </small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'students:create' %}" class="btn btn-sm btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+      <i class="bi bi-person-plus me-1"></i>Add Student
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#EBF8FF;">
+        <i class="bi bi-people-fill" style="color:#2B6CB0;"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ total_students }}</div>
+        <div class="stat-label">Enrolled Students</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#E6FFFA;">
+        <i class="bi bi-diagram-3-fill" style="color:#2C7A7B;"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ total_classes }}</div>
+        <div class="stat-label">Active Classes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FFF5F5;">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#C53030;"></i>
+      </div>
+      <div>
+        <div class="stat-value">—</div>
+        <div class="stat-label">At-Risk Students</div>
+        <div class="stat-delta text-muted" style="font-size:.7rem;">Module coming soon</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FFFFF0;">
+        <i class="bi bi-cash-coin" style="color:#B7791F;"></i>
+      </div>
+      <div>
+        <div class="stat-value">—</div>
+        <div class="stat-label">Fees Collected</div>
+        <div class="stat-delta text-muted" style="font-size:.7rem;">Module coming soon</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Recent Students -->
+  <div class="col-md-8">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-people me-2" style="color:#0A7B8C;"></i>Recently Added Students</h6>
+        <a href="{% url 'students:list' %}" class="btn btn-sm" style="font-size:.8rem;color:#0A7B8C;">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table asms-table mb-0">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>ID</th>
+              <th>Status</th>
+              <th>Admitted</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in recent_students %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center"
+                       style="width:32px;height:32px;background:#EBF8FF;font-size:.75rem;font-weight:700;color:#2B6CB0;flex-shrink:0;">
+                    {{ student.first_name.0 }}{{ student.last_name.0 }}
+                  </div>
+                  <div>
+                    <div style="font-weight:600;font-size:.875rem;">{{ student.get_full_name }}</div>
+                    <div style="font-size:.75rem;color:#718096;">{{ student.gender }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><code style="font-size:.8rem;background:#f7fafc;padding:2px 6px;border-radius:4px;">{{ student.student_id }}</code></td>
+              <td>
+                <span class="badge rounded-pill badge-{{ student.status }}" style="font-size:.72rem;">
+                  {{ student.get_status_display }}
+                </span>
+              </td>
+              <td style="color:#718096;font-size:.8rem;">{{ student.admission_date|date:"d M Y" }}</td>
+              <td>
+                <a href="{% url 'students:detail' student.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:2px 8px;">View</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-person-plus fs-3 d-block mb-2"></i>
+                No students yet. <a href="{% url 'students:create' %}">Add your first student</a>.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions & Info -->
+  <div class="col-md-4">
+    <div class="asms-card mb-3">
+      <div class="asms-card-header"><h6><i class="bi bi-lightning-charge me-2" style="color:#D4A017;"></i>Quick Actions</h6></div>
+      <div class="asms-card-body p-0">
+        <a href="{% url 'students:create' %}" class="d-flex align-items-center gap-3 px-4 py-3 text-decoration-none border-bottom" style="color:#2d3748;">
+          <i class="bi bi-person-plus-fill" style="color:#1B3A6B;font-size:1.1rem;width:20px;"></i>
+          <span style="font-size:.875rem;font-weight:500;">Enrol New Student</span>
+          <i class="bi bi-chevron-right ms-auto" style="font-size:.75rem;color:#a0aec0;"></i>
+        </a>
+        <a href="{% url 'students:classrooms' %}" class="d-flex align-items-center gap-3 px-4 py-3 text-decoration-none border-bottom" style="color:#2d3748;">
+          <i class="bi bi-diagram-3-fill" style="color:#0A7B8C;font-size:1.1rem;width:20px;"></i>
+          <span style="font-size:.875rem;font-weight:500;">Manage Classes</span>
+          <i class="bi bi-chevron-right ms-auto" style="font-size:.75rem;color:#a0aec0;"></i>
+        </a>
+        <a href="#" class="d-flex align-items-center gap-3 px-4 py-3 text-decoration-none" style="color:#a0aec0;">
+          <i class="bi bi-check2-square" style="font-size:1.1rem;width:20px;"></i>
+          <span style="font-size:.875rem;font-weight:500;">Mark Attendance</span>
+          <span class="badge bg-secondary ms-auto" style="font-size:.65rem;">Soon</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="asms-card">
+      <div class="asms-card-header"><h6><i class="bi bi-info-circle me-2" style="color:#0A7B8C;"></i>School Info</h6></div>
+      <div class="asms-card-body">
+        {% if tenant %}
+        <div class="mb-2" style="font-size:.82rem;">
+          <span class="text-muted">School:</span>
+          <span class="fw-600 ms-1">{{ tenant.name }}</span>
+        </div>
+        <div class="mb-2" style="font-size:.82rem;">
+          <span class="text-muted">Plan:</span>
+          <span class="badge badge-trial ms-1">{{ tenant.get_plan_display }}</span>
+        </div>
+        <div class="mb-2" style="font-size:.82rem;">
+          <span class="text-muted">EMIS Code:</span>
+          <code class="ms-1">{{ tenant.emis_code|default:"Not set" }}</code>
+        </div>
+        <div style="font-size:.82rem;">
+          <span class="text-muted">Country:</span>
+          <span class="ms-1">{{ tenant.country }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

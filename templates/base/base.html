@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} | {% if tenant %}{{ tenant.name }}{% else %}ASMS{% endif %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --asms-primary: #1B3A6B;
+      --asms-secondary: #0A7B8C;
+      --sidebar-w: 260px;
+      --topbar-h: 60px;
+    }
+    body { font-family: 'Inter', sans-serif; background: #F0F2F5; margin: 0; }
+
+    /* Sidebar */
+    #sidebar {
+      width: var(--sidebar-w); height: 100vh; position: fixed; top: 0; left: 0;
+      background: var(--asms-primary); z-index: 1040; overflow-y: auto;
+    }
+    .sidebar-brand {
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-brand h6 { color: #fff; font-weight: 700; font-size: 0.95rem; margin: 0; }
+    .sidebar-brand small { color: rgba(255,255,255,0.5); font-size: 0.72rem; }
+    .nav-section-label {
+      padding: 0.9rem 1.5rem 0.3rem;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.4); text-transform: uppercase;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.6rem 1.5rem; color: rgba(255,255,255,0.75);
+      font-size: 0.875rem; font-weight: 500; text-decoration: none; transition: all 0.15s;
+    }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(255,255,255,0.12); color: #fff;
+    }
+    .sidebar-link i { font-size: 1rem; width: 20px; }
+    .sidebar-link.disabled { color: rgba(255,255,255,0.3); pointer-events: none; }
+
+    /* Topbar */
+    #topbar {
+      height: var(--topbar-h); background: #fff;
+      position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+      display: flex; align-items: center; padding: 0 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); z-index: 1030;
+    }
+    .page-title { font-size: 1rem; font-weight: 600; color: #1a202c; margin: 0; }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--asms-primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700;
+    }
+
+    /* Main */
+    #main-content { margin-left: var(--sidebar-w); padding-top: var(--topbar-h); min-height: 100vh; }
+    .content-area { padding: 1.75rem; }
+
+    /* Stat cards */
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #edf2f7;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .stat-icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; flex-shrink: 0;
+    }
+    .stat-value { font-size: 1.9rem; font-weight: 700; color: #1a202c; line-height: 1; }
+    .stat-label { font-size: 0.8rem; color: #718096; font-weight: 500; margin-top: 3px; }
+    .stat-delta { font-size: 0.75rem; font-weight: 600; }
+
+    /* Cards */
+    .asms-card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #edf2f7; overflow: hidden;
+    }
+    .asms-card-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid #edf2f7;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .asms-card-header h6 { font-weight: 700; margin: 0; font-size: 0.9rem; color: #2d3748; }
+    .asms-card-body { padding: 1.5rem; }
+
+    /* Table */
+    .asms-table th {
+      background: #f7fafc; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      color: #4a5568; padding: 0.75rem 1rem; border-bottom: 2px solid #e2e8f0;
+    }
+    .asms-table td { padding: 0.75rem 1rem; vertical-align: middle; font-size: 0.875rem; }
+    .asms-table tbody tr:hover { background: #f7fafc; }
+
+    /* Badges */
+    .badge-active   { background: #c6f6d5; color: #276749; }
+    .badge-inactive { background: #fed7d7; color: #9b2c2c; }
+    .badge-trial    { background: #fefcbf; color: #744210; }
+
+    /* Trial banner */
+    .trial-banner {
+      background: linear-gradient(90deg, #744210, #c05621);
+      color: #fff; font-size: 0.8rem; padding: 0.4rem 1rem; text-align: center;
+    }
+
+    /* Forms */
+    .form-section { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #edf2f7; }
+    .form-section-title { font-size: 0.85rem; font-weight: 700; color: var(--asms-primary);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+    label.form-label { font-size: 0.8rem; font-weight: 600; color: #4a5568; }
+
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+      #sidebar.open { transform: translateX(0); }
+      #topbar, #main-content { left: 0; margin-left: 0; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+  {% if tenant and tenant.is_on_trial %}
+  <div class="trial-banner">
+    &#128336; Trial — {{ tenant.trial_days_remaining }} day{{ tenant.trial_days_remaining|pluralize }} remaining.
+    <a href="#" class="text-warning fw-bold ms-2">Upgrade now</a>
+  </div>
+  {% endif %}
+
+  <nav id="sidebar">
+    <div class="sidebar-brand">
+      {% if tenant %}<h6>{{ tenant.name }}</h6><small>{{ user.get_role_display }}</small>
+      {% else %}<h6>ASMS Platform</h6><small>Platform Admin</small>{% endif %}
+    </div>
+    <div class="pt-1 pb-4">
+      <div class="nav-section-label">Main</div>
+      <a href="{% url 'core:dashboard' %}" class="sidebar-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
+        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+      </a>
+
+      
+      {% if can_see_students %}<div class="nav-section-label">Students</div>
+      <a href="{% url 'students:list' %}" class="sidebar-link">
+        <i class="bi bi-people-fill"></i> All Students
+      </a>
+      <a href="{% url 'students:classrooms' %}" class="sidebar-link">
+        <i class="bi bi-diagram-3-fill"></i> Classes &amp; Streams
+      </a>
+      <a href="{% url 'students:create' %}" class="sidebar-link">
+        <i class="bi bi-person-plus-fill"></i> Add Student
+      </a>      {% endif %}
+
+
+         
+      {% if can_see_academics %}<div class="nav-section-label">Academics</div>
+      <a href="{% url 'subject_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'subject_list' %} active{% endif %}">
+        <i class="bi bi-book-fill"></i> Subjects
+      </a>
+      <a href="{% url 'class_subject_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'class_subject_list' %} active{% endif %}">
+        <i class="bi bi-journal-text"></i> Class Subjects
+      </a>
+      <a href="{% url 'timetable_view' %}" class="sidebar-link{% if request.resolver_match.url_name == 'timetable_view' %} active{% endif %}">
+        <i class="bi bi-calendar3"></i> Timetable
+      </a>
+     <a href="{% url 'attendance:home' %}" class="sidebar-link{% if request.resolver_match.url_name == 'home' and request.resolver_match.namespace == 'attendance' %} active{% endif %}">
+  <i class="bi bi-calendar-check-fill"></i> Attendance
+</a>
+      <a href="{% url 'exam_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'exam_list' %} active{% endif %}">
+        <i class="bi bi-clipboard2-data-fill"></i> Exams & Marks
+      </a>
+      <a href="{% url 'assignment_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'assignment_list' %} active{% endif %}">
+        <i class="bi bi-file-earmark-text-fill"></i> Assignments
+      </a>
+      <a href="{% url 'lms_dashboard' %}" class="sidebar-link{% if request.resolver_match.url_name == 'lms_dashboard' %} active{% endif %}">
+        <i class="bi bi-laptop-fill"></i> LMS
+      </a>
+      <a href="{% url 'lesson_plan_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'lesson_plan_list' %} active{% endif %}">
+        <i class="bi bi-journal-bookmark-fill"></i> Lesson Plans
+      </a>
+      <a href="{% url 'quiz_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'quiz_list' %} active{% endif %}">
+        <i class="bi bi-patch-question-fill"></i> Quizzes
+      </a>
+      <a href="{% url 'resource_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'resource_list' %} active{% endif %}">
+        <i class="bi bi-folder-fill"></i> Resources
+      </a>      {% endif %}
+
+
+      
+      {% if can_see_finance %}<div class="nav-section-label">Finance</div>
+      <a href="{% url 'finance:invoice_list' %}" class="sidebar-link"><i class="bi bi-cash-stack"></i> Fee Management</a>
+      <a href="{% url 'admissions:list' %}" class="sidebar-link"><i class="bi bi-person-check-fill"></i> Admissions</a>
+       <a href="{% url 'finance:invoice_list' %}" class="sidebar-link">
+        <i class="bi bi-receipt-cutoff"></i> Invoices
+      </a>
+      <a href="{% url 'finance:arrears_report' %}" class="sidebar-link">
+        <i class="bi bi-bar-chart-fill"></i> Finance Summary
+      </a>      {% endif %}
+
+ 
+
+      
+      {% if can_see_communication %}<div class="nav-section-label">Communication</div>
+      <a href="#" class="sidebar-link disabled"><i class="bi bi-chat-dots-fill"></i> Messaging <span class="badge bg-secondary ms-auto" style="font-size:.6rem">Soon</span></a>      {% endif %}
+
+
+      <div class="nav-section-label">Account</div>
+      <a href="{% url 'accounts:profile' %}" class="sidebar-link"><i class="bi bi-person-circle"></i> My Profile</a>
+      <a href="{% url 'accounts:logout' %}" class="sidebar-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </div>
+
+
+      
+      {% if can_see_staff_or_library %}<div class="nav-section-label">Staff & Library</div>
+      <a href="{% url 'staff_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'staff_list' %} active{% endif %}">
+        <i class="bi bi-person-badge-fill"></i> Staff
+      </a>
+      <a href="{% url 'leave_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'leave_list' %} active{% endif %}">
+        <i class="bi bi-calendar-x-fill"></i> Leave
+      </a>
+      <a href="{% url 'cpd_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'cpd_list' %} active{% endif %}">
+        <i class="bi bi-award-fill"></i> CPD Records
+      </a>
+      <a href="{% url 'book_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'book_list' %} active{% endif %}">
+        <i class="bi bi-bookshelf"></i> Library
+      </a>
+      
+      <a href="{% url 'borrow_list' %}" class="sidebar-link{% if request.resolver_match.url_name == 'borrow_list' %} active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Loans
+      </a>
+
+        {% endif %}
+</nav>
+
+  <header id="topbar">
+    <h6 class="page-title">{% block page_title %}ASMS{% endblock %}</h6>
+    <div class="topbar-right">
+      <span class="text-muted d-none d-md-inline" style="font-size:.8rem">{{ user.get_full_name }}</span>
+      <div class="avatar">{{ user.first_name.0 }}{{ user.last_name.0 }}</div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show mb-2">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="content-area">{% block content %}{% endblock %}</div>
+  </main>
+
+{% else %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+<script>
+(function () {
+  var sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  // Restore saved scroll position first
+  var saved = sessionStorage.getItem('sidebarScroll');
+  if (saved) sidebar.scrollTop = parseInt(saved, 10);
+  // Then scroll active link into view (overrides saved if active is off-screen)
+  var active = sidebar.querySelector('.sidebar-link.active');
+  if (active) {
+    active.scrollIntoView({ block: 'center', behavior: 'instant' });
+  }
+  // Save scroll position on every sidebar link click
+  sidebar.querySelectorAll('.sidebar-link').forEach(function (link) {
+    link.addEventListener('click', function () {
+      sessionStorage.setItem('sidebarScroll', sidebar.scrollTop);
+    });
+  });
+})();
+</script>
+</body>
+</html>

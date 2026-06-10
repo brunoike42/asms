@@ -1,0 +1,12 @@
+{% extends "base/base.html" %}{% block title %}Add Subject{% endblock %}{% block page_title %}Add Subject{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-5">
+<div class="card"><div class="card-header"><i class="bi bi-book me-2 text-primary"></i>Subject Details</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="mb-3"><label class="form-label fw-semibold">Subject Name *</label><input type="text" name="name" class="form-control" required placeholder="e.g. Mathematics"></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Code</label><input type="text" name="code" class="form-control" placeholder="e.g. MATH"></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Department</label>
+  <select name="department" class="form-select"><option value="">— None —</option>{% for d in departments %}<option value="{{ d.pk }}">{{ d }}</option>{% endfor %}</select></div>
+  <div class="mb-3 form-check"><input type="checkbox" name="is_compulsory" class="form-check-input" id="comp" checked><label for="comp" class="form-check-label">Compulsory Subject</label></div>
+  <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">Add Subject</button><a href="{% url 'subject_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+</form></div></div></div></div>{% endblock %}

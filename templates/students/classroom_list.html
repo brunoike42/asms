@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% block title %}Classes{% endblock %}
+{% block page_title %}Classes &amp; Streams{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:#1a202c;">Classes &amp; Streams</h5>
+    <small class="text-muted">{{ classrooms|length }} class{{ classrooms|length|pluralize:"es" }} configured</small>
+  </div>
+  <button class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+    <i class="bi bi-plus-lg me-2"></i>Add Class
+  </button>
+</div>
+
+<div class="row g-3">
+  {% for cls in classrooms %}
+  <div class="col-md-4">
+    <div class="asms-card">
+      <div class="asms-card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <h6 class="fw-bold mb-1" style="font-size:1rem;color:#1a202c;">{{ cls }}</h6>
+            <div style="font-size:.8rem;color:#718096;">{{ cls.academic_year.name }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center"
+               style="width:40px;height:40px;background:#EBF8FF;font-size:1.1rem;font-weight:700;color:#2B6CB0;flex-shrink:0;">
+            {{ cls.level.short_name }}
+          </div>
+        </div>
+        <hr style="border-color:#edf2f7;margin:0.75rem 0;">
+        <div class="d-flex justify-content-between" style="font-size:.82rem;">
+          <div>
+            <i class="bi bi-people me-1" style="color:#0A7B8C;"></i>
+            <strong>{{ cls.student_count }}</strong> / {{ cls.capacity }} students
+          </div>
+          <div>
+            {% if cls.class_teacher %}
+              <i class="bi bi-person-badge me-1" style="color:#0A7B8C;"></i>
+              {{ cls.class_teacher.get_full_name }}
+            {% else %}
+              <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No class teacher</span>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Capacity bar -->
+        <div class="mt-2">
+          {% with pct=cls.student_count|default:0 %}
+          <div class="progress" style="height:6px;border-radius:10px;background:#e2e8f0;">
+            <div class="progress-bar" style="width:{% widthratio cls.student_count cls.capacity 100 %}%;background:#0A7B8C;border-radius:10px;"></div>
+          </div>
+          {% endwith %}
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'students:list' %}?classroom={{ cls.pk }}" class="btn btn-sm btn-outline-primary" style="font-size:.78rem;flex:1;">
+            <i class="bi bi-people me-1"></i>View Students
+          </a>
+          <button class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="asms-card text-center py-5">
+      <i class="bi bi-building fs-1 d-block mb-2" style="color:#cbd5e0;"></i>
+      <p class="text-muted">No classes configured yet.</p>
+      <button class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+        <i class="bi bi-plus me-2"></i>Create First Class
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base/base.html" %}{% block title %}Assign Subject{% endblock %}{% block page_title %}Assign Subject to Class{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-6">
+<div class="card"><div class="card-header"><i class="bi bi-journal-plus me-2 text-primary"></i>Subject Assignment</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="mb-3"><label class="form-label fw-semibold">Class *</label>
+  <select name="classroom" class="form-select" required><option value="">Select class...</option>{% for c in classrooms %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}</select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Subject *</label>
+  <select name="subject" class="form-select" required><option value="">Select subject...</option>{% for s in subjects %}<option value="{{ s.pk }}">{{ s }}</option>{% endfor %}</select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Term *</label>
+  <select name="term" class="form-select" required><option value="">Select term...</option>{% for t in terms %}<option value="{{ t.pk }}">{{ t }}</option>{% endfor %}</select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Teacher</label>
+  <select name="teacher" class="form-select"><option value="">— Unassigned —</option>{% for t in teachers %}<option value="{{ t.pk }}">{{ t.get_full_name }}</option>{% endfor %}</select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Periods per Week</label><input type="number" name="periods_per_week" class="form-control" value="4" min="1" max="10"></div>
+  <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">Save Assignment</button><a href="{% url 'class_subject_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+</form></div></div></div></div>{% endblock %}

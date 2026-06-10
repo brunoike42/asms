@@ -1,0 +1,55 @@
+{% extends "base/base.html" %}
+{% block title %}Fee Invoices{% endblock %}
+{% block page_title %}Fee Management{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h5 class="fw-bold mb-0">Fee Invoices</h5>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#EBF8FF;"><i class="bi bi-cash-stack" style="color:#2B6CB0;"></i></div>
+      <div><div class="stat-value">{{ stats.total_invoiced|floatformat:0 }}</div><div class="stat-label">Total Invoiced (UGX)</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#C6F6D5;"><i class="bi bi-check-circle" style="color:#276749;"></i></div>
+      <div><div class="stat-value">{{ stats.total_collected|floatformat:0 }}</div><div class="stat-label">Collected (UGX)</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FED7D7;"><i class="bi bi-exclamation-circle" style="color:#9B2C2C;"></i></div>
+      <div><div class="stat-value">{{ stats.pending_count }}</div><div class="stat-label">Outstanding Invoices</div></div>
+    </div>
+  </div>
+</div>
+<div class="asms-card">
+  <div class="table-responsive">
+    <table class="table asms-table mb-0">
+      <thead><tr><th>Invoice #</th><th>Student</th><th>Term</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for inv in page_obj %}
+        <tr>
+          <td><code style="font-size:.8rem;">{{ inv.invoice_number }}</code></td>
+          <td style="font-size:.875rem;font-weight:600;">{{ inv.student.get_full_name }}</td>
+          <td style="font-size:.85rem;">{{ inv.term }}</td>
+          <td style="font-size:.875rem;">{{ inv.total_amount|floatformat:0 }}</td>
+          <td style="font-size:.875rem;color:#276749;">{{ inv.amount_paid|floatformat:0 }}</td>
+          <td style="font-size:.875rem;{% if inv.balance_due > 0 %}color:#C53030;font-weight:600;{% endif %}">{{ inv.balance_due|floatformat:0 }}</td>
+          <td>
+            {% if inv.status == 'paid' %}<span class="badge rounded-pill" style="background:#c6f6d5;color:#276749;font-size:.72rem;">Paid</span>
+            {% elif inv.status == 'overdue' %}<span class="badge rounded-pill" style="background:#fed7d7;color:#9b2c2c;font-size:.72rem;">Overdue</span>
+            {% else %}<span class="badge rounded-pill" style="background:#fefcbf;color:#744210;font-size:.72rem;">{{ inv.get_status_display }}</span>{% endif %}
+          </td>
+          <td><a href="{% url 'finance:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;padding:3px 8px;"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-receipt fs-1 d-block mb-2" style="color:#cbd5e0;"></i>No invoices yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

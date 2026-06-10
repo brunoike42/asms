@@ -1,0 +1,34 @@
+{% extends "base/base.html" %}{% block title %}Staff{% endblock %}{% block page_title %}Staff Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <div></div>
+  <a href="{% url 'staff_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Staff</a>
+</div>
+<div class="row g-3">
+{% for s in staff %}
+<div class="col-md-6 col-lg-4">
+<div class="card h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-center mb-3">
+      <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px">
+        <i class="bi bi-person-fill text-primary fs-4"></i>
+      </div>
+      <div>
+        <div class="fw-bold">{{ s.user.get_full_name }}</div>
+        <div class="text-muted small">{{ s.designation|default:s.user.get_role_display }}</div>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap mb-2">
+      <span class="badge bg-primary bg-opacity-10 text-primary">{{ s.user.get_role_display }}</span>
+      {% if s.department %}<span class="badge bg-secondary bg-opacity-10 text-secondary">{{ s.department }}</span>{% endif %}
+      <span class="badge {% if s.employment_type == 'permanent' %}bg-success{% else %}bg-warning text-dark{% endif %} bg-opacity-15">{{ s.get_employment_type_display }}</span>
+    </div>
+    <div class="text-muted small mb-1"><i class="bi bi-telephone me-1"></i>{{ s.user.phone|default:"—" }}</div>
+    <div class="text-muted small"><i class="bi bi-envelope me-1"></i>{{ s.user.email|default:"—" }}</div>
+  </div>
+  <div class="card-footer bg-transparent"><a href="{% url 'staff_detail' s.pk %}" class="btn btn-sm btn-outline-primary w-100">View Profile</a></div>
+</div></div>
+{% empty %}
+<div class="col-12"><div class="text-center py-5 text-muted"><i class="bi bi-person-badge fs-1 d-block mb-3"></i><p>No staff added yet.</p><a href="{% url 'staff_create' %}" class="btn btn-primary">Add First Staff Member</a></div></div>
+{% endfor %}
+</div>{% endblock %}

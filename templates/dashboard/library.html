@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+{% block title %}Library Dashboard{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold text-primary">{{ total_books }}</div>
+      <div class="text-muted small">Total Books</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold text-success">{{ available_books }}</div>
+      <div class="text-muted small">Available</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold text-warning">{{ borrowed_out }}</div>
+      <div class="text-muted small">Borrowed Out</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold text-danger">{{ overdue_books }}</div>
+      <div class="text-muted small">Overdue</div>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card p-3 text-center"><div class="fw-bold text-info">{{ issued_today }}</div><div class="text-muted small">Issued Today</div></div></div>
+  <div class="col-md-4"><div class="card p-3 text-center"><div class="fw-bold text-danger">UGX {{ total_fines|floatformat:0 }}</div><div class="text-muted small">Unpaid Fines</div></div></div>
+  <div class="col-md-4"><div class="card p-3 text-center"><div class="fw-bold text-warning">{{ low_stock }}</div><div class="text-muted small">Out of Stock</div></div></div>
+</div>
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-exclamation-circle me-2 text-danger"></i>Overdue Books</div>
+  <div class="card-body p-0">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light"><tr><th>Book</th><th>Student</th><th>Due Date</th><th>Fine</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for r in overdue_records %}
+      <tr>
+        <td class="fw-semibold small">{{ r.book.title|truncatechars:20 }}</td>
+        <td class="small">{{ r.student.full_name }}</td>
+        <td class="text-danger small">{{ r.due_date|date:"d M Y" }}</td>
+        <td class="text-danger small">{% if r.fine_amount %}UGX {{ r.fine_amount|floatformat:0 }}{% else %}—{% endif %}</td>
+        <td><a href="{% url 'return_book' r.pk %}" class="btn btn-sm btn-outline-success">Return</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-muted py-3">No overdue books.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="d-flex gap-2">
+  <a href="{% url 'borrow_book' %}" class="btn btn-primary"><i class="bi bi-arrow-right-circle me-1"></i>Issue Book</a>
+  <a href="{% url 'book_create' %}" class="btn btn-outline-primary"><i class="bi bi-plus me-1"></i>Add Book</a>
+  <a href="{% url 'borrow_list' %}" class="btn btn-outline-secondary"><i class="bi bi-list me-1"></i>All Loans</a>
+</div>
+{% endblock %}

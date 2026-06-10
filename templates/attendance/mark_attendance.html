@@ -1,0 +1,201 @@
+{% extends "base/base.html" %}
+{% block title %}Mark Attendance — {{ classroom }}{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'attendance:home' %}" style="color:#0A7B8C;text-decoration:none;">Attendance</a>
+  <span class="text-muted"> / {{ classroom }} / {{ mark_date|date:"d M Y" }}</span>
+</nav>
+
+{% if already_marked %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="font-size:.875rem;">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>Attendance for this class on <strong>{{ mark_date|date:"d F Y" }}</strong> has already been marked.
+  You can update it below.</span>
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="date" value="{{ mark_date|date:'Y-m-d' }}">
+
+  <!-- Header bar -->
+  <div class="asms-card mb-3">
+    <div class="asms-card-body" style="padding:1rem 1.5rem;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <h6 class="fw-bold mb-0" style="font-size:1.05rem;">{{ classroom }}</h6>
+          <small class="text-muted">{{ enrollments|length }} student{{ enrollments|length|pluralize }} &middot; {{ mark_date|date:"l, d F Y" }}</small>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <!-- Date picker -->
+          <input type="date" id="datePicker" value="{{ mark_date|date:'Y-m-d' }}"
+                 max="{{ today|date:'Y-m-d' }}"
+                 class="form-control form-control-sm" style="width:160px;border-color:#e2e8f0;"
+                 onchange="window.location='{% url 'attendance:mark' classroom.pk %}?date='+this.value">
+          <!-- Quick-mark all buttons -->
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="markAll('P')">
+            <i class="bi bi-check-all me-1"></i>All Present
+          </button>
+          <button type="submit" class="btn btn-sm btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+            <i class="bi bi-save me-1"></i>Save Register
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status legend -->
+  <div class="d-flex gap-3 mb-3" style="font-size:.8rem;">
+    <span><span class="badge" style="background:#c6f6d5;color:#276749;">P</span> Present</span>
+    <span><span class="badge" style="background:#fed7d7;color:#9b2c2c;">A</span> Absent (SMS sent)</span>
+    <span><span class="badge" style="background:#fefcbf;color:#744210;">L</span> Late</span>
+    <span><span class="badge" style="background:#bee3f8;color:#2a69ac;">E</span> Excused</span>
+  </div>
+
+  <!-- Student register -->
+  <div class="asms-card">
+    <div class="table-responsive">
+      <table class="table asms-table mb-0" id="registerTable">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Student</th>
+            <th>Student ID</th>
+            <th style="width:260px;">Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enrollment in enrollments %}
+          {% with student=enrollment.student existing_rec=existing|default_if_none:"" %}
+          <tr id="row-{{ student.pk }}" class="{% if existing and student.pk in existing %}
+            {% with rec=existing|default_if_none:"" %}{% endwith %}
+          {% endif %}">
+            <td style="color:#718096;font-size:.8rem;">{{ forloop.counter }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                     style="width:32px;height:32px;background:#EBF8FF;font-size:.75rem;font-weight:700;color:#2B6CB0;flex-shrink:0;">
+                  {{ student.first_name.0 }}{{ student.last_name.0 }}
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:.875rem;">{{ student.get_full_name }}</div>
+                  {% if student.has_disability %}
+                  <span class="badge" style="background:#FED7D7;color:#9B2C2C;font-size:.65rem;">Disability</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td><code style="font-size:.78rem;">{{ student.student_id }}</code></td>
+            <td>
+              <!-- Radio-style status buttons -->
+              <div class="btn-group status-group" role="group">
+                {% for val, label in status_choices %}
+                <input type="radio" class="btn-check" name="status_{{ student.pk }}"
+                       id="s{{ student.pk }}_{{ val }}" value="{{ val }}"
+                       {% if existing and student.pk in existing %}
+                         {% if existing|stringformat:"s" %}{% endif %}
+                       {% endif %}
+                       {% if not existing or student.pk not in existing %}
+                         {% if val == 'P' %}checked{% endif %}
+                       {% endif %}
+                       onchange="updateRow({{ student.pk }}, '{{ val }}')">
+                <label class="btn btn-sm btn-outline-secondary status-btn" for="s{{ student.pk }}_{{ val }}"
+                       data-status="{{ val }}"
+                       style="font-size:.75rem;padding:4px 10px;min-width:52px;">
+                  {{ val }}
+                </label>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              <input type="text" name="notes_{{ student.pk }}" class="form-control form-control-sm"
+                     placeholder="Optional note..." style="border-color:#e2e8f0;font-size:.8rem;min-width:150px;">
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer save -->
+    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top" style="background:#f7fafc;">
+      <small class="text-muted">
+        <span id="presentCount">0</span> present &middot;
+        <span id="absentCount" style="color:#C53030;">0</span> absent &middot;
+        <span id="lateCount" style="color:#B7791F;">0</span> late
+      </small>
+      <button type="submit" class="btn btn-primary" style="background:#1B3A6B;border-color:#1B3A6B;">
+        <i class="bi bi-save me-2"></i>Save Attendance Register
+      </button>
+    </div>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+// Status button colour coding
+const statusColors = {
+  'P': { bg: '#c6f6d5', color: '#276749', row: '' },
+  'A': { bg: '#fed7d7', color: '#9b2c2c', row: '#fff5f5' },
+  'L': { bg: '#fefcbf', color: '#744210', row: '#fffff0' },
+  'E': { bg: '#bee3f8', color: '#2a69ac', row: '' },
+  'S': { bg: '#e9d8fd', color: '#553c9a', row: '' },
+};
+
+function updateRow(studentPk, status) {
+  const row = document.getElementById(`row-${studentPk}`);
+  if (row && statusColors[status]) {
+    row.style.background = statusColors[status].row;
+  }
+  updateCounts();
+}
+
+function markAll(status) {
+  document.querySelectorAll(`input[type="radio"][value="${status}"]`).forEach(radio => {
+    radio.checked = true;
+    const pk = radio.name.replace('status_', '');
+    updateRow(pk, status);
+  });
+  updateCounts();
+}
+
+function updateCounts() {
+  let p = 0, a = 0, l = 0;
+  document.querySelectorAll('input[type="radio"]:checked').forEach(r => {
+    if (r.value === 'P') p++;
+    else if (r.value === 'A') a++;
+    else if (r.value === 'L') l++;
+  });
+  document.getElementById('presentCount').textContent = p;
+  document.getElementById('absentCount').textContent = a;
+  document.getElementById('lateCount').textContent = l;
+}
+
+// Style checked radio labels
+document.querySelectorAll('.btn-check').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const group = this.closest('.btn-group');
+    group.querySelectorAll('.status-btn').forEach(btn => {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    });
+    const label = group.querySelector(`label[for="${this.id}"]`);
+    const s = statusColors[this.value];
+    if (label && s) {
+      label.style.background = s.bg;
+      label.style.color = s.color;
+      label.style.borderColor = s.bg;
+    }
+  });
+  // Apply to pre-checked on load
+  if (radio.checked) radio.dispatchEvent(new Event('change'));
+});
+updateCounts();
+</script>
+{% endblock %}
+{% endblock %}

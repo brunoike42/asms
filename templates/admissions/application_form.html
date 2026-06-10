@@ -1,0 +1,59 @@
+{% extends "base/base.html" %}
+{% block title %}{{ action }}{% endblock %}
+{% block page_title %}{{ action }}{% endblock %}
+{% block content %}
+<nav class="mb-3" style="font-size:.82rem;">
+  <a href="{% url 'admissions:list' %}" style="color:#0A7B8C;text-decoration:none;">Admissions</a>
+  <span class="text-muted"> / {{ action }}</span>
+</nav>
+<form method="post">
+  {% csrf_token %}
+  <div class="form-section">
+    <div class="form-section-title">Applicant Details</div>
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label">First Name *</label>{{ form.first_name }}</div>
+      <div class="col-md-4"><label class="form-label">Middle Name</label>{{ form.middle_name }}</div>
+      <div class="col-md-4"><label class="form-label">Last Name *</label>{{ form.last_name }}</div>
+      <div class="col-md-4"><label class="form-label">Date of Birth</label>{{ form.date_of_birth }}</div>
+      <div class="col-md-4"><label class="form-label">Gender</label>{{ form.gender }}</div>
+      <div class="col-md-4"><label class="form-label">Nationality</label>{{ form.nationality }}</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Application Details</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Applying for Class Level</label>{{ form.applying_for_level }}</div>
+      <div class="col-md-6"><label class="form-label">Academic Year</label>{{ form.applying_for_year }}</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Parent / Guardian</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Guardian Full Name *</label>{{ form.guardian_name }}</div>
+      <div class="col-md-3"><label class="form-label">Phone *</label>{{ form.guardian_phone }}</div>
+      <div class="col-md-3"><label class="form-label">Email</label>{{ form.guardian_email }}</div>
+      <div class="col-md-4"><label class="form-label">Relationship</label>{{ form.guardian_relationship }}</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Previous School</div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Previous School Name</label>{{ form.previous_school }}</div>
+      <div class="col-md-3"><label class="form-label">Last Class / Year</label>{{ form.previous_class }}</div>
+      <div class="col-12"><label class="form-label">Previous Results / Notes</label>{{ form.previous_school_results }}</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Application Status</div>
+    <div class="row g-3">
+      <div class="col-md-3"><label class="form-label">Status</label>{{ form.status }}</div>
+      <div class="col-md-3"><label class="form-label">Interview Date</label>{{ form.interview_date }}</div>
+      <div class="col-12"><label class="form-label">Decision Notes</label>{{ form.decision_notes }}</div>
+    </div>
+  </div>
+  <div class="d-flex gap-3">
+    <button type="submit" class="btn btn-primary px-4" style="background:#1B3A6B;border-color:#1B3A6B;"><i class="bi bi-check-lg me-2"></i>Save Application</button>
+    <a href="{% url 'admissions:list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+  </div>
+</form>
+{% endblock %}

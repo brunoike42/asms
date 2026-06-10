@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}{% block title %}Exams{% endblock %}{% block page_title %}Exams & Marks{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <div></div>
+  <a href="{% url 'exam_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
+</div>
+<div class="card"><div class="card-header"><i class="bi bi-clipboard2-data me-2 text-primary"></i>All Exams</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead class="table-light"><tr><th>Name</th><th>Type</th><th>Class</th><th>Subject</th><th>Term</th><th>Date</th><th>Max</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>
+{% for e in exams %}
+<tr>
+  <td class="fw-semibold">{{ e.name }}</td>
+  <td><span class="badge bg-secondary">{{ e.get_exam_type_display }}</span></td>
+  <td>{{ e.classroom }}</td>
+  <td>{{ e.subject }}</td>
+  <td>{{ e.term }}</td>
+  <td>{{ e.exam_date|date:"d M Y"|default:"—" }}</td>
+  <td>{{ e.max_score }}</td>
+  <td>{% if e.is_published %}<span class="badge bg-success">Published</span>{% else %}<span class="badge bg-warning text-dark">Draft</span>{% endif %}</td>
+  <td>
+    <a href="{% url 'enter_marks' e.pk %}" class="btn btn-sm btn-outline-primary">Marks</a>
+    <a href="{% url 'exam_results' e.pk %}" class="btn btn-sm btn-outline-info">Results</a>
+    {% if not e.is_published %}<a href="{% url 'publish_exam' e.pk %}" class="btn btn-sm btn-outline-success">Publish</a>{% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="9" class="text-center text-muted py-4">No exams yet. <a href="{% url 'exam_create' %}">Create the first exam.</a></td></tr>
+{% endfor %}
+</tbody></table></div></div></div>
+{% endblock %}

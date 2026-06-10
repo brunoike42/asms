@@ -1,0 +1,422 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Dashboard — ASMS{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Good day, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.get_username }}{% endif %} 👋</h4>
+    {% if term and academic_year %}
+    <p class="text-muted mb-0">
+      <i class="bi bi-calendar3 me-1"></i>
+      {{ term.get_name_display }} — {{ academic_year.name }}
+    </p>
+    {% else %}
+    <p class="text-muted mb-0"><i class="bi bi-calendar3 me-1"></i>Current Academic Period</p>
+    {% endif %}
+  </div>
+  <a href="{% url 'students:create' %}" class="btn btn-primary">
+    <i class="bi bi-person-plus-fill me-1"></i> Add Student
+  </a>
+</div>
+
+<!-- ── Stat cards — EMIS-style with gender breakdown ────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Students -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success">
+            <i class="bi bi-people-fill fs-3"></i>
+          </div>
+          <div>
+            <div class="fs-1 fw-bold lh-1 text-success">{{ total_students }}</div>
+            <div class="text-muted small fw-semibold">ENROLLED LEARNERS</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(13,110,253,.12);color:#0d6efd;font-size:.78rem">
+            <i class="bi bi-gender-male me-1"></i>{{ male_students }} Male
+          </span>
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(220,53,69,.12);color:#dc3545;font-size:.78rem">
+            <i class="bi bi-gender-female me-1"></i>{{ female_students }} Female
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teaching Staff -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-person-badge-fill fs-3"></i>
+          </div>
+          <div>
+            <div class="fs-1 fw-bold lh-1 text-primary">{{ teaching_staff }}</div>
+            <div class="text-muted small fw-semibold">TEACHING STAFF</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(13,110,253,.12);color:#0d6efd;font-size:.78rem">
+            <i class="bi bi-gender-male me-1"></i>{{ staff_male }} Male
+          </span>
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(220,53,69,.12);color:#dc3545;font-size:.78rem">
+            <i class="bi bi-gender-female me-1"></i>{{ staff_female }} Female
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- At-Risk Students -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 p-2 bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+          </div>
+          <div>
+            <div class="fs-1 fw-bold lh-1 text-warning">{{ at_risk_count }}</div>
+            <div class="text-muted small fw-semibold">AT-RISK STUDENTS</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(255,193,7,.15);color:#856404;font-size:.78rem">
+            <i class="bi bi-calendar-x me-1"></i>3+ Absences This Term
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fees Collected -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 p-2 bg-info bg-opacity-10 text-info">
+            <i class="bi bi-cash-stack fs-3"></i>
+          </div>
+          <div>
+            <div class="fs-2 fw-bold lh-1 text-info">{{ total_collected|intcomma }}</div>
+            <div class="text-muted small fw-semibold">FEES COLLECTED (UGX)</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="badge rounded-pill px-3 py-2"
+                style="background:rgba(220,53,69,.12);color:#dc3545;font-size:.78rem">
+            <i class="bi bi-exclamation-circle me-1"></i>{{ total_outstanding|intcomma }} Outstanding
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Charts row ────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Enrollment by Class & Sex — EMIS bar chart -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 py-3">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+          Enrollment by Class &amp; Sex
+        </h6>
+      </div>
+      <div class="card-body pt-0" style="position:relative;height:260px">
+        {% if enrollment_json != "[]" %}
+        <canvas id="enrollmentChart"></canvas>
+        {% else %}
+        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+          <div class="text-center">
+            <i class="bi bi-bar-chart fs-1 opacity-25 d-block mb-2"></i>
+            No class data yet — add students to classes to see this chart.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Gender Distribution donut -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 py-3">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-pie-chart-fill text-success me-2"></i>
+          Gender Distribution
+        </h6>
+      </div>
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <div style="position:relative;width:180px;height:180px">
+          <canvas id="genderChart"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+            <div class="fw-bold fs-4">{{ total_students }}</div>
+            <div class="text-muted" style="font-size:.7rem">TOTAL</div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-center gap-3 mt-3">
+          <div class="text-center">
+            <div class="badge rounded-pill px-3 py-2 mb-1"
+                 style="background:rgba(13,110,253,.12);color:#0d6efd">
+              {{ male_students }} Male
+            </div>
+            {% if total_students > 0 %}
+            <div class="text-muted" style="font-size:.75rem">
+              {{ male_students|floatformat:0 }} / {{ total_students }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="text-center">
+            <div class="badge rounded-pill px-3 py-2 mb-1"
+                 style="background:rgba(220,53,69,.12);color:#dc3545">
+              {{ female_students }} Female
+            </div>
+            {% if total_students > 0 %}
+            <div class="text-muted" style="font-size:.75rem">
+              {{ female_students|floatformat:0 }} / {{ total_students }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Bottom row: Recent students + Quick actions + Activity ────────────── -->
+<div class="row g-3">
+
+  <!-- Recently Added Students table -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-person-lines-fill text-success me-2"></i>
+          Recently Added Students
+        </h6>
+        <a href="{% url 'students:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="border-0">Student</th>
+              <th class="border-0">ID</th>
+              <th class="border-0">Class</th>
+              <th class="border-0">Status</th>
+              <th class="border-0">Admitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in recent_students %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                       style="width:34px;height:34px;font-size:.8rem;
+                              background:{% if student.gender == 'M' %}#0d6efd{% elif student.gender == 'F' %}#dc3545{% else %}#6c757d{% endif %}">
+                    {{ student.first_name.0 }}{{ student.last_name.0 }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold small">{{ student.get_full_name }}</div>
+                    <div class="text-muted" style="font-size:.73rem">{{ student.get_gender_display }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><code class="text-primary small">{{ student.student_id }}</code></td>
+              <td><span class="small">{{ student.current_class|default:"—" }}</span></td>
+              <td>
+                <span class="badge bg-success bg-opacity-15 text-success small">
+                  {{ student.get_status_display }}
+                </span>
+              </td>
+              <td><span class="small text-muted">{{ student.admission_date|date:"d M Y"|default:"—" }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-person-x fs-3 d-block mb-2 opacity-25"></i>
+                No students enrolled yet
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Quick Actions + Activity Feed -->
+  <div class="col-lg-5">
+
+    <!-- Quick Actions — EMIS Action Center style -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 py-3">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-lightning-fill text-warning me-2"></i>Quick Actions
+        </h6>
+      </div>
+      <div class="card-body pt-0">
+        <div class="d-grid gap-2">
+          <a href="{% url 'students:create' %}" class="btn btn-outline-success text-start">
+            <i class="bi bi-person-plus me-2"></i>Enrol New Student
+          </a>
+          <a href="{% url 'students:classrooms' %}" class="btn btn-outline-primary text-start">
+            <i class="bi bi-building me-2"></i>Manage Classes
+          </a>
+          <a href="{% url 'attendance:home' %}" class="btn btn-outline-info text-start">
+            <i class="bi bi-calendar-check me-2"></i>Mark Attendance
+          </a>
+          <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary text-start">
+            <i class="bi bi-clipboard2-data me-2"></i>Enter Exam Marks
+          </a>
+          <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-warning text-start">
+            <i class="bi bi-receipt-cutoff me-2"></i>View Invoices
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Feed — like EMIS Activity panel -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between py-3">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-activity text-info me-2"></i>Recent Activity
+        </h6>
+      </div>
+      <div class="card-body pt-0">
+        {% for item in recent_activities %}
+        <div class="d-flex gap-3 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="mt-1">
+            <div class="rounded-circle bg-{{ item.color }} bg-opacity-15"
+                 style="width:30px;height:30px;display:flex;align-items:center;justify-content:center">
+              <i class="bi bi-{{ item.icon }} text-{{ item.color }} small"></i>
+            </div>
+          </div>
+          <div>
+            <div class="small fw-semibold">{{ item.message }}</div>
+            {% if item.time %}
+            <div class="text-muted" style="font-size:.73rem">{{ item.time|timesince }} ago</div>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-3">
+          <i class="bi bi-clock-history fs-3 d-block mb-2 opacity-25"></i>
+          <small>No recent activity yet</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  // ── Enrollment by Class & Sex chart ─────────────────────────────────────
+  var enrollData = {{ enrollment_json|safe }};
+  var ctx1 = document.getElementById('enrollmentChart');
+  if (ctx1 && enrollData.length) {
+    new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: enrollData.map(function(d) { return d.name; }),
+        datasets: [
+          {
+            label: 'Male',
+            data: enrollData.map(function(d) { return d.male; }),
+            backgroundColor: 'rgba(13,110,253,0.75)',
+            borderRadius: 5,
+            borderSkipped: false,
+          },
+          {
+            label: 'Female',
+            data: enrollData.map(function(d) { return d.female; }),
+            backgroundColor: 'rgba(220,53,69,0.75)',
+            borderRadius: 5,
+            borderSkipped: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
+          tooltip: {
+            callbacks: {
+              afterLabel: function(ctx) {
+                var d = enrollData[ctx.dataIndex];
+                return 'Total in class: ' + d.total;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.06)' } }
+        }
+      }
+    });
+  }
+
+  // ── Gender Distribution donut ────────────────────────────────────────────
+  var ctx2 = document.getElementById('genderChart');
+  if (ctx2) {
+    new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels: ['Male', 'Female'],
+        datasets: [{
+          data: [{{ male_students }}, {{ female_students }}],
+          backgroundColor: ['rgba(13,110,253,0.8)', 'rgba(220,53,69,0.8)'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                var total = ctx.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                var pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+                return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+              }
+            }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base/base.html" %}{% block title %}Issue Book{% endblock %}{% block page_title %}Issue Book{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-6">
+<div class="card"><div class="card-header"><i class="bi bi-arrow-right-circle me-2 text-primary"></i>Issue Book to Student</div>
+<div class="card-body"><form method="post">{% csrf_token %}
+  <div class="mb-3"><label class="form-label fw-semibold">Book *</label>
+  <select name="book" class="form-select" required>
+  <option value="">Select available book...</option>
+  {% for b in books %}<option value="{{ b.pk }}">{{ b.title }} — {{ b.author }} ({{ b.available_copies }} left)</option>{% endfor %}
+  </select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Student *</label>
+  <select name="student" class="form-select" required>
+  <option value="">Select student...</option>
+  {% for s in students %}<option value="{{ s.pk }}">{{ s.full_name }} ({{ s.current_class|default:"No class" }})</option>{% endfor %}
+  </select></div>
+  <div class="mb-3"><label class="form-label fw-semibold">Loan Period (days)</label>
+  <select name="days" class="form-select"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div>
+  <div class="d-flex gap-2"><button type="submit" class="btn btn-success">Issue Book</button><a href="{% url 'borrow_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+</form></div></div></div></div>{% endblock %}

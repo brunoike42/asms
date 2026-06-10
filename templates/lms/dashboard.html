@@ -1,0 +1,18 @@
+{% extends "base/base.html" %}{% block title %}LMS{% endblock %}{% block page_title %}Learning Management{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card text-center p-4"><i class="bi bi-folder-fill text-primary fs-2"></i><h4 class="fw-bold mt-2">Resources</h4><p class="text-muted small">Documents, links, and learning materials</p><a href="{% url 'resource_list' %}" class="btn btn-primary w-100">Browse Resources</a><a href="{% url 'resource_create' %}" class="btn btn-outline-primary w-100 mt-2">Upload Resource</a></div></div>
+  <div class="col-md-4"><div class="card text-center p-4"><i class="bi bi-patch-question-fill text-warning fs-2"></i><h4 class="fw-bold mt-2">Quizzes</h4><p class="text-muted small">Create and assign online quizzes</p><a href="{% url 'quiz_list' %}" class="btn btn-warning w-100">View Quizzes</a><a href="{% url 'quiz_create' %}" class="btn btn-outline-warning w-100 mt-2">Create Quiz</a></div></div>
+  <div class="col-md-4"><div class="card text-center p-4"><i class="bi bi-journal-bookmark-fill text-success fs-2"></i><h4 class="fw-bold mt-2">Lesson Plans</h4><p class="text-muted small">Weekly lesson planning and tracking</p><a href="{% url 'lesson_plan_list' %}" class="btn btn-success w-100">View Plans</a><a href="{% url 'lesson_plan_create' %}" class="btn btn-outline-success w-100 mt-2">Create Plan</a></div></div>
+</div>
+<div class="card"><div class="card-header"><i class="bi bi-table me-2 text-primary"></i>Class Subjects on LMS</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr><th>Class</th><th>Subject</th><th>Teacher</th><th>Resources</th><th>Quizzes</th></tr></thead>
+<tbody>{% for cs in class_subjects %}
+<tr>
+  <td>{{ cs.classroom }}</td><td class="fw-semibold">{{ cs.subject }}</td>
+  <td>{{ cs.teacher.get_full_name|default:"—" }}</td>
+  <td><a href="{% url 'resource_list_cs' cs.pk %}">{{ cs.resources.count }} resource(s)</a></td>
+  <td>{{ cs.quizzes.count }}</td>
+</tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No class subjects found.</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

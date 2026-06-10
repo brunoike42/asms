@@ -1,0 +1,59 @@
+{% extends "base/base.html" %}{% block title %}Enter Marks{% endblock %}{% block page_title %}Enter Marks — {{ exam.name }}{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <div class="card"><div class="card-body py-2">
+      <div class="row g-2 text-center">
+        <div class="col"><div class="text-muted small">Class</div><div class="fw-semibold">{{ exam.classroom }}</div></div>
+        <div class="col"><div class="text-muted small">Subject</div><div class="fw-semibold">{{ exam.subject }}</div></div>
+        <div class="col"><div class="text-muted small">Type</div><div class="fw-semibold">{{ exam.get_exam_type_display }}</div></div>
+        <div class="col"><div class="text-muted small">Max Score</div><div class="fw-semibold">{{ exam.max_score }}</div></div>
+        <div class="col"><div class="text-muted small">Term</div><div class="fw-semibold">{{ exam.term }}</div></div>
+      </div>
+    </div></div>
+  </div>
+  {% if stats %}
+  <div class="col-md-4">
+    <div class="card"><div class="card-body py-2">
+      <div class="row g-2 text-center">
+        <div class="col-6"><div class="text-muted small">Average</div><div class="fw-bold text-primary">{{ stats.avg }}</div></div>
+        <div class="col-6"><div class="text-muted small">Highest</div><div class="fw-bold text-success">{{ stats.highest }}</div></div>
+        <div class="col-6"><div class="text-muted small">Pass</div><div class="fw-bold text-success">{{ stats.pass_count }}</div></div>
+        <div class="col-6"><div class="text-muted small">Marked</div><div class="fw-bold">{{ stats.count }}</div></div>
+      </div>
+    </div></div>
+  </div>
+  {% endif %}
+</div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-pencil-fill me-2 text-primary"></i>Mark Entry — {{ student_data|length }} Students</span>
+    {% if not exam.is_published %}<a href="{% url 'publish_exam' exam.pk %}" class="btn btn-sm btn-success" onclick="return confirm('Publish results now?')">Publish Results</a>{% endif %}
+  </div>
+  <div class="card-body p-0">
+    <form method="post">{% csrf_token %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th style="width:40px">#</th><th>Student Name</th><th style="width:140px">Score <small class="text-muted">/ {{ exam.max_score }}</small></th><th style="width:70px">Grade</th><th>Remarks</th></tr></thead>
+        <tbody>
+        {% for item in student_data %}
+        <tr>
+          <td class="text-muted small">{{ forloop.counter }}</td>
+          <td class="fw-semibold">{{ item.student.full_name }}</td>
+          <td><input type="number" name="score_{{ item.student.pk }}" value="{{ item.score }}" class="form-control form-control-sm" min="0" max="{{ exam.max_score }}" step="0.5" placeholder="—"></td>
+          <td class="fw-bold {% if item.grade == 'A' %}text-success{% elif item.grade == 'F' %}text-danger{% else %}text-primary{% endif %}">{{ item.grade|default:"—" }}</td>
+          <td><input type="text" name="remarks_{{ item.student.pk }}" value="{{ item.remarks }}" class="form-control form-control-sm" placeholder="Optional remark"></td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No active students in this class.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="p-3 border-top d-flex gap-2">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save All Marks</button>
+      <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">Back to Exams</a>
+    </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

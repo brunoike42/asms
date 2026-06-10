@@ -1,0 +1,39 @@
+{% extends "base/base.html" %}{% block title %}Report Card{% endblock %}{% block page_title %}Report Card — {{ report.student.full_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-9">
+<div class="card mb-3">
+  <div class="card-body text-center py-4" style="background:linear-gradient(135deg,#f8f9fa,#e9ecef)">
+    <h4 class="fw-bold mb-1">{% if tenant %}{{ tenant.name }}{% else %}ASMS School{% endif %}</h4>
+    <p class="text-muted mb-2">{{ report.term }} — Academic Report Card</p>
+    <div class="row g-2 justify-content-center mt-3">
+      <div class="col-auto"><div class="bg-white rounded p-2 shadow-sm text-center" style="min-width:90px"><div class="text-muted small">Student</div><div class="fw-bold">{{ report.student.full_name }}</div></div></div>
+      <div class="col-auto"><div class="bg-white rounded p-2 shadow-sm text-center" style="min-width:90px"><div class="text-muted small">Class</div><div class="fw-bold">{{ report.classroom }}</div></div></div>
+      <div class="col-auto"><div class="bg-white rounded p-2 shadow-sm text-center" style="min-width:90px"><div class="text-muted small">Position</div><div class="fw-bold text-primary">{{ report.position }}/{{ report.out_of }}</div></div></div>
+      <div class="col-auto"><div class="bg-white rounded p-2 shadow-sm text-center" style="min-width:90px"><div class="text-muted small">Average</div><div class="fw-bold text-primary">{{ report.average_score }}%</div></div></div>
+    </div>
+  </div>
+</div>
+<div class="card mb-3"><div class="card-header fw-semibold"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Subject Performance</div>
+<div class="card-body p-0"><div class="table-responsive">
+<table class="table mb-0">
+<thead class="table-light"><tr><th>Subject</th><th>Score</th><th>Max</th><th>%</th><th>Grade</th><th>Comment</th></tr></thead>
+<tbody>
+{% for ss in subject_scores %}
+<tr>
+  <td class="fw-semibold">{{ ss.subject.name }}</td>
+  <td>{{ ss.total_score|floatformat:1 }}</td>
+  <td>{{ ss.max_possible|floatformat:0 }}</td>
+  <td>{{ ss.percentage|floatformat:1 }}%</td>
+  <td><span class="badge {% if ss.grade == 'A' %}bg-success{% elif ss.grade == 'B' %}bg-primary{% elif ss.grade == 'F' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">{{ ss.grade }}</span></td>
+  <td class="text-muted small">{{ ss.teacher_comment|default:"" }}</td>
+</tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No subject scores computed.</td></tr>
+{% endfor %}
+</tbody></table></div></div></div>
+{% if report.class_teacher_comment %}
+<div class="card mb-3"><div class="card-body"><strong>Class Teacher:</strong> {{ report.class_teacher_comment }}</div></div>{% endif %}
+{% if report.principal_comment %}
+<div class="card mb-3"><div class="card-body"><strong>Principal:</strong> {{ report.principal_comment }}</div></div>{% endif %}
+<div class="text-end"><a href="{% url 'report_list' report.term.pk %}" class="btn btn-outline-secondary">← Back to Reports</a></div>
+</div></div>
+{% endblock %}

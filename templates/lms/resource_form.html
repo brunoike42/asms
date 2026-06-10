@@ -1,0 +1,19 @@
+{% extends "base/base.html" %}{% block title %}Upload Resource{% endblock %}{% block page_title %}Upload LMS Resource{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-7">
+<div class="card"><div class="card-header"><i class="bi bi-upload me-2 text-primary"></i>New Resource</div>
+<div class="card-body"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-8"><label class="form-label fw-semibold">Title *</label><input type="text" name="title" class="form-control" required></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Resource Type</label>
+    <select name="resource_type" class="form-select">{% for v,l in resource_types %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-12"><label class="form-label fw-semibold">Class Subject *</label>
+    <select name="class_subject" class="form-select" required><option value="">Select class subject...</option>
+    {% for cs in class_subjects %}<option value="{{ cs.pk }}">{{ cs.classroom }} — {{ cs.subject }}</option>{% endfor %}</select></div>
+    <div class="col-12"><label class="form-label fw-semibold">Description</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">File Upload</label><input type="file" name="file" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label fw-semibold">External URL</label><input type="url" name="external_url" class="form-control" placeholder="https://..."></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Week Number</label><input type="number" name="week_number" class="form-control" min="1" max="40"></div>
+    <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-primary">Upload Resource</button><a href="{% url 'resource_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+  </div>
+</form></div></div></div></div>{% endblock %}

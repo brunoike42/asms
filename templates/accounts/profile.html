@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+<div class="row g-3 justify-content-center">
+  <div class="col-md-6">
+    <div class="asms-card">
+      <div class="asms-card-header"><h6><i class="bi bi-person-circle me-2" style="color:#0A7B8C;"></i>Account Details</h6></div>
+      <div class="asms-card-body">
+        <div class="text-center mb-4">
+          <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+               style="width:72px;height:72px;background:#EBF8FF;font-size:1.6rem;font-weight:700;color:#2B6CB0;">
+            {{ user.first_name.0 }}{{ user.last_name.0 }}
+          </div>
+          <h5 class="fw-bold mb-0">{{ user.get_full_name }}</h5>
+          <small class="text-muted">{{ user.get_role_display }}</small>
+        </div>
+        <div class="py-2 border-bottom" style="font-size:.875rem;"><span class="text-muted">Email</span><span class="float-end fw-500">{{ user.email }}</span></div>
+        <div class="py-2 border-bottom" style="font-size:.875rem;"><span class="text-muted">Phone</span><span class="float-end fw-500">{{ user.phone|default:"Not set" }}</span></div>
+        <div class="py-2 border-bottom" style="font-size:.875rem;"><span class="text-muted">Role</span><span class="float-end fw-500">{{ user.get_role_display }}</span></div>
+        <div class="py-2" style="font-size:.875rem;"><span class="text-muted">School</span><span class="float-end fw-500">{% if user.tenant %}{{ user.tenant.name }}{% else %}Platform Admin{% endif %}</span></div>
+        <div class="d-flex gap-2 mt-4">
+          <a href="{% url 'accounts:change_password' %}" class="btn btn-outline-primary w-100" style="font-size:.85rem;">
+            <i class="bi bi-key me-1"></i>Change Password
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
