@@ -1,0 +1,274 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_title }} | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Discipline & Behaviour</h4>
+    {% if current_term %}
+    <small class="text-muted">{{ current_term.name }} — {{ current_term.academic_year }}</small>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    {% if user_role in 'teacher,principal,school_admin,super_admin,vice_principal' %}
+    <a href="{% url 'discipline:incident_create' %}" class="btn btn-danger btn-sm">
+      <i class="bi bi-exclamation-triangle me-1"></i> Log Incident
+    </a>
+    <a href="{% url 'discipline:merit_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-award me-1"></i> Award Merit
+    </a>
+    {% endif %}
+    <a href="{% url 'discipline:incident_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list me-1"></i> All Incidents
+    </a>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="fs-2 fw-bold text-danger">{{ stats.total_this_term }}</div>
+        <div class="text-muted small">Incidents This Term</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="fs-2 fw-bold text-warning">{{ stats.open_incidents }}</div>
+        <div class="text-muted small">Open / Unresolved</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="fs-2 fw-bold {% if stats.pending_approval > 0 %}text-orange{% else %}text-success{% endif %}">
+          {{ stats.pending_approval }}
+        </div>
+        <div class="text-muted small">Awaiting Approval</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="fs-2 fw-bold text-success">{{ stats.merits_this_term }}</div>
+        <div class="text-muted small">Merits Awarded</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-5 border-danger">
+      <div class="card-body py-3">
+        <div class="fw-bold fs-4">{{ stats.critical_incidents }}</div>
+        <div class="text-muted small">Critical Incidents</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-5 border-primary">
+      <div class="card-body py-3">
+        <div class="fw-bold fs-4">{{ stats.suspensions }}</div>
+        <div class="text-muted small">Suspensions This Term</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-5 border-info">
+      <div class="card-body py-3">
+        <div class="fw-bold fs-4">{{ stats.counselling_flags }}</div>
+        <div class="text-muted small">Counselling Flags Raised</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-5 border-success">
+      <div class="card-body py-3">
+        <div class="fw-bold fs-4">{{ stats.resolved_this_term }}</div>
+        <div class="text-muted small">Resolved This Term</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Severity Breakdown</h6>
+      </div>
+      <div class="card-body">
+        <canvas id="severityChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Top Categories</h6>
+      </div>
+      <div class="card-body">
+        {% for item in category_data %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between small mb-1">
+            <span>{{ item.category__name }}</span>
+            <span class="fw-semibold">{{ item.count }}</span>
+          </div>
+          <div class="progress" style="height:6px;">
+            {% with max_count=category_data.0.count %}
+            <div class="progress-bar bg-danger"
+                 style="width:{% widthratio item.count max_count 100 %}%"></div>
+            {% endwith %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small text-center mt-3">No incidents recorded this term.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Most Frequent — This Term</h6>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for s in top_students %}
+          <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+            <a href="{% url 'discipline:student_history' student_pk=s.student__id %}" class="text-decoration-none text-dark small">
+              {{ s.student__first_name }} {{ s.student__last_name }}
+            </a>
+            <span class="badge bg-danger rounded-pill">{{ s.count }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted small text-center py-3">No repeat incidents.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pending Approvals + Recent Incidents -->
+<div class="row g-3">
+  {% if pending_approvals %}
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm border-start border-4 border-warning">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Awaiting Principal Approval</h6>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for inc in pending_approvals %}
+          <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <a href="{% url 'discipline:incident_detail' pk=inc.pk %}" class="fw-semibold text-decoration-none small">
+                  {{ inc.reference_number }}
+                </a>
+                <div class="text-muted small">{{ inc.student.first_name }} {{ inc.student.last_name }} — {{ inc.category.name }}</div>
+              </div>
+              <span class="badge bg-warning text-dark">{{ inc.incident_date|date:"d M" }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="col-md-{% if pending_approvals %}7{% else %}12{% endif %}">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0">Recent Incidents</h6>
+        <a href="{% url 'discipline:incident_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Ref</th>
+              <th>Student</th>
+              <th>Category</th>
+              <th>Severity</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in recent_incidents %}
+            <tr>
+              <td>
+                <a href="{% url 'discipline:incident_detail' pk=inc.pk %}" class="text-decoration-none fw-semibold small">
+                  {{ inc.reference_number }}
+                </a>
+              </td>
+              <td class="small">{{ inc.student.first_name }} {{ inc.student.last_name }}</td>
+              <td class="small">{{ inc.category.name }}</td>
+              <td>
+                <span class="badge {{ inc.get_severity_badge_class }}">
+                  {{ inc.get_severity_display }}
+                </span>
+              </td>
+              <td class="small">{{ inc.incident_date|date:"d M Y" }}</td>
+              <td>
+                <span class="badge {{ inc.get_status_badge_class }} small">
+                  {{ inc.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">No incidents recorded this term.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Severity donut chart
+const severityCtx = document.getElementById('severityChart');
+if (severityCtx) {
+  new Chart(severityCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Minor', 'Moderate', 'Serious', 'Critical'],
+      datasets: [{
+        data: [
+          {{ severity_data.Minor|default:0 }},
+          {{ severity_data.Moderate|default:0 }},
+          {{ severity_data.Serious|default:0 }},
+          {{ severity_data.Critical|default:0 }}
+        ],
+        backgroundColor: ['#17a2b8', '#ffc107', '#fd7e14', '#dc3545'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 } } }
+      },
+      cutout: '65%',
+    }
+  });
+}
+</script>
+{% endblock %}

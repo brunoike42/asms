@@ -1,0 +1,660 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.db.models import Count, Q, Avg
+from django.core.paginator import Paginator
+
+from .models import (
+    WelfareCase, CounsellingSession, WelfareCaseAction,
+    BursaryApplication, CounsellorReferral, AtRiskRegister,
+)
+from .forms import (
+    WelfareCaseForm, CaseUpdateForm, EscalationForm, PrincipalResponseForm,
+    ResolutionForm, CounsellingSessionForm, WelfareCaseActionForm,
+    BursaryApplicationForm, BursaryApprovalForm, CounsellorReferralForm,
+)
+
+COUNSELLOR_ROLES = ('counsellor', 'principal', 'school_admin', 'super_admin', 'vice_principal')
+MANAGEMENT_ROLES = ('principal', 'school_admin', 'super_admin', 'vice_principal')
+
+
+def get_tenant(request):
+    return getattr(request, 'tenant', None)
+
+
+def require_counsellor_access(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        role = getattr(request.user, 'role', None)
+        if role not in COUNSELLOR_ROLES and not request.user.is_staff:
+            messages.error(request, 'Access restricted to counselling staff.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+def require_management(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        role = getattr(request.user, 'role', None)
+        if role not in MANAGEMENT_ROLES and not request.user.is_staff:
+            messages.error(request, 'Only school management can perform this action.')
+            return redirect('counselling:dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+# ──────────────────────────────────────────────────────────
+#  Dashboard
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def dashboard(request):
+    tenant = get_tenant(request)
+    user_role = getattr(request.user, 'role', '')
+
+    base_qs = WelfareCase.objects.filter(tenant=tenant)
+
+    # Counsellors only see their own cases unless principal/admin
+    if user_role == 'counsellor':
+        my_cases = base_qs.filter(assigned_counsellor=request.user)
+    else:
+        my_cases = base_qs
+
+    stats = {
+        'open_cases': my_cases.filter(status__in=['open', 'in_progress']).count(),
+        'escalated': my_cases.filter(status='escalated').count(),
+        'high_priority': my_cases.filter(
+            priority__in=['high', 'critical'], status__in=['open', 'in_progress', 'escalated']
+        ).count(),
+        'overdue_review': my_cases.filter(
+            next_review_date__lt=timezone.now().date(),
+            status__in=['open', 'in_progress']
+        ).count(),
+        'pending_bursary': BursaryApplication.objects.filter(
+            tenant=tenant, status='submitted'
+        ).count(),
+        'total_this_year': base_qs.count(),
+        'resolved_this_year': base_qs.filter(status__in=['resolved', 'closed']).count(),
+        'safeguarding': base_qs.filter(
+            involves_safeguarding=True, status__in=['open', 'in_progress', 'escalated']
+        ).count(),
+    }
+
+    # At-risk register
+    at_risk = AtRiskRegister.objects.filter(
+        tenant=tenant,
+        risk_score__gte=41,
+    ).select_related('student').order_by('-risk_score')[:10]
+
+    # High-priority open cases
+    urgent_cases = my_cases.filter(
+        priority__in=['high', 'critical'],
+        status__in=['open', 'in_progress', 'escalated']
+    ).select_related('student').order_by('-priority', '-created_at')[:8]
+
+    # Cases due for review
+    overdue_cases = my_cases.filter(
+        next_review_date__lte=timezone.now().date(),
+        status__in=['open', 'in_progress']
+    ).select_related('student').order_by('next_review_date')[:5]
+
+    # Recent sessions
+    recent_sessions = CounsellingSession.objects.filter(
+        welfare_case__tenant=tenant,
+        welfare_case__in=(my_cases if user_role == 'counsellor' else base_qs)
+    ).select_related('welfare_case__student').order_by('-session_date')[:5]
+
+    # Case type breakdown
+    type_breakdown = list(
+        my_cases.filter(status__in=['open', 'in_progress'])
+        .values('case_type')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:8]
+    )
+
+    context = {
+        'page_title': 'Counselling & Welfare',
+        'stats': stats,
+        'at_risk': at_risk,
+        'urgent_cases': urgent_cases,
+        'overdue_cases': overdue_cases,
+        'recent_sessions': recent_sessions,
+        'type_breakdown': type_breakdown,
+        'user_role': user_role,
+    }
+    return render(request, 'counselling/dashboard.html', context)
+
+
+# ──────────────────────────────────────────────────────────
+#  At-Risk Dashboard (counsellor + principal)
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def at_risk_dashboard(request):
+    tenant = get_tenant(request)
+
+    risk_qs = AtRiskRegister.objects.filter(tenant=tenant).select_related('student')
+
+    level_filter = request.GET.get('level', '')
+    actioned_filter = request.GET.get('actioned', '')
+    search = request.GET.get('q', '').strip()
+
+    if level_filter:
+        risk_qs = risk_qs.filter(risk_level=level_filter)
+    if actioned_filter == 'no':
+        risk_qs = risk_qs.filter(counsellor_actioned=False)
+    elif actioned_filter == 'yes':
+        risk_qs = risk_qs.filter(counsellor_actioned=True)
+    if search:
+        risk_qs = risk_qs.filter(
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search)
+        )
+
+    paginator = Paginator(risk_qs.order_by('-risk_score'), 30)
+    at_risk_students = paginator.get_page(request.GET.get('page', 1))
+
+    # Summary counts
+    counts = {
+        'critical': risk_qs.filter(risk_score__gte=71).count(),
+        'medium': risk_qs.filter(risk_score__gte=41, risk_score__lt=71).count(),
+        'low': risk_qs.filter(risk_score__lt=41).count(),
+        'unactioned': risk_qs.filter(counsellor_actioned=False, risk_score__gte=41).count(),
+    }
+
+    context = {
+        'page_title': 'At-Risk Student Register',
+        'at_risk_students': at_risk_students,
+        'counts': counts,
+        'filters': {
+            'level': level_filter,
+            'actioned': actioned_filter,
+            'q': search,
+        },
+        'user_role': getattr(request.user, 'role', ''),
+    }
+    return render(request, 'counselling/at_risk_dashboard.html', context)
+
+
+# ──────────────────────────────────────────────────────────
+#  Welfare Case List
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def case_list(request):
+    tenant = get_tenant(request)
+    user_role = getattr(request.user, 'role', '')
+
+    qs = WelfareCase.objects.filter(tenant=tenant).select_related(
+        'student', 'assigned_counsellor', 'term'
+    ).order_by('-created_at')
+
+    # Counsellors only see their own by default
+    if user_role == 'counsellor':
+        qs = qs.filter(
+            Q(assigned_counsellor=request.user) | Q(opened_by=request.user)
+        )
+
+    # Filters
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    type_filter = request.GET.get('case_type', '')
+    search = request.GET.get('q', '').strip()
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if priority_filter:
+        qs = qs.filter(priority=priority_filter)
+    if type_filter:
+        qs = qs.filter(case_type=type_filter)
+    if search:
+        qs = qs.filter(
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search) |
+            Q(reference_number__icontains=search) |
+            Q(title__icontains=search)
+        )
+
+    paginator = Paginator(qs, 25)
+    cases = paginator.get_page(request.GET.get('page', 1))
+
+    context = {
+        'page_title': 'Welfare Cases',
+        'cases': cases,
+        'status_choices': WelfareCase.STATUS_CHOICES,
+        'priority_choices': WelfareCase.PRIORITY_CHOICES,
+        'type_choices': WelfareCase.CASE_TYPE_CHOICES,
+        'filters': {
+            'status': status_filter,
+            'priority': priority_filter,
+            'case_type': type_filter,
+            'q': search,
+        },
+        'user_role': user_role,
+    }
+    return render(request, 'counselling/case_list.html', context)
+
+
+# ──────────────────────────────────────────────────────────
+#  Welfare Case Create
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def case_create(request):
+    tenant = get_tenant(request)
+
+    if request.method == 'POST':
+        form = WelfareCaseForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            case = form.save(commit=False)
+            case.tenant = tenant
+            case.opened_by = request.user
+            # Set current term
+            try:
+                from apps.discipline.utils import get_current_term, get_current_academic_year
+                term = get_current_term(tenant)
+                year = get_current_academic_year(tenant)
+                if term:
+                    case.term = term
+                if year:
+                    case.academic_year = year
+            except Exception:
+                pass
+            # Auto-assign to opener if they're a counsellor
+            if not case.assigned_counsellor and getattr(request.user, 'role', '') == 'counsellor':
+                case.assigned_counsellor = request.user
+                case.assigned_at = timezone.now()
+            case.save()
+            messages.success(request, f'Welfare case {case.reference_number} opened.')
+            return redirect('counselling:case_detail', pk=case.pk)
+    else:
+        # Pre-fill student from query param if provided
+        initial = {}
+        student_pk = request.GET.get('student')
+        if student_pk:
+            initial['student'] = student_pk
+        form = WelfareCaseForm(tenant=tenant, initial=initial)
+
+    context = {
+        'page_title': 'Open Welfare Case',
+        'form': form,
+    }
+    return render(request, 'counselling/case_form.html', context)
+
+
+# ──────────────────────────────────────────────────────────
+#  Welfare Case Detail
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def case_detail(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(
+        WelfareCase.objects.select_related(
+            'student', 'assigned_counsellor', 'opened_by',
+            'escalated_to', 'term', 'academic_year',
+        ),
+        pk=pk, tenant=tenant
+    )
+
+    sessions = case.sessions.select_related('conducted_by').order_by('-session_date')
+    actions = case.actions.select_related('completed_by').order_by('-action_date')
+    referrals = case.referrals.select_related('made_by').order_by('-referral_date')
+
+    # Bursary application if it exists
+    try:
+        bursary = case.bursary_application
+    except BursaryApplication.DoesNotExist:
+        bursary = None
+
+    # Linked discipline incidents
+    linked_incidents = case.linked_incidents.select_related('category').order_by('-incident_date')
+
+    # Student risk from register
+    try:
+        risk_entry = AtRiskRegister.objects.filter(student=case.student).latest('computed_at')
+    except AtRiskRegister.DoesNotExist:
+        risk_entry = None
+
+    # Inline forms
+    session_form = CounsellingSessionForm()
+    action_form = WelfareCaseActionForm()
+    referral_form = CounsellorReferralForm()
+    update_form = CaseUpdateForm(instance=case)
+    escalation_form = EscalationForm(instance=case)
+    principal_form = PrincipalResponseForm(instance=case)
+    resolution_form = ResolutionForm(instance=case)
+    bursary_form = BursaryApplicationForm() if not bursary else None
+    bursary_approval_form = BursaryApprovalForm(instance=bursary) if bursary else None
+
+    user_role = getattr(request.user, 'role', '')
+    can_manage = user_role in MANAGEMENT_ROLES or request.user.is_staff
+    is_counsellor = user_role == 'counsellor'
+
+    context = {
+        'page_title': f'Welfare Case {case.reference_number}',
+        'case': case,
+        'sessions': sessions,
+        'actions': actions,
+        'referrals': referrals,
+        'bursary': bursary,
+        'linked_incidents': linked_incidents,
+        'risk_entry': risk_entry,
+        'session_form': session_form,
+        'action_form': action_form,
+        'referral_form': referral_form,
+        'update_form': update_form,
+        'escalation_form': escalation_form,
+        'principal_form': principal_form,
+        'resolution_form': resolution_form,
+        'bursary_form': bursary_form,
+        'bursary_approval_form': bursary_approval_form,
+        'user_role': user_role,
+        'can_manage': can_manage,
+        'is_counsellor': is_counsellor,
+    }
+    return render(request, 'counselling/case_detail.html', context)
+
+
+# ──────────────────────────────────────────────────────────
+#  Add Session Note
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def add_session(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = CounsellingSessionForm(request.POST)
+        if form.is_valid():
+            session = form.save(commit=False)
+            session.welfare_case = case
+            session.conducted_by = request.user
+            session.save()
+
+            # Update case status and follow-up
+            updates = {}
+            if case.status == 'open':
+                updates['status'] = 'in_progress'
+            if session.follow_up_date:
+                updates['next_review_date'] = session.follow_up_date
+            if updates:
+                WelfareCase.objects.filter(pk=pk).update(**updates)
+
+            # Safeguarding escalation alert
+            if session.safeguarding_concern_raised:
+                _notify_principal_safeguarding(case, session)
+
+            messages.success(request, 'Session note saved.')
+        else:
+            messages.error(request, 'Please correct the form errors.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+def _notify_principal_safeguarding(case, session):
+    """Alert principal when a safeguarding concern is raised in a session."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        f'SAFEGUARDING CONCERN raised in welfare case {case.reference_number} '
+        f'by {session.conducted_by}. Immediate principal notification required.'
+    )
+    # In production: send email + push notification to principal
+
+
+# ──────────────────────────────────────────────────────────
+#  Add Case Action
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def add_action(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = WelfareCaseActionForm(request.POST)
+        if form.is_valid():
+            action = form.save(commit=False)
+            action.welfare_case = case
+            action.completed_by = request.user
+            action.save()
+            messages.success(request, 'Action recorded.')
+        else:
+            messages.error(request, 'Error recording action.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Add Referral
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def add_referral(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = CounsellorReferralForm(request.POST)
+        if form.is_valid():
+            referral = form.save(commit=False)
+            referral.welfare_case = case
+            referral.made_by = request.user
+            referral.save()
+
+            # Update case status
+            WelfareCase.objects.filter(pk=pk).update(status='pending_external')
+            messages.success(request, 'Referral recorded.')
+        else:
+            messages.error(request, 'Error recording referral.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Escalate to Principal
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def escalate_case(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = EscalationForm(request.POST, instance=case)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.escalated = True
+            updated.escalated_at = timezone.now()
+            updated.status = 'escalated'
+            # Try to assign to a principal user
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                principal = User.objects.filter(
+                    role='principal', profile__tenant=tenant
+                ).first() if hasattr(User, 'profile') else None
+                if principal:
+                    updated.escalated_to = principal
+            except Exception:
+                pass
+            updated.save()
+            messages.warning(request, f'Case {case.reference_number} escalated to principal.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Principal Response
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_management
+def principal_response(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = PrincipalResponseForm(request.POST, instance=case)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.principal_responded_at = timezone.now()
+            if case.status == 'escalated':
+                updated.status = 'in_progress'
+            updated.save()
+            messages.success(request, 'Principal response recorded. Case returned to counsellor.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Update Case Status
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def update_case(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = CaseUpdateForm(request.POST, instance=case)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Case updated.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Resolve Case
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def resolve_case(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = ResolutionForm(request.POST, instance=case)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.status = 'resolved'
+            updated.resolved_at = timezone.now()
+            updated.resolved_by = request.user
+            updated.save()
+            messages.success(request, f'Case {case.reference_number} resolved.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Bursary Application
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def create_bursary(request, pk):
+    tenant = get_tenant(request)
+    case = get_object_or_404(WelfareCase, pk=pk, tenant=tenant)
+
+    # Check if one already exists
+    if hasattr(case, 'bursary_application') and case.bursary_application:
+        messages.info(request, 'A bursary application already exists for this case.')
+        return redirect('counselling:case_detail', pk=pk)
+
+    if request.method == 'POST':
+        form = BursaryApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            bursary = form.save(commit=False)
+            bursary.welfare_case = case
+            bursary.student = case.student
+            bursary.tenant = tenant
+            bursary.submitted_by = request.user
+            bursary.submitted_at = timezone.now()
+            bursary.status = 'submitted'
+            # Set current term
+            try:
+                from apps.discipline.utils import get_current_term, get_current_academic_year
+                bursary.term = get_current_term(tenant)
+                bursary.academic_year = get_current_academic_year(tenant)
+            except Exception:
+                pass
+            bursary.save()
+            messages.success(request, 'Bursary application submitted for principal approval.')
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+@login_required
+@require_management
+def approve_bursary(request, pk, bursary_pk):
+    tenant = get_tenant(request)
+    bursary = get_object_or_404(BursaryApplication, pk=bursary_pk, tenant=tenant)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        form = BursaryApprovalForm(request.POST, instance=bursary)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.approved_by = request.user
+            updated.approved_at = timezone.now()
+            if action == 'approve':
+                updated.status = 'approved'
+                messages.success(request, f'Bursary approved: UGX {updated.amount_approved:,.0f}. Finance team will apply the credit.')
+            elif action == 'reject':
+                updated.status = 'rejected'
+                messages.info(request, 'Bursary application rejected.')
+            updated.save()
+
+    return redirect('counselling:case_detail', pk=pk)
+
+
+# ──────────────────────────────────────────────────────────
+#  Student Welfare History
+# ──────────────────────────────────────────────────────────
+
+@login_required
+@require_counsellor_access
+def student_welfare_history(request, student_pk):
+    from apps.students.models import Student
+    tenant = get_tenant(request)
+    student = get_object_or_404(Student, pk=student_pk, tenant=tenant)
+
+    cases = WelfareCase.objects.filter(student=student, tenant=tenant).select_related('assigned_counsellor', 'term')
+    bursaries = BursaryApplication.objects.filter(student=student, tenant=tenant)
+
+    try:
+        risk = AtRiskRegister.objects.filter(student=student).latest('computed_at')
+    except AtRiskRegister.DoesNotExist:
+        risk = None
+
+    context = {
+        'page_title': f'Welfare History — {student.first_name} {student.last_name}',
+        'student': student,
+        'cases': cases,
+        'bursaries': bursaries,
+        'risk': risk,
+        'user_role': getattr(request.user, 'role', ''),
+    }
+    return render(request, 'counselling/student_welfare_history.html', context)

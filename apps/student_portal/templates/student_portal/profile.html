@@ -1,0 +1,117 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Profile summary -->
+  <div class="col-lg-4">
+    <div class="portal-card p-4 text-center">
+      {% if student.photo %}
+      <img src="{{ student.photo.url }}" class="rounded-circle mb-3" width="90" height="90" style="object-fit:cover;">
+      {% else %}
+      <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle mx-auto mb-3"
+           style="width:90px;height:90px;font-size:2rem;font-weight:700;">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <h6 class="fw-bold mb-0">{{ request.user.get_full_name }}</h6>
+      <div class="text-muted" style="font-size:.8rem;">{{ student.student_id }}</div>
+      <div class="text-muted" style="font-size:.8rem;">{{ student.current_class }}</div>
+
+      <hr>
+      <div class="text-start" style="font-size:.8rem;">
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">NSIN</span><span class="fw-medium">{{ student.nsin|default:'—' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Date of Birth</span><span class="fw-medium">{{ student.date_of_birth|date:"d M Y"|default:'—' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Gender</span><span class="fw-medium">{{ student.get_gender_display|default:'—' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Admission Date</span><span class="fw-medium">{{ student.admission_date|date:"d M Y"|default:'—' }}</span>
+        </div>
+      </div>
+      <div class="alert alert-light mt-3 py-2" style="font-size:.7rem;border:1px solid #E5E9F0;">
+        <i class="bi bi-info-circle me-1"></i>
+        To update personal details (name, date of birth, gender), contact the school administration.
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="col-lg-8">
+
+    <!-- Contact info -->
+    <div class="portal-card p-4 mb-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Contact Information</h6>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Phone Number</label>
+            {{ form.phone }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Email Address</label>
+            {{ form.email }}
+          </div>
+        </div>
+
+        <h6 class="fw-bold mb-2 mt-4" style="font-size:.85rem;"><i class="bi bi-bell me-2 text-warning"></i>Notification Preferences</h6>
+        <div class="d-flex flex-column gap-2 mb-3">
+          <div class="form-check form-switch">
+            {{ form.notify_sms }}
+            <label class="form-check-label" style="font-size:.83rem;" for="{{ form.notify_sms.id_for_label }}">
+              SMS — critical alerts only (results, fees, absences)
+            </label>
+          </div>
+          <div class="form-check form-switch">
+            {{ form.notify_email }}
+            <label class="form-check-label" style="font-size:.83rem;" for="{{ form.notify_email.id_for_label }}">
+              Email — results, assignments, fee receipts, messages
+            </label>
+          </div>
+          <div class="form-check form-switch">
+            {{ form.notify_push }}
+            <label class="form-check-label" style="font-size:.83rem;" for="{{ form.notify_push.id_for_label }}">
+              Push notifications — all events (requires installed app)
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-floppy me-1"></i>Save Changes
+        </button>
+      </form>
+    </div>
+
+    <!-- Password change -->
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-shield-lock me-2 text-danger"></i>Change Password</h6>
+      <form method="post" action="#">
+        {% csrf_token %}
+        <div class="row g-3 mb-3">
+          <div class="col-sm-12">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Current Password</label>
+            <input type="password" name="current_password" class="form-control form-control-sm">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">New Password</label>
+            <input type="password" name="new_password" class="form-control form-control-sm" minlength="8">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Confirm New Password</label>
+            <input type="password" name="confirm_password" class="form-control form-control-sm" minlength="8">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-key me-1"></i>Update Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

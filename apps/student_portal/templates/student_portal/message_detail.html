@@ -1,0 +1,52 @@
+{% extends "student_portal/base.html" %}
+
+{% block page_actions %}
+<a href="{% url 'student_portal:messages' %}" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+  <i class="bi bi-arrow-left"></i> Back to Inbox
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <div class="portal-card p-4">
+      <div class="d-flex align-items-start justify-content-between mb-3 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+          <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+               style="width:44px;height:44px;background:#E0E7FF;color:#3730A3;font-weight:700;">
+            {{ message.sender.get_full_name|default:"AD"|slice:":1" }}
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:.9rem;">{{ message.sender.get_full_name|default:"School Administration" }}</div>
+            <div class="text-muted" style="font-size:.75rem;">{{ message.sent_at|date:"d M Y, H:i" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <h5 class="fw-bold mb-3">{{ message.subject }}</h5>
+      <div style="font-size:.85rem;line-height:1.7;white-space:pre-wrap;" class="text-secondary mb-4">
+        {{ message.body }}
+      </div>
+
+      {% if message.attachment_path %}
+      <a href="{{ message.attachment_path }}" target="_blank" class="d-inline-flex align-items-center gap-2 mb-4" style="font-size:.83rem;">
+        <i class="bi bi-paperclip"></i> View Attachment
+      </a>
+      {% endif %}
+
+      <!-- Reply -->
+      <form method="post" action="{% url 'student_portal:messages' %}" class="border-top pt-3">
+        {% csrf_token %}
+        <input type="hidden" name="subject" value="Re: {{ message.subject }}">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Reply</label>
+        <textarea name="body" class="form-control mb-2" rows="3" placeholder="Type your reply..."></textarea>
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-reply me-1"></i>Send Reply
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

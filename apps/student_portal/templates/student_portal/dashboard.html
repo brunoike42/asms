@@ -1,0 +1,212 @@
+{% extends "student_portal/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<!-- ── Enrollment alert banner ────────────────────────────────── -->
+{% if not enrollment or not enrollment.is_confirmed %}
+<div class="alert alert-warning d-flex align-items-center gap-3 py-2 mb-3" role="alert" style="border-radius:8px;">
+  <i class="bi bi-clipboard-exclamation fs-4 flex-shrink-0"></i>
+  <div>
+    <strong>Term enrollment is pending.</strong>
+    Confirm your enrollment for <strong>{{ term }}</strong> to generate your exam permit and register course units.
+    <a href="{% url 'student_portal:term_enrollment' %}" class="alert-link ms-1">Enroll now →</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── KPI row ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Attendance -->
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center h-100">
+      <div class="mb-1" style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6c757d;">Attendance</div>
+      <div class="mb-1">
+        <span style="font-size:2rem;font-weight:800;
+          color:{% if attendance_pct >= 80 %}#16A34A{% elif attendance_pct >= 60 %}#D97706{% else %}#DC2626{% endif %};">
+          {{ attendance_pct }}%
+        </span>
+      </div>
+      <div style="height:4px;background:#e9ecef;border-radius:2px;">
+        <div style="height:4px;width:{{ attendance_pct }}%;border-radius:2px;
+          background:{% if attendance_pct >= 80 %}#16A34A{% elif attendance_pct >= 60 %}#D97706{% else %}#DC2626{% endif %};"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fee balance -->
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center h-100">
+      <div class="mb-1" style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6c757d;">Fee Balance</div>
+      <div style="font-size:1.5rem;font-weight:800;color:{% if fee_balance > 0 %}#DC2626{% else %}#16A34A{% endif %};">
+        {% if fee_balance <= 0 %}
+          <i class="bi bi-check-circle me-1" style="font-size:1.2rem;"></i>Cleared
+        {% else %}
+          {{ fee_balance|intcomma }} UGX
+        {% endif %}
+      </div>
+      {% if fee_balance > 0 %}
+      <a href="{% url 'student_portal:fee_account' %}" class="btn btn-sm btn-warning mt-2" style="font-size:.72rem;">Pay Now</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Pending assignments -->
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center h-100">
+      <div class="mb-1" style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6c757d;">Pending Assignments</div>
+      <div style="font-size:2rem;font-weight:800;color:{% if pending_assignments > 3 %}#DC2626{% elif pending_assignments > 0 %}#D97706{% else %}#16A34A{% endif %};">
+        {{ pending_assignments }}
+      </div>
+      <a href="{% url 'student_portal:assignments' %}" style="font-size:.72rem;color:#6c757d;">View all →</a>
+    </div>
+  </div>
+
+  <!-- Class & term -->
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center h-100">
+      <div class="mb-1" style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6c757d;">Current Class</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#1B4F72;">{{ student.current_class }}</div>
+      <div style="font-size:.75rem;color:#6c757d;">{{ term|default:'—' }}</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Two-column row ──────────────────────────────────────────── -->
+<div class="row g-3">
+
+  <!-- TODAY'S TIMETABLE -->
+  <div class="col-lg-6">
+    <div class="portal-card h-100">
+      <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2 border-bottom">
+        <span class="fw-bold" style="font-size:.88rem;"><i class="bi bi-clock me-2 text-primary"></i>Today's Schedule</span>
+        <a href="{% url 'student_portal:timetable' %}" style="font-size:.75rem;color:#6c757d;">Full timetable →</a>
+      </div>
+      <div class="px-3 pb-2">
+        {% if today_timetable %}
+          {% for entry in today_timetable %}
+          <div class="d-flex align-items-center gap-3 py-2 border-bottom">
+            <div class="text-center" style="min-width:52px;">
+              <div style="font-size:.7rem;color:#6c757d;">{{ entry.start_time|time:"H:i" }}</div>
+              <div style="font-size:.7rem;color:#6c757d;">{{ entry.end_time|time:"H:i" }}</div>
+            </div>
+            <div>
+              <div class="fw-semibold" style="font-size:.84rem;">{{ entry.subject.name }}</div>
+              <div style="font-size:.72rem;color:#6c757d;">{{ entry.teacher }} · {{ entry.room|default:'—' }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-muted py-4" style="font-size:.82rem;">
+            <i class="bi bi-sun fs-3 d-block mb-2 text-warning"></i>
+            No classes scheduled for today.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- UPCOMING EVENTS + RECENT RESULTS -->
+  <div class="col-lg-6 d-flex flex-column gap-3">
+
+    <!-- Upcoming events -->
+    <div class="portal-card">
+      <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2 border-bottom">
+        <span class="fw-bold" style="font-size:.88rem;"><i class="bi bi-calendar-event me-2 text-danger"></i>Upcoming Events</span>
+        <a href="{% url 'student_portal:academic_calendar' %}" style="font-size:.75rem;color:#6c757d;">View calendar →</a>
+      </div>
+      <div class="px-3 pb-2">
+        {% if upcoming_events %}
+          {% for event in upcoming_events %}
+          <div class="d-flex align-items-center gap-2 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+            <div class="flex-shrink-0 text-center" style="min-width:38px;">
+              <div style="font-size:.7rem;color:#6c757d;text-transform:uppercase;">{{ event.start_date|date:"M" }}</div>
+              <div style="font-size:1.1rem;font-weight:800;line-height:1;color:#1B4F72;">{{ event.start_date|date:"d" }}</div>
+            </div>
+            <div>
+              <div style="font-size:.82rem;font-weight:600;">{{ event.title }}</div>
+              <div style="font-size:.7rem;color:#6c757d;">{{ event.get_event_type_display }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-muted py-3" style="font-size:.8rem;">No upcoming events this week.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent results -->
+    <div class="portal-card">
+      <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2 border-bottom">
+        <span class="fw-bold" style="font-size:.88rem;"><i class="bi bi-bar-chart me-2 text-success"></i>Recent Results</span>
+        <a href="{% url 'student_portal:results' %}" style="font-size:.75rem;color:#6c757d;">All results →</a>
+      </div>
+      <div class="px-3 pb-2">
+        {% if recent_results %}
+          {% for r in recent_results %}
+          <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom{% endif %}">
+            <div style="font-size:.82rem;font-weight:600;">{{ r.subject.name }}</div>
+            <div class="d-flex align-items-center gap-2">
+              <span style="font-size:.8rem;color:#6c757d;">{{ r.term }}</span>
+              <span class="badge {% if r.grade == 'A' or r.grade == 'D1' %}bg-success{% elif r.grade == 'F' or r.grade == 'D6' or r.grade == 'D7' or r.grade == 'D8' or r.grade == 'D9' %}bg-danger{% else %}bg-secondary{% endif %}"
+                    style="font-size:.7rem;">
+                {{ r.grade }} ({{ r.marks }})
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-muted py-3" style="font-size:.8rem;">No results available yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Quick action tiles ──────────────────────────────────────── -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="portal-card p-3">
+      <div class="mb-3 fw-bold" style="font-size:.82rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Quick Actions</div>
+      <div class="d-flex flex-wrap gap-2">
+
+        <a href="{% url 'student_portal:attendance' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-calendar-check"></i> Attendance
+        </a>
+        <a href="{% url 'student_portal:fee_account' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-cash-stack"></i> Pay Fees
+        </a>
+        <a href="{% url 'student_portal:transcript' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-file-earmark-text"></i> Transcript
+        </a>
+        <a href="{% url 'student_portal:exam_permit' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-ticket-detailed"></i> Exam Permit
+        </a>
+        <a href="{% url 'student_portal:library' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-book"></i> Library
+        </a>
+        <a href="{% url 'student_portal:messages' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-chat-dots"></i> Messages
+        </a>
+        <a href="{% url 'student_portal:documents' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-folder2"></i> My Documents
+        </a>
+        <a href="{% url 'student_portal:term_enrollment' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-clipboard-check"></i> Enrollment
+        </a>
+        <a href="{% url 'student_portal:exam_appeals' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-flag"></i> Appeals
+        </a>
+        <a href="{% url 'student_portal:academic_clearance' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-shield-check"></i> Clearance
+        </a>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

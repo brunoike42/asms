@@ -1,0 +1,148 @@
+{% extends "base/base.html" %}
+{% block title %}Welfare Cases | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Welfare Cases</h4>
+    <small class="text-muted">{{ cases.paginator.count }} case{{ cases.paginator.count|pluralize }}</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'counselling:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-grid me-1"></i> Dashboard
+    </a>
+    <a href="{% url 'counselling:case_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i> Open Case
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <input type="text" name="q" class="form-control form-control-sm"
+               placeholder="Student name or reference…" value="{{ filters.q }}">
+      </div>
+      <div class="col-md-2">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="priority" class="form-select form-select-sm">
+          <option value="">All Priorities</option>
+          {% for val, label in priority_choices %}
+          <option value="{{ val }}" {% if filters.priority == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="case_type" class="form-select form-select-sm">
+          <option value="">All Types</option>
+          {% for val, label in type_choices %}
+          <option value="{{ val }}" {% if filters.case_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Cases Table -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Reference</th>
+          <th>Student</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Counsellor</th>
+          <th>Days Open</th>
+          <th>Review Due</th>
+          <th>Flags</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for case in cases %}
+        <tr>
+          <td class="ps-3">
+            <a href="{% url 'counselling:case_detail' pk=case.pk %}"
+               class="fw-semibold text-decoration-none text-primary small">
+              {{ case.reference_number }}
+            </a>
+            {% if case.auto_opened %}
+            <span class="badge bg-secondary ms-1 small" title="Auto-opened by system">Auto</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'counselling:student_welfare_history' student_pk=case.student.pk %}"
+               class="text-decoration-none text-dark fw-semibold small">
+              {{ case.student.first_name }} {{ case.student.last_name }}
+            </a>
+          </td>
+          <td class="small">{{ case.get_case_type_display }}</td>
+          <td>
+            <span class="badge {{ case.get_priority_badge_class }}">{{ case.get_priority_display }}</span>
+          </td>
+          <td>
+            <span class="badge {{ case.get_status_badge_class }} small">{{ case.get_status_display }}</span>
+          </td>
+          <td class="small text-muted">
+            {% if case.assigned_counsellor %}
+              {{ case.assigned_counsellor.get_full_name|default:case.assigned_counsellor.username }}
+            {% else %}
+              <span class="text-danger">Unassigned</span>
+            {% endif %}
+          </td>
+          <td class="small text-center {% if case.days_open > 21 and case.is_open %}text-danger fw-bold{% else %}text-muted{% endif %}">
+            {{ case.days_open }}d
+          </td>
+          <td class="small {% if case.next_review_date and case.next_review_date < today %}text-danger fw-bold{% else %}text-muted{% endif %}">
+            {% if case.next_review_date %}{{ case.next_review_date|date:"d M" }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if case.involves_safeguarding %}<span class="badge bg-dark me-1 small" title="Safeguarding">SG</span>{% endif %}
+            {% if case.involves_self_harm_risk %}<span class="badge bg-danger me-1 small" title="Self-harm risk">SH</span>{% endif %}
+            {% if case.escalated %}<span class="badge bg-danger small" title="Escalated">ESC</span>{% endif %}
+          </td>
+          <td>
+            <a href="{% url 'counselling:case_detail' pk=case.pk %}"
+               class="btn btn-outline-primary btn-sm py-0 px-2">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="text-center text-muted py-5">
+            <i class="bi bi-heart fs-2 d-block mb-2 opacity-25"></i>
+            No welfare cases found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if cases.has_other_pages %}
+  <div class="card-footer border-0 bg-transparent">
+    <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if cases.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ cases.previous_page_number }}">Previous</a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ cases.number }} / {{ cases.paginator.num_pages }}</span></li>
+      {% if cases.has_next %}<li class="page-item"><a class="page-link" href="?page={{ cases.next_page_number }}">Next</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

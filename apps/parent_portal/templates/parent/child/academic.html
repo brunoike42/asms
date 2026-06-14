@@ -1,0 +1,167 @@
+{% extends "parent/base.html" %}
+{% block title %}Academic — {{ student.first_name }} | Parent Portal{% endblock %}
+
+{% block content %}
+
+<!-- Student header -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#0e9f6e);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;">
+    {{ student.first_name|first }}{{ student.last_name|first }}
+  </div>
+  <div>
+    <div style="font-weight:700;font-size:16px;">{{ student.first_name }} {{ student.last_name }}</div>
+    <div style="font-size:12px;color:var(--pp-muted);">Academic Overview{% if student.current_class %} · {{ student.current_class }}{% endif %}</div>
+  </div>
+</div>
+
+<!-- Performance radar chart (PowerSchool-inspired) -->
+{% if subject_labels %}
+<div class="pp-card">
+  <div class="pp-card-header">
+    <span class="pp-card-title">Subject Performance</span>
+    <span style="font-size:11px;color:var(--pp-muted);">Current term</span>
+  </div>
+  <canvas id="radarChart" height="220"></canvas>
+</div>
+{% endif %}
+
+<!-- Term trend chart (PowerSchool grade history) -->
+{% if term_history %}
+<div class="pp-card">
+  <div class="pp-card-header">
+    <span class="pp-card-title">Grade Trend</span>
+    <span style="font-size:11px;color:var(--pp-muted);">Last {{ term_history|length }} terms</span>
+  </div>
+  <canvas id="trendChart" height="140"></canvas>
+</div>
+{% endif %}
+
+<!-- Subject Results Table -->
+{% if results %}
+<div class="pp-section-label">Subject Results</div>
+<div class="pp-card">
+  {% for result in results %}
+  <div class="pp-list-item">
+    <div class="item-main">
+      <div class="item-title">
+        {% if result.subject %}{{ result.subject.name }}{% else %}{{ result }}{% endif %}
+      </div>
+      <div style="margin-top:5px;">
+        {% with marks=result.marks|default:0 %}
+        <div class="pp-progress">
+          <div class="pp-progress-bar"
+               style="width:{{ marks }}%;background:{% if marks >= 75 %}#0e9f6e{% elif marks >= 50 %}#e3a008{% else %}#e02424{% endif %};">
+          </div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+      {% with marks=result.marks|default:0 %}
+      <div style="font-size:20px;font-weight:800;color:{% if marks >= 75 %}#0e9f6e{% elif marks >= 50 %}#e3a008{% else %}#e02424{% endif %};">
+        {{ marks }}
+      </div>
+      <div style="font-size:10px;color:var(--pp-muted);">
+        {% if result.grade %}{{ result.grade }}{% endif %}
+      </div>
+      {% endwith %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="pp-card text-center py-4">
+  <i class="bi bi-journal-x" style="font-size:2.5rem;color:var(--pp-muted);display:block;margin-bottom:8px;"></i>
+  <div style="color:var(--pp-muted);font-size:13px;">No results available yet for this term.</div>
+</div>
+{% endif %}
+
+<!-- Quick links -->
+<div class="pp-section-label">More</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+  <a href="{% url 'parent:child_assignments' student_pk=student.pk %}"
+     class="pp-card text-decoration-none" style="display:flex;align-items:center;gap:10px;margin-bottom:0;">
+    <div style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-pencil-square" style="color:#1a56db;font-size:18px;"></i>
+    </div>
+    <div>
+      <div style="font-weight:600;font-size:13px;">Assignments</div>
+      <div style="font-size:11px;color:var(--pp-muted);">View & track</div>
+    </div>
+  </a>
+  <a href="{% url 'parent:child_documents' student_pk=student.pk %}"
+     class="pp-card text-decoration-none" style="display:flex;align-items:center;gap:10px;margin-bottom:0;">
+    <div style="width:36px;height:36px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-file-earmark-pdf-fill" style="color:#0e9f6e;font-size:18px;"></i>
+    </div>
+    <div>
+      <div style="font-weight:600;font-size:13px;">Documents</div>
+      <div style="font-size:11px;color:var(--pp-muted);">Report cards</div>
+    </div>
+  </a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+{% if subject_labels %}
+// Radar / spider chart — PowerSchool-inspired multi-subject view
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: {{ subject_labels|safe }},
+    datasets: [{
+      label: 'Score',
+      data: {{ subject_marks|safe }},
+      backgroundColor: 'rgba(26,86,219,0.15)',
+      borderColor: '#1a56db',
+      borderWidth: 2,
+      pointBackgroundColor: '#1a56db',
+      pointRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      r: {
+        min: 0, max: 100,
+        ticks: { stepSize: 25, font: { size: 10 } },
+        pointLabels: { font: { size: 11, weight: '600' } }
+      }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+{% endif %}
+
+{% if term_history %}
+// Grade trend line chart — PowerSchool performance history
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: [{% for t in term_history %}'{{ t.term }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+      label: 'Average',
+      data: [{% for t in term_history %}{{ t.average }}{% if not forloop.last %},{% endif %}{% endfor %}],
+      borderColor: '#1a56db',
+      backgroundColor: 'rgba(26,86,219,0.08)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#1a56db',
+      pointRadius: 5,
+      tension: 0.3,
+      fill: true,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 100, ticks: { stepSize: 25, font: { size: 10 } } },
+      x: { ticks: { font: { size: 10 } } }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

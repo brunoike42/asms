@@ -1,0 +1,98 @@
+{% extends "student_portal/base.html" %}
+
+{% block page_actions %}
+<a href="{% url 'student_portal:exam_appeal_new' %}" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+  <i class="bi bi-plus-lg"></i> Lodge New Appeal
+</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="portal-card mb-3 p-3" style="border-left:4px solid #2563EB;background:#EFF6FF;">
+  <div style="font-size:.8rem;color:#1e40af;">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>About Exam Appeals:</strong>
+    Submit a formal request if you believe your result contains a clerical error, a missing mark, or requires a re-mark.
+    Appeals are reviewed by the Academic Registrar within <strong>10 working days</strong>.
+    You will be notified of the outcome via the portal and SMS.
+  </div>
+</div>
+
+{% if appeals %}
+<div class="portal-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+      <thead style="background:#F8FAFC;">
+        <tr>
+          <th class="ps-4">Reference</th>
+          <th>Subject</th>
+          <th>Term</th>
+          <th>Type</th>
+          <th>Original</th>
+          <th>Revised</th>
+          <th>Status</th>
+          <th>Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appeal in appeals %}
+        <tr>
+          <td class="ps-4">
+            <span class="fw-mono fw-semibold" style="font-size:.78rem;">{{ appeal.reference_number }}</span>
+          </td>
+          <td class="fw-medium">{{ appeal.subject.name }}</td>
+          <td class="text-muted">{{ appeal.term }}</td>
+          <td>
+            <span class="badge bg-secondary" style="font-size:.68rem;">
+              {{ appeal.get_appeal_type_display }}
+            </span>
+          </td>
+          <td class="text-center">{{ appeal.original_marks|default:'—' }}</td>
+          <td class="text-center fw-bold"
+              style="color:{% if appeal.revised_marks and appeal.revised_marks > appeal.original_marks %}#16A34A{% elif appeal.revised_marks %}#DC2626{% else %}#6c757d{% endif %};">
+            {{ appeal.revised_marks|default:'—' }}
+          </td>
+          <td>
+            {% if appeal.status == 'submitted' %}
+              <span class="badge bg-secondary" style="font-size:.68rem;">Submitted</span>
+            {% elif appeal.status == 'acknowledged' %}
+              <span class="badge bg-info" style="font-size:.68rem;">Acknowledged</span>
+            {% elif appeal.status == 'under_review' %}
+              <span class="badge bg-warning text-dark" style="font-size:.68rem;">Under Review</span>
+            {% elif appeal.status == 'resolved' %}
+              <span class="badge bg-success" style="font-size:.68rem;">Resolved</span>
+            {% elif appeal.status == 'rejected' %}
+              <span class="badge bg-danger" style="font-size:.68rem;">Rejected</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.75rem;">{{ appeal.submitted_at|date:"d M Y" }}</td>
+        </tr>
+        {% if appeal.admin_response %}
+        <tr style="background:#FAFAFA;">
+          <td colspan="8" class="ps-4 pe-4 py-2">
+            <div style="font-size:.75rem;color:#374151;">
+              <strong>Registrar's Response:</strong> {{ appeal.admin_response }}
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-flag fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No appeals submitted yet</div>
+  <div style="font-size:.82rem;" class="mb-3">
+    If you have a concern about an exam result, lodge a formal appeal.
+  </div>
+  <a href="{% url 'student_portal:exam_appeal_new' %}" class="btn btn-sm btn-primary">
+    Lodge Your First Appeal
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

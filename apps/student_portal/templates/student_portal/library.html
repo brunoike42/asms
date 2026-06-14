@@ -1,0 +1,126 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+<!-- Tabs -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="?tab=borrowed" class="btn btn-sm {% if tab == 'borrowed' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-journal-bookmark me-1"></i>Currently Borrowed
+    {% if borrowed %}<span class="badge bg-light text-dark ms-1">{{ borrowed|length }}</span>{% endif %}
+  </a>
+  <a href="?tab=history" class="btn btn-sm {% if tab == 'history' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-clock-history me-1"></i>History
+  </a>
+  <a href="?tab=catalogue" class="btn btn-sm {% if tab == 'catalogue' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-search me-1"></i>Browse Catalogue
+  </a>
+</div>
+
+{% if tab == 'catalogue' %}
+<!-- Search bar -->
+<form method="get" class="mb-3">
+  <input type="hidden" name="tab" value="catalogue">
+  <div class="input-group input-group-sm" style="max-width:420px;">
+    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+    <input type="text" name="q" value="{{ query }}" class="form-control"
+           placeholder="Search by title, author, or ISBN...">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </div>
+</form>
+
+<div class="portal-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+      <thead style="background:#F8FAFC;">
+        <tr><th class="ps-4">Title</th><th>Author</th><th>Category</th><th class="text-center">Copies</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for book in catalogue %}
+        <tr>
+          <td class="ps-4 fw-medium">{{ book.title }}</td>
+          <td class="text-muted">{{ book.author }}</td>
+          <td><span class="badge bg-secondary" style="font-size:.68rem;">{{ book.category|default:'General' }}</span></td>
+          <td class="text-center">{{ book.available_copies }}/{{ book.total_copies }}</td>
+          <td class="text-end pe-4">
+            {% if book.available_copies > 0 %}
+            <button class="btn btn-sm btn-outline-primary" style="font-size:.7rem;padding:.15rem .5rem;">Reserve</button>
+            {% else %}
+            <span class="text-muted" style="font-size:.72rem;">Unavailable</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-5">No books found{% if query %} for "{{ query }}"{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if catalogue.paginator.num_pages > 1 %}
+<nav class="mt-3 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    {% if catalogue.has_previous %}
+    <li class="page-item"><a class="page-link" href="?tab=catalogue&q={{ query }}&page={{ catalogue.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item active"><span class="page-link">{{ catalogue.number }} / {{ catalogue.paginator.num_pages }}</span></li>
+    {% if catalogue.has_next %}
+    <li class="page-item"><a class="page-link" href="?tab=catalogue&q={{ query }}&page={{ catalogue.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% elif tab == 'history' %}
+<div class="portal-card">
+  {% for record in history %}
+  <div class="d-flex align-items-center gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <i class="bi bi-book text-muted flex-shrink-0"></i>
+    <div class="flex-grow-1">
+      <div class="fw-medium" style="font-size:.83rem;">{{ record.book.title }}</div>
+      <div class="text-muted" style="font-size:.72rem;">by {{ record.book.author }}</div>
+    </div>
+    <div class="text-end" style="font-size:.75rem;color:#6c757d;">
+      Returned {{ record.returned_at|date:"d M Y" }}
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center text-muted py-5" style="font-size:.82rem;">No borrowing history yet.</div>
+  {% endfor %}
+</div>
+
+{% else %}
+<!-- Borrowed -->
+<div class="portal-card">
+  {% for record in borrowed %}
+  <div class="d-flex align-items-center gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+         style="width:40px;height:40px;background:{% if record.is_overdue %}#FEE2E2{% else %}#DBEAFE{% endif %};">
+      <i class="bi bi-book {% if record.is_overdue %}text-danger{% else %}text-primary{% endif %}"></i>
+    </div>
+    <div class="flex-grow-1">
+      <div class="fw-semibold" style="font-size:.83rem;">{{ record.book.title }}</div>
+      <div class="text-muted" style="font-size:.72rem;">by {{ record.book.author }} · {{ record.book.isbn }}</div>
+    </div>
+    <div class="text-end">
+      <div style="font-size:.78rem;font-weight:600;color:{% if record.is_overdue %}#DC2626{% else %}#374151{% endif %};">
+        Due {{ record.due_date|date:"d M Y" }}
+      </div>
+      {% if record.is_overdue %}
+      <div style="font-size:.7rem;color:#DC2626;">
+        Overdue · Fine: {{ record.fine_amount|default:0 }} UGX
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
+    <div class="fw-semibold">No books currently borrowed</div>
+    <a href="?tab=catalogue" class="btn btn-sm btn-outline-primary mt-2">Browse Catalogue</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

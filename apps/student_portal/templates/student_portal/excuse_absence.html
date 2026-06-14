@@ -1,0 +1,50 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+
+    <div class="portal-card mb-3 p-3" style="border-left:4px solid #2563EB;background:#EFF6FF;">
+      <div style="font-size:.8rem;color:#1e40af;">
+        <i class="bi bi-info-circle me-1"></i>
+        Use this form to explain an absence to your class teacher. Excuses are reviewed and may require
+        a parent/guardian follow-up for extended absences.
+      </div>
+    </div>
+
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-3">Submit Absence Excuse</h6>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Date of Absence</label>
+          {{ form.date }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Reason for Absence</label>
+          {{ form.reason }}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">
+            Supporting Document
+            <span class="text-muted fw-normal">(e.g. medical note — optional)</span>
+          </label>
+          {{ form.attachment }}
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'student_portal:attendance' %}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-send me-1"></i>Submit Excuse
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

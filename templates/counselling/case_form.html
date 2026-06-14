@@ -1,0 +1,159 @@
+{% extends "base/base.html" %}
+{% block title %}Open Welfare Case | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">Open Welfare Case</h4>
+  <a href="{% url 'counselling:case_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+<div class="alert alert-info border-0 mb-4 py-2 small">
+  <i class="bi bi-lock me-2"></i>
+  <strong>Confidential:</strong> Welfare case details are visible to the assigned counsellor and principal only.
+  Student and parent see only that a case is open — not the content.
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+
+      <!-- Core Case Info -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0 pb-0">
+          <h6 class="fw-semibold text-muted mb-0">1. Case Details</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Student <span class="text-danger">*</span></label>
+              {{ form.student }}
+              {% if form.student.errors %}<div class="text-danger small">{{ form.student.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Case Type <span class="text-danger">*</span></label>
+              {{ form.case_type }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Title <span class="text-danger">*</span></label>
+              {{ form.title }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Description <span class="text-danger">*</span></label>
+              {{ form.description }}
+              <div class="form-text">Confidential. Summarise the presenting situation and relevant background.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assignment & Priority -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0 pb-0">
+          <h6 class="fw-semibold text-muted mb-0">2. Priority & Assignment</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Priority</label>
+              {{ form.priority }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">How was this case triggered?</label>
+              {{ form.trigger }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Assign Counsellor</label>
+              {{ form.assigned_counsellor }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parent & Consent -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0 pb-0">
+          <h6 class="fw-semibold text-muted mb-0">3. Parent Engagement & Consent</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="form-check mb-2">
+                {{ form.parent_informed }}
+                <label class="form-check-label small fw-semibold">Parent / Guardian Informed</label>
+              </div>
+              {{ form.parent_informed_how }}
+              <div class="form-text">How was the parent informed?</div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check mb-2">
+                {{ form.parent_meeting_scheduled }}
+                <label class="form-check-label small fw-semibold">Parent Meeting Scheduled</label>
+              </div>
+              {{ form.parent_meeting_date }}
+              <div class="form-text">Meeting date (if scheduled)</div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check">
+                {{ form.student_consent_given }}
+                <label class="form-check-label small">Student has given consent</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check">
+                {{ form.parent_consent_given }}
+                <label class="form-check-label small">Parent / Guardian has given consent</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-4">
+
+      <div class="card border-0 shadow-sm mb-4 border-top border-4 border-danger">
+        <div class="card-header bg-transparent border-0 pb-0">
+          <h6 class="fw-semibold mb-0 text-danger"><i class="bi bi-shield-exclamation me-2"></i>Safeguarding Flags</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">Check these only if they apply. Flagged cases are immediately visible to the principal.</p>
+          <div class="form-check mb-2">
+            {{ form.involves_safeguarding }}
+            <label class="form-check-label small fw-semibold">Safeguarding Concern</label>
+          </div>
+          <div class="form-check mb-2">
+            {{ form.involves_abuse }}
+            <label class="form-check-label small fw-semibold">Abuse Concern</label>
+          </div>
+          <div class="form-check">
+            {{ form.involves_self_harm_risk }}
+            <label class="form-check-label small fw-semibold">Self-Harm Risk</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label fw-semibold small">Next Review Date</label>
+            {{ form.next_review_date }}
+          </div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-folder-plus me-2"></i> Open Welfare Case
+        </button>
+        <a href="{% url 'counselling:case_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </div>
+  </div>
+</form>
+{% endblock %}

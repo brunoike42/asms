@@ -1,0 +1,180 @@
+{% extends "parent/base.html" %}
+{% block title %}Home | Parent Portal{% endblock %}
+
+{% block content %}
+
+{% for child in children_data %}
+{% with s=child.student stats=child.stats %}
+
+<!-- Child Card -->
+<div class="pp-card">
+  <div class="pp-card-header">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#0e9f6e);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;">
+        {{ s.first_name|first }}{{ s.last_name|first }}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:15px;">{{ s.first_name }} {{ s.last_name }}</div>
+        <div style="font-size:12px;color:var(--pp-muted);">
+          {% if s.current_class %}{{ s.current_class }}{% endif %}
+        </div>
+      </div>
+    </div>
+    <a href="{% url 'parent:child_academic' student_pk=s.pk %}" class="pp-badge blue">
+      View All <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="stat-row mb-3">
+    <div class="stat-pill {% if stats.attendance_pct and stats.attendance_pct < 70 %}red{% elif stats.attendance_pct and stats.attendance_pct < 85 %}amber{% else %}green{% endif %}">
+      <div class="val">{% if stats.attendance_pct %}{{ stats.attendance_pct }}%{% else %}—{% endif %}</div>
+      <div class="lbl">Attendance</div>
+    </div>
+    <div class="stat-pill {% if stats.open_incidents > 0 %}red{% else %}green{% endif %}">
+      <div class="val">{{ stats.open_incidents }}</div>
+      <div class="lbl">Open Incidents</div>
+    </div>
+    <div class="stat-pill {% if stats.outstanding_fees > 0 %}amber{% else %}green{% endif %}">
+      <div class="val">{% if stats.outstanding_fees > 0 %}!{% else %}✓{% endif %}</div>
+      <div class="lbl">Fees</div>
+    </div>
+    <div class="stat-pill blue">
+      <div class="val">{{ stats.pending_assignments }}</div>
+      <div class="lbl">Assignments</div>
+    </div>
+  </div>
+
+  <!-- Risk alert (only shown for medium/high risk) -->
+  {% if stats.risk_level == 'high' %}
+  <div class="pp-alert urgent mb-3">
+    <i class="bi bi-exclamation-triangle-fill" style="font-size:18px;flex-shrink:0;"></i>
+    <div>
+      <strong>Urgent attention needed</strong> for {{ s.first_name }}.
+      The school welfare team has been alerted. Please contact us.
+    </div>
+  </div>
+  {% elif stats.risk_level == 'medium' %}
+  <div class="pp-alert warning mb-3">
+    <i class="bi bi-info-circle-fill" style="font-size:18px;flex-shrink:0;"></i>
+    <div>{{ s.first_name }} needs some support. Please check the details below or contact the school.</div>
+  </div>
+  {% endif %}
+
+  <!-- Outstanding fees alert -->
+  {% if stats.outstanding_fees > 0 %}
+  <div class="pp-alert warning mb-3">
+    <i class="bi bi-cash-stack" style="font-size:18px;flex-shrink:0;"></i>
+    <div>
+      <strong>UGX {{ stats.outstanding_fees|floatformat:0 }}</strong> outstanding fees.
+      <a href="{% url 'parent:child_fees' student_pk=s.pk %}" style="color:inherit;font-weight:700;">
+        Pay now →
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick action buttons -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'parent:child_academic' student_pk=s.pk %}"
+       style="flex:1;min-width:80px;background:#eff6ff;border-radius:8px;padding:10px;text-align:center;text-decoration:none;color:#1e40af;font-size:11px;font-weight:600;">
+      <i class="bi bi-mortarboard-fill d-block mb-1" style="font-size:18px;"></i>Academic
+    </a>
+    <a href="{% url 'parent:child_attendance' student_pk=s.pk %}"
+       style="flex:1;min-width:80px;background:#f0fdf4;border-radius:8px;padding:10px;text-align:center;text-decoration:none;color:#166534;font-size:11px;font-weight:600;">
+      <i class="bi bi-calendar-check-fill d-block mb-1" style="font-size:18px;"></i>Attendance
+    </a>
+    <a href="{% url 'parent:child_fees' student_pk=s.pk %}"
+       style="flex:1;min-width:80px;background:#fffbeb;border-radius:8px;padding:10px;text-align:center;text-decoration:none;color:#92400e;font-size:11px;font-weight:600;">
+      <i class="bi bi-credit-card-fill d-block mb-1" style="font-size:18px;"></i>Fees
+    </a>
+    <a href="{% url 'parent:child_behaviour' student_pk=s.pk %}"
+       style="flex:1;min-width:80px;background:#fef2f2;border-radius:8px;padding:10px;text-align:center;text-decoration:none;color:#991b1b;font-size:11px;font-weight:600;">
+      <i class="bi bi-shield-fill d-block mb-1" style="font-size:18px;"></i>Behaviour
+    </a>
+  </div>
+</div>
+
+{% endwith %}
+{% empty %}
+<div class="pp-card text-center py-4">
+  <i class="bi bi-person-x" style="font-size:2.5rem;color:var(--pp-muted);display:block;margin-bottom:8px;"></i>
+  <div style="font-weight:600;">No children linked to your account</div>
+  <div style="font-size:12px;color:var(--pp-muted);margin-top:4px;">
+    Contact the school office to link your account to your child's record.
+  </div>
+</div>
+{% endfor %}
+
+<!-- Upcoming Meetings -->
+{% if upcoming_meetings %}
+<div class="pp-section-label">Upcoming Meetings</div>
+<div class="pp-card">
+  {% for meeting in upcoming_meetings %}
+  <div class="pp-list-item">
+    <div style="width:40px;height:40px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-calendar-event-fill" style="color:#1a56db;font-size:18px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ meeting.get_meeting_type_display }}</div>
+      <div class="item-sub">
+        {{ meeting.student.first_name }} ·
+        {{ meeting.preferred_date|date:"d M" }} at {{ meeting.preferred_time|time:"H:i" }}
+        {% if meeting.teacher %}· with {{ meeting.teacher.get_full_name }}{% endif %}
+      </div>
+    </div>
+    <span class="pp-badge {% if meeting.status == 'confirmed' %}green{% else %}amber{% endif %}">
+      {{ meeting.get_status_display }}
+    </span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pending Consent Forms (FamilyID-inspired) -->
+{% if pending_consents %}
+<div class="pp-section-label">Action Required</div>
+{% for item in pending_consents %}
+<div class="pp-alert info">
+  <i class="bi bi-pen-fill" style="font-size:18px;flex-shrink:0;"></i>
+  <div>
+    <strong>{{ item.form.title }}</strong> — for {{ item.student.first_name }}.
+    Due {{ item.form.deadline|date:"d M" }}.
+    <div style="margin-top:4px;">
+      <a href="#consent-{{ item.form.pk }}" style="color:inherit;font-weight:700;font-size:12px;">
+        Sign consent form →
+      </a>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Recent Notifications -->
+{% if notifications %}
+<div class="pp-section-label">Recent Alerts</div>
+<div class="pp-card">
+  {% for notif in notifications|slice:":5" %}
+  <div class="feed-item">
+    <div class="feed-icon {% if notif.is_urgent %}bg-danger bg-opacity-10{% elif notif.category == 'merit' %}bg-success bg-opacity-10{% elif notif.category == 'finance' %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
+      {% if notif.category == 'attendance' %}<i class="bi bi-calendar-x" style="color:#e02424;"></i>
+      {% elif notif.category == 'academic' %}<i class="bi bi-mortarboard-fill" style="color:#1a56db;"></i>
+      {% elif notif.category == 'behaviour' %}<i class="bi bi-shield-exclamation" style="color:#e02424;"></i>
+      {% elif notif.category == 'merit' %}<i class="bi bi-award-fill" style="color:#0e9f6e;"></i>
+      {% elif notif.category == 'finance' %}<i class="bi bi-cash-stack" style="color:#e3a008;"></i>
+      {% else %}<i class="bi bi-bell-fill" style="color:#1a56db;"></i>{% endif %}
+    </div>
+    <div class="feed-content flex-grow-1">
+      <div class="feed-title">{{ notif.title }}</div>
+      <div class="feed-body">{{ notif.body|truncatechars:80 }}</div>
+      <div class="feed-time">{{ notif.created_at|timesince }} ago</div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="text-center mt-2">
+    <a href="{% url 'parent:notifications' %}" class="pp-card-link">View all notifications →</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

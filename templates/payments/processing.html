@@ -1,0 +1,88 @@
+{% extends "base/base.html" %}
+{% block title %}Processing Payment | ASMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-lg-5 col-md-7">
+    <div class="card border-0 shadow text-center p-4">
+
+      <!-- Animated spinner -->
+      <div class="mb-4">
+        <div class="position-relative d-inline-block">
+          <div class="spinner-border text-primary" style="width:3.5rem;height:3.5rem;" role="status">
+            <span class="visually-hidden">Processing…</span>
+          </div>
+          <i class="bi bi-phone position-absolute top-50 start-50 translate-middle fs-4 text-primary"></i>
+        </div>
+      </div>
+
+      <h5 class="fw-bold mb-2">Waiting for Payment Confirmation</h5>
+      <p class="text-muted small mb-4">
+        Check your phone for a <strong>USSD prompt</strong> from MTN or Airtel.<br>
+        Enter your Mobile Money PIN to confirm the payment.<br>
+        This page updates automatically.
+      </p>
+
+      <!-- Amount reminder -->
+      <div class="p-3 bg-light rounded mb-4">
+        <div class="text-muted small mb-1">Amount</div>
+        <div class="fw-bold fs-4">UGX {{ txn.amount|floatformat:0 }}</div>
+        <div class="small text-muted">Ref: {{ txn.merchant_reference }}</div>
+      </div>
+
+      <!-- Status badge (updated by JS) -->
+      <div id="statusBadge" class="mb-3">
+        <span class="badge bg-warning text-dark px-3 py-2">
+          <i class="bi bi-clock me-1"></i> Awaiting confirmation…
+        </span>
+      </div>
+
+      <div class="text-muted small mb-4" id="statusMsg">
+        Polling for payment status every 5 seconds…
+      </div>
+
+      <a href="{% url 'finance:invoice_detail' pk=txn.invoice_id %}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to Invoice
+      </a>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const checkUrl = "{% url 'payments:check_status' pk=txn.pk %}";
+let pollCount = 0;
+const maxPolls = 60; // poll for up to 5 minutes
+
+function pollStatus() {
+  fetch(checkUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(r => r.json())
+    .then(data => {
+      pollCount++;
+      if (data.redirect_url) {
+        // Payment resolved — go to result page
+        document.getElementById('statusMsg').textContent = 'Redirecting…';
+        window.location.href = data.redirect_url;
+        return;
+      }
+      if (pollCount >= maxPolls) {
+        document.getElementById('statusBadge').innerHTML =
+          '<span class="badge bg-secondary px-3 py-2">Timed out — check your invoice for status</span>';
+        document.getElementById('statusMsg').textContent = '';
+        return;
+      }
+      // Still pending — poll again
+      setTimeout(pollStatus, 5000);
+    })
+    .catch(() => {
+      if (pollCount < maxPolls) setTimeout(pollStatus, 5000);
+    });
+}
+
+// Start polling after 3 seconds (give PesaPal a moment)
+setTimeout(pollStatus, 3000);
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "parent/base.html" %}
+{% block title %}Notifications | Parent Portal{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div style="font-weight:700;font-size:16px;">Notifications</div>
+  <form method="post" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" name="action" value="mark_all_read"
+            style="background:none;border:none;color:#1a56db;font-size:12px;font-weight:600;cursor:pointer;padding:0;">
+      Mark all read
+    </button>
+  </form>
+</div>
+
+{% for notif in notifs %}
+<div class="pp-card" style="{% if not notif.is_read %}border-left:3px solid #1a56db;{% endif %}padding:12px 14px;margin-bottom:8px;">
+  <div style="display:flex;gap:10px;align-items:flex-start;">
+    <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                background:{% if notif.category == 'behaviour' %}#fee2e2{% elif notif.category == 'merit' %}#fef3c7{% elif notif.category == 'finance' %}#f0fdf4{% else %}#eff6ff{% endif %};">
+      {% if notif.category == 'attendance' %}<i class="bi bi-calendar-x-fill" style="color:#e02424;"></i>
+      {% elif notif.category == 'academic' %}<i class="bi bi-mortarboard-fill" style="color:#1a56db;"></i>
+      {% elif notif.category == 'behaviour' %}<i class="bi bi-shield-exclamation" style="color:#e02424;"></i>
+      {% elif notif.category == 'merit' %}<i class="bi bi-award-fill" style="color:#e3a008;"></i>
+      {% elif notif.category == 'finance' %}<i class="bi bi-cash-stack" style="color:#0e9f6e;"></i>
+      {% elif notif.category == 'meeting' %}<i class="bi bi-calendar-event-fill" style="color:#1a56db;"></i>
+      {% else %}<i class="bi bi-bell-fill" style="color:#6b7280;"></i>{% endif %}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:{% if not notif.is_read %}700{% else %}500{% endif %};font-size:13px;">{{ notif.title }}</div>
+      <div style="font-size:12px;color:var(--pp-muted);margin-top:2px;">{{ notif.body }}</div>
+      <div style="font-size:11px;color:var(--pp-muted);margin-top:4px;">
+        {% if notif.student %}{{ notif.student.first_name }} · {% endif %}
+        {{ notif.created_at|timesince }} ago
+      </div>
+    </div>
+    {% if notif.is_urgent %}<span style="color:#e02424;flex-shrink:0;"><i class="bi bi-exclamation-circle-fill"></i></span>{% endif %}
+  </div>
+</div>
+{% empty %}
+<div class="pp-card text-center py-5">
+  <i class="bi bi-bell-slash" style="font-size:2.5rem;color:var(--pp-muted);display:block;margin-bottom:8px;"></i>
+  <div style="font-weight:600;margin-bottom:4px;">All caught up!</div>
+  <div style="font-size:12px;color:var(--pp-muted);">No notifications yet.</div>
+</div>
+{% endfor %}
+
+{% if notifs.has_other_pages %}
+<div style="display:flex;justify-content:center;gap:8px;margin-top:8px;">
+  {% if notifs.has_previous %}
+  <a href="?page={{ notifs.previous_page_number }}" class="pp-badge blue">← Previous</a>
+  {% endif %}
+  <span style="font-size:12px;color:var(--pp-muted);align-self:center;">{{ notifs.number }}/{{ notifs.paginator.num_pages }}</span>
+  {% if notifs.has_next %}
+  <a href="?page={{ notifs.next_page_number }}" class="pp-badge blue">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

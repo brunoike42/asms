@@ -1,0 +1,120 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+{% if not transport_info %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-bus-front fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No transport assignment</div>
+  <div style="font-size:.82rem;">
+    You are not currently registered for school transport.
+    Contact the school administration to request a route assignment.
+  </div>
+</div>
+
+{% else %}
+<div class="row g-3">
+
+  <!-- Route card -->
+  <div class="col-lg-5">
+    <div class="portal-card overflow-hidden">
+      <div style="background:linear-gradient(135deg,#1B4F72 0%,#2E86C1 100%);padding:1.25rem;color:#fff;">
+        <div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em;">Assigned Route</div>
+        <div style="font-size:1.3rem;font-weight:800;margin-top:.2rem;">{{ transport_info.route.name }}</div>
+      </div>
+      <div class="p-4">
+        <div class="d-flex flex-column gap-3">
+
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                 style="width:38px;height:38px;background:#DBEAFE;">
+              <i class="bi bi-bus-front text-primary"></i>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Bus Number</div>
+              <div class="fw-bold" style="font-size:.9rem;">{{ transport_info.bus.number_plate|default:transport_info.bus.name }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                 style="width:38px;height:38px;background:#D1FAE5;">
+              <i class="bi bi-geo-alt text-success"></i>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Pick-up / Drop-off Stop</div>
+              <div class="fw-bold" style="font-size:.9rem;">{{ transport_info.stop.name }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                 style="width:38px;height:38px;background:#FEF3C7;">
+              <i class="bi bi-clock text-warning"></i>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Scheduled Times</div>
+              <div class="fw-bold" style="font-size:.9rem;">
+                Pick-up {{ transport_info.pickup_time|default:"—" }} · Drop-off {{ transport_info.dropoff_time|default:"—" }}
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                 style="width:38px;height:38px;background:#E0E7FF;">
+              <i class="bi bi-person text-indigo" style="color:#3730A3;"></i>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Driver Contact</div>
+              <div class="fw-bold" style="font-size:.9rem;">{{ transport_info.bus.driver_name|default:"—" }}</div>
+              {% if transport_info.bus.driver_phone %}
+              <a href="tel:{{ transport_info.bus.driver_phone }}" style="font-size:.8rem;">{{ transport_info.bus.driver_phone }}</a>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS map -->
+  <div class="col-lg-7">
+    <div class="portal-card h-100">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-geo-alt-fill text-danger"></i> Live Bus Location
+      </div>
+      {% if transport_info.bus.gps_enabled %}
+      <div id="busMap" style="height:380px;border-radius:0 0 10px 10px;"></div>
+      {% else %}
+      <div class="d-flex flex-column align-items-center justify-content-center text-center text-muted py-5" style="min-height:300px;">
+        <i class="bi bi-broadcast-pin fs-1 d-block mb-2"></i>
+        <div class="fw-semibold">GPS tracking not enabled for this bus</div>
+        <div style="font-size:.8rem;max-width:320px;">
+          Your school has not yet enabled live GPS tracking for this vehicle.
+          Contact the transport office for schedule information.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if transport_info.bus.gps_enabled %}
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_KEY"></script>
+<script>
+function initMap() {
+  const bus = { lat: {{ transport_info.bus.last_lat|default:'0.3476' }}, lng: {{ transport_info.bus.last_lng|default:'32.5825' }} };
+  const map = new google.maps.Map(document.getElementById("busMap"), { zoom: 13, center: bus });
+  new google.maps.Marker({ position: bus, map, title: "{{ transport_info.bus.number_plate }}" });
+}
+window.addEventListener('load', initMap);
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base/base.html" %}
+{% block title %}Payment Failed | ASMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-lg-5 col-md-7">
+    <div class="card border-0 shadow text-center p-4">
+
+      <div class="mb-3">
+        <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center"
+             style="width:80px;height:80px;">
+          <i class="bi bi-x-circle-fill text-danger" style="font-size:2.5rem;"></i>
+        </div>
+      </div>
+
+      <h4 class="fw-bold text-danger mb-1">Payment Not Completed</h4>
+      <p class="text-muted small mb-4">
+        {% if txn.status == 'reversed' %}
+          This payment was reversed. No funds have been deducted.
+        {% elif txn.status == 'cancelled' %}
+          You cancelled this payment. No funds have been deducted.
+        {% else %}
+          The payment could not be processed.
+          {% if txn.pesapal_status_message %}
+          Reason: <strong>{{ txn.pesapal_status_message }}</strong>.
+          {% endif %}
+        {% endif %}
+        Your invoice balance is unchanged.
+      </p>
+
+      <div class="text-start p-3 bg-light rounded mb-4 small">
+        <div class="row g-2">
+          <div class="col-5 text-muted fw-semibold">Reference</div>
+          <div class="col-7">{{ txn.merchant_reference }}</div>
+          <div class="col-5 text-muted fw-semibold">Amount</div>
+          <div class="col-7">UGX {{ txn.amount|floatformat:0 }}</div>
+          <div class="col-5 text-muted fw-semibold">Status</div>
+          <div class="col-7">
+            <span class="badge {{ txn.get_status_badge_class }}">{{ txn.get_status_display }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <a href="{% url 'payments:initiate' invoice_pk=txn.invoice_id %}"
+           class="btn btn-primary">
+          <i class="bi bi-arrow-clockwise me-2"></i> Try Again
+        </a>
+        <a href="{% url 'finance:invoice_detail' pk=txn.invoice_id %}"
+           class="btn btn-outline-secondary btn-sm">
+          Back to Invoice
+        </a>
+      </div>
+
+      <div class="text-muted mt-3 small">
+        If the problem persists, please contact the school finance office.
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

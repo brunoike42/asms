@@ -1,0 +1,120 @@
+{% extends "base/base.html" %}
+{% block title %}Online Payment History | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Online Payments (PesaPal)</h4>
+    <small class="text-muted">{{ txns.paginator.count }} transaction{{ txns.paginator.count|pluralize }}</small>
+  </div>
+  <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Dashboard
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100 border-start border-4 border-success">
+      <div class="fs-2 fw-bold text-success">{{ stats.total_collected|floatformat:0 }}</div>
+      <div class="small text-muted">UGX Collected</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-2 fw-bold text-success">{{ stats.completed_count }}</div>
+      <div class="small text-muted">Completed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-2 fw-bold text-warning">{{ stats.pending_count }}</div>
+      <div class="small text-muted">Pending</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-2 fw-bold text-danger">{{ stats.failed_count }}</div>
+      <div class="small text-muted">Failed / Cancelled</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2 align-items-end">
+      <div>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Reference</th>
+          <th>Student</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Payer Phone</th>
+          <th>PesaPal Ref</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in txns %}
+        <tr>
+          <td class="ps-3 small fw-semibold">{{ txn.merchant_reference }}</td>
+          <td class="small">{{ txn.student.first_name }} {{ txn.student.last_name }}</td>
+          <td class="small fw-bold">{{ txn.currency }} {{ txn.amount|floatformat:0 }}</td>
+          <td class="small text-muted">{{ txn.payment_method|default:"—" }}</td>
+          <td class="small text-muted">{{ txn.payer_phone|default:"—" }}</td>
+          <td class="small text-muted">{{ txn.confirmation_code|default:"—" }}</td>
+          <td>
+            <span class="badge {{ txn.get_status_badge_class }} small">
+              {{ txn.get_status_display }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ txn.initiated_at|date:"d M Y H:i" }}</td>
+          <td>
+            <a href="{% url 'finance:invoice_detail' pk=txn.invoice_id %}"
+               class="btn btn-outline-secondary btn-sm py-0 px-2 small">
+              Invoice
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-credit-card fs-2 d-block mb-2 opacity-25"></i>
+            No online payments yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if txns.has_other_pages %}
+  <div class="card-footer border-0 bg-transparent">
+    <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if txns.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ txns.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Previous</a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ txns.number }} / {{ txns.paginator.num_pages }}</span></li>
+      {% if txns.has_next %}<li class="page-item"><a class="page-link" href="?page={{ txns.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

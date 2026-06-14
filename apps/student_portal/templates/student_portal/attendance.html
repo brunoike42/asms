@@ -1,0 +1,138 @@
+{% extends "student_portal/base.html" %}
+{% load humanize %}
+
+{% block page_actions %}
+<a href="{% url 'student_portal:excuse_absence' %}"
+   class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+  <i class="bi bi-pencil-square"></i> Submit Excuse Note
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats row -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Total Days</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1B4F72;">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Present</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#16A34A;">{{ present }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Absent</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#DC2626;">{{ absent }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Attendance</div>
+      <div style="font-size:1.8rem;font-weight:800;
+        color:{% if att_pct >= 80 %}#16A34A{% elif att_pct >= 60 %}#D97706{% else %}#DC2626{% endif %};">
+        {{ att_pct }}%
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress bar -->
+<div class="portal-card p-3 mb-3">
+  <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;">
+    <span class="fw-semibold">
+      {% if att_pct >= 80 %}
+        <i class="bi bi-check-circle-fill text-success me-1"></i>Good standing
+      {% elif att_pct >= 60 %}
+        <i class="bi bi-exclamation-circle-fill text-warning me-1"></i>Below target — improve attendance
+      {% else %}
+        <i class="bi bi-x-circle-fill text-danger me-1"></i>At risk — attendance below 60%
+      {% endif %}
+    </span>
+    <span class="text-muted">Target: 80%</span>
+  </div>
+  <div style="height:10px;background:#e9ecef;border-radius:5px;overflow:hidden;position:relative;">
+    <div style="height:100%;width:{{ att_pct }}%;
+                background:{% if att_pct >= 80 %}#16A34A{% elif att_pct >= 60 %}#D97706{% else %}#DC2626{% endif %};
+                border-radius:5px;transition:width .4s ease;"></div>
+    <!-- 80% target line -->
+    <div style="position:absolute;top:0;bottom:0;left:80%;width:2px;background:rgba(0,0,0,.15);"></div>
+  </div>
+</div>
+
+<!-- Month calendar view -->
+<div class="portal-card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="fw-bold" style="font-size:.88rem;">
+      <i class="bi bi-calendar3 me-2 text-primary"></i>Attendance Record
+    </div>
+    <!-- Legend -->
+    <div class="d-flex gap-3" style="font-size:.72rem;">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16A34A;"></span> Present</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#DC2626;"></span> Absent</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D97706;"></span> Late</span>
+    </div>
+  </div>
+
+  <!-- Day-by-day log -->
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0" style="font-size:.8rem;">
+      <thead style="background:#F8FAFC;">
+        <tr>
+          <th class="fw-semibold">Date</th>
+          <th class="fw-semibold">Day</th>
+          <th class="fw-semibold text-center">Status</th>
+          <th class="fw-semibold d-none d-md-table-cell">Marked By</th>
+          <th class="fw-semibold d-none d-md-table-cell">Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>{{ record.date|date:"d M Y" }}</td>
+          <td class="text-muted">{{ record.date|date:"l" }}</td>
+          <td class="text-center">
+            {% if record.status == 'present' %}
+            <span class="badge bg-success" style="font-size:.68rem;min-width:54px;">Present</span>
+            {% elif record.status == 'absent' %}
+            <span class="badge bg-danger" style="font-size:.68rem;min-width:54px;">Absent</span>
+            {% elif record.status == 'late' %}
+            <span class="badge bg-warning text-dark" style="font-size:.68rem;min-width:54px;">Late</span>
+            {% elif record.status == 'excused' %}
+            <span class="badge bg-secondary" style="font-size:.68rem;min-width:54px;">Excused</span>
+            {% endif %}
+          </td>
+          <td class="text-muted d-none d-md-table-cell" style="font-size:.72rem;">
+            {{ record.marked_by|default:'—' }}
+          </td>
+          <td class="text-muted d-none d-md-table-cell" style="font-size:.72rem;">
+            {{ record.note|default:'' }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No attendance records for this period.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if att_pct < 80 %}
+<div class="portal-card mt-3 p-3" style="border-left:4px solid #DC2626;background:#FEF2F2;">
+  <div style="font-size:.8rem;color:#991B1B;">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    <strong>Attendance Warning:</strong>
+    Your attendance is {{ att_pct }}%, which is below the required 80% threshold.
+    Students with attendance below 70% are flagged for counsellor review.
+    Please discuss with your class teacher if you have a valid reason for your absences.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base/base.html" %}
+{% block title %}At-Risk Register | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">At-Risk Student Register</h4>
+    <small class="text-muted">Weekly composite risk scores · Spec section 3.3 & 7.2</small>
+  </div>
+  <a href="{% url 'counselling:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Dashboard
+  </a>
+</div>
+
+<!-- Summary Badges -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100 bg-danger text-white">
+      <div class="fs-2 fw-bold">{{ counts.critical }}</div>
+      <div class="small opacity-75">High Risk (71–100)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100 bg-warning">
+      <div class="fs-2 fw-bold">{{ counts.medium }}</div>
+      <div class="small text-dark opacity-75">Medium Risk (41–70)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-2 fw-bold text-secondary">{{ counts.low }}</div>
+      <div class="small text-muted">Low Risk (0–40)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100 {% if counts.unactioned > 0 %}border border-danger{% endif %}">
+      <div class="fs-2 fw-bold {% if counts.unactioned > 0 %}text-danger{% else %}text-success{% endif %}">
+        {{ counts.unactioned }}
+      </div>
+      <div class="small text-muted">Unactioned (Medium+)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Spec reference note -->
+<div class="alert alert-info border-0 small mb-4 py-2">
+  <i class="bi bi-info-circle me-2"></i>
+  <strong>Risk Score Composition:</strong>
+  Attendance &lt;70% <strong>(30pts)</strong> · Academic failure in 2+ subjects <strong>(25pts)</strong> · 3+ discipline incidents <strong>(20pts)</strong> · Fee arrears &gt;45 days <strong>(15pts)</strong> · Open welfare case <strong>(10pts)</strong>.
+  Score &gt;70 = counsellor assignment + parent notification.
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <input type="text" name="q" class="form-control form-control-sm"
+               placeholder="Search student name…" value="{{ filters.q }}">
+      </div>
+      <div class="col-md-3">
+        <select name="level" class="form-select form-select-sm">
+          <option value="">All Risk Levels</option>
+          <option value="high" {% if filters.level == 'high' %}selected{% endif %}>High (71–100)</option>
+          <option value="medium" {% if filters.level == 'medium' %}selected{% endif %}>Medium (41–70)</option>
+          <option value="low" {% if filters.level == 'low' %}selected{% endif %}>Low (0–40)</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="actioned" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="no" {% if filters.actioned == 'no' %}selected{% endif %}>Unactioned Only</option>
+          <option value="yes" {% if filters.actioned == 'yes' %}selected{% endif %}>Actioned</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- At-Risk Table -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Student</th>
+          <th class="text-center">Risk Score</th>
+          <th class="text-center" title="Attendance contribution (max 30)">Attend.<br><small class="text-muted fw-normal">max 30</small></th>
+          <th class="text-center" title="Academic contribution (max 25)">Academic<br><small class="text-muted fw-normal">max 25</small></th>
+          <th class="text-center" title="Behaviour contribution (max 20)">Behaviour<br><small class="text-muted fw-normal">max 20</small></th>
+          <th class="text-center" title="Finance contribution (max 15)">Finance<br><small class="text-muted fw-normal">max 15</small></th>
+          <th class="text-center" title="Welfare contribution (max 10)">Welfare<br><small class="text-muted fw-normal">max 10</small></th>
+          <th class="text-center">Actioned</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in at_risk_students %}
+        <tr class="{% if r.risk_score >= 71 %}table-danger{% elif r.risk_score >= 41 %}table-warning{% endif %}">
+          <td class="ps-3">
+            <div class="fw-semibold small">{{ r.student.first_name }} {{ r.student.last_name }}</div>
+            <div class="text-muted" style="font-size:0.7rem">
+              Att: {{ r.attendance_pct|floatformat:0 }}% ·
+              Failed subj: {{ r.failed_subjects }} ·
+              Incidents: {{ r.incident_count }} ·
+              Arrears: {{ r.fee_arrears_days }}d
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="badge fs-6 fw-bold {% if r.risk_score >= 71 %}bg-danger{% elif r.risk_score >= 41 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+              {{ r.risk_score }}
+            </span>
+          </td>
+          <td class="text-center small {% if r.attendance_score >= 20 %}text-danger fw-bold{% endif %}">{{ r.attendance_score }}</td>
+          <td class="text-center small {% if r.academic_score >= 15 %}text-danger fw-bold{% endif %}">{{ r.academic_score }}</td>
+          <td class="text-center small {% if r.behaviour_score >= 15 %}text-danger fw-bold{% endif %}">{{ r.behaviour_score }}</td>
+          <td class="text-center small {% if r.finance_score >= 10 %}text-danger fw-bold{% endif %}">{{ r.finance_score }}</td>
+          <td class="text-center small {% if r.welfare_score >= 8 %}text-danger fw-bold{% endif %}">{{ r.welfare_score }}</td>
+          <td class="text-center">
+            {% if r.counsellor_actioned %}
+              <span class="badge bg-success small">Yes</span>
+            {% else %}
+              {% if r.risk_score >= 41 %}
+              <span class="badge bg-danger small">No</span>
+              {% else %}
+              <span class="badge bg-secondary small">—</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              <a href="{% url 'counselling:student_welfare_history' student_pk=r.student.pk %}"
+                 class="btn btn-outline-primary btn-sm py-0 px-2 small">
+                <i class="bi bi-person"></i>
+              </a>
+              <a href="{% url 'counselling:case_create' %}?student={{ r.student.pk }}"
+                 class="btn btn-outline-danger btn-sm py-0 px-2 small" title="Open case">
+                <i class="bi bi-plus"></i>
+              </a>
+              <a href="{% url 'discipline:student_history' student_pk=r.student.pk %}"
+                 class="btn btn-outline-secondary btn-sm py-0 px-2 small" title="Discipline history">
+                <i class="bi bi-shield-exclamation"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-shield-check fs-2 d-block mb-2 opacity-25"></i>
+            No students match the selected filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if at_risk_students.has_other_pages %}
+  <div class="card-footer border-0 bg-transparent">
+    <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if at_risk_students.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ at_risk_students.previous_page_number }}&level={{ filters.level }}&actioned={{ filters.actioned }}&q={{ filters.q }}">Previous</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ at_risk_students.number }} / {{ at_risk_students.paginator.num_pages }}</span></li>
+      {% if at_risk_students.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ at_risk_students.next_page_number }}&level={{ filters.level }}&actioned={{ filters.actioned }}&q={{ filters.q }}">Next</a></li>
+      {% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

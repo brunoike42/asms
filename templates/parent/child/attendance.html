@@ -1,0 +1,202 @@
+{% extends "parent/base.html" %}
+{% block title %}Attendance — {{ student.first_name }} | Parent Portal{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <div style="font-weight:700;font-size:16px;">{{ student.first_name }}'s Attendance</div>
+    <div style="font-size:12px;color:var(--pp-muted);">{{ month_name }} {{ year }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="?month={{ prev_month }}&year={{ prev_year }}"
+       style="background:#fff;border:1px solid var(--pp-border);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--pp-text);">
+      <i class="bi bi-chevron-left" style="font-size:12px;"></i>
+    </a>
+    <a href="?month={{ next_month }}&year={{ next_year }}"
+       style="background:#fff;border:1px solid var(--pp-border);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--pp-text);">
+      <i class="bi bi-chevron-right" style="font-size:12px;"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Legend -->
+<div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:var(--pp-muted);">
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#d1fae5;vertical-align:middle;margin-right:3px;"></span>Present</span>
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#fee2e2;vertical-align:middle;margin-right:3px;"></span>Absent</span>
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#fef3c7;vertical-align:middle;margin-right:3px;"></span>Late</span>
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f3f4f6;vertical-align:middle;margin-right:3px;"></span>No school</span>
+</div>
+
+<!-- Calendar -->
+<div class="pp-card">
+  <div class="att-calendar">
+    <div class="att-day-header">Mon</div>
+    <div class="att-day-header">Tue</div>
+    <div class="att-day-header">Wed</div>
+    <div class="att-day-header">Thu</div>
+    <div class="att-day-header">Fri</div>
+    <div class="att-day-header">Sat</div>
+    <div class="att-day-header">Sun</div>
+
+    <!-- Leading empty cells for first week offset -->
+    {% for i in leading_blanks %}
+    <div class="att-day empty"></div>
+    {% endfor %}
+
+    <!-- Day cells — rendered by JS from calendar_json -->
+    {% for day in days_range %}
+    <div class="att-day" id="day-{{ day }}"
+         style="cursor:default;background:#f9fafb;">
+      {{ day }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Monthly Stats -->
+<div class="stat-row">
+  <div class="stat-pill green">
+    <div class="val" id="presentCount">—</div>
+    <div class="lbl">Present</div>
+  </div>
+  <div class="stat-pill red">
+    <div class="val" id="absentCount">—</div>
+    <div class="lbl">Absent</div>
+  </div>
+  <div class="stat-pill amber">
+    <div class="val" id="lateCount">—</div>
+    <div class="lbl">Late</div>
+  </div>
+  <div class="stat-pill blue">
+    <div class="val" id="attPct">—</div>
+    <div class="lbl">Rate</div>
+  </div>
+</div>
+
+<!-- Submit Absence Excuse -->
+<div class="pp-section-label">Report an Absence</div>
+<div class="pp-card">
+  <div style="font-size:13px;color:var(--pp-muted);margin-bottom:12px;">
+    If {{ student.first_name }} was or will be absent, submit a reason here.
+    The school will review and update the record.
+  </div>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Absence Date <span style="color:var(--pp-danger);">*</span></label>
+      <input type="date" name="absence_date" class="form-control form-control-sm"
+             max="{{ today|date:'Y-m-d' }}" required>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Reason <span style="color:var(--pp-danger);">*</span></label>
+      <select name="excuse_type" class="form-select form-select-sm" required>
+        <option value="">Select reason…</option>
+        {% for val, label in excuse_choices %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Explanation <span style="color:var(--pp-danger);">*</span></label>
+      <textarea name="explanation" class="form-control form-control-sm" rows="3"
+                placeholder="Brief explanation…" required></textarea>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">
+        Supporting Document
+        <span style="font-weight:400;color:var(--pp-muted);">(optional — medical cert, etc.)</span>
+      </label>
+      <input type="file" name="supporting_doc" class="form-control form-control-sm"
+             accept=".pdf,.jpg,.jpeg,.png">
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm w-100">
+      <i class="bi bi-send me-2"></i>Submit Excuse
+    </button>
+  </form>
+</div>
+
+<!-- Previous Excuses -->
+{% if excuses %}
+<div class="pp-section-label">Previous Excuses Submitted</div>
+<div class="pp-card">
+  {% for excuse in excuses %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;border-radius:8px;background:{% if excuse.status == 'approved' %}#f0fdf4{% elif excuse.status == 'rejected' %}#fef2f2{% else %}#fffbeb{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      {% if excuse.status == 'approved' %}
+      <i class="bi bi-check-circle-fill" style="color:#0e9f6e;font-size:16px;"></i>
+      {% elif excuse.status == 'rejected' %}
+      <i class="bi bi-x-circle-fill" style="color:#e02424;font-size:16px;"></i>
+      {% else %}
+      <i class="bi bi-hourglass-split" style="color:#e3a008;font-size:16px;"></i>
+      {% endif %}
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ excuse.absence_date|date:"d M Y" }}</div>
+      <div class="item-sub">{{ excuse.get_excuse_type_display }}</div>
+      {% if excuse.school_response %}
+      <div style="font-size:11px;color:var(--pp-muted);margin-top:2px;font-style:italic;">
+        School: "{{ excuse.school_response|truncatechars:60 }}"
+      </div>
+      {% endif %}
+    </div>
+    <span class="pp-badge {% if excuse.status == 'approved' %}green{% elif excuse.status == 'rejected' %}red{% else %}amber{% endif %}">
+      {{ excuse.get_status_display }}
+    </span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Apply attendance colours from JSON data
+const calendarData = {{ calendar_json|default:'{}' }};
+const today = new Date();
+const isCurrentMonth = ({{ month }} === today.getMonth() + 1 && {{ year }} === today.getFullYear());
+
+let present = 0, absent = 0, late = 0;
+
+Object.entries(calendarData).forEach(([day, data]) => {
+  const el = document.getElementById('day-' + day);
+  if (!el) return;
+
+  const status = data.status || '';
+  if (status === 'present') {
+    el.style.background = '#d1fae5';
+    el.style.color = '#065f46';
+    present++;
+  } else if (status === 'absent') {
+    el.style.background = '#fee2e2';
+    el.style.color = '#991b1b';
+    absent++;
+  } else if (status === 'late') {
+    el.style.background = '#fef3c7';
+    el.style.color = '#92400e';
+    late++;
+  }
+
+  if (data.note) el.title = status + ': ' + data.note;
+});
+
+// Highlight today
+if (isCurrentMonth) {
+  const todayEl = document.getElementById('day-' + today.getDate());
+  if (todayEl) {
+    todayEl.style.outline = '2px solid #1a56db';
+    todayEl.style.outlineOffset = '-2px';
+    todayEl.style.borderRadius = '6px';
+  }
+}
+
+// Update stat pills
+const total = present + absent + late;
+document.getElementById('presentCount').textContent = present;
+document.getElementById('absentCount').textContent = absent;
+document.getElementById('lateCount').textContent = late;
+document.getElementById('attPct').textContent = total > 0
+  ? Math.round((present + late) / total * 100) + '%' : '—';
+</script>
+{% endblock %}

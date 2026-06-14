@@ -1,0 +1,144 @@
+{% extends "student_portal/base.html" %}
+{% load humanize portal_extras %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+
+    {% if not clearance %}
+    <!-- No clearance yet — request it -->
+    <div class="portal-card p-5 text-center">
+      <i class="bi bi-shield-check fs-1 d-block mb-3 text-primary"></i>
+      <h6 class="fw-bold">Academic Clearance</h6>
+      <p class="text-muted mb-3" style="font-size:.83rem;">
+        Apply for academic clearance to confirm you have no outstanding obligations with any school department
+        before graduation, promotion, or certificate collection.
+      </p>
+      <p class="text-muted mb-4" style="font-size:.8rem;">
+        Academic Year: <strong>{{ year }}</strong>
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="request_clearance" class="btn btn-primary btn-sm">
+          <i class="bi bi-send me-1"></i>Request Clearance
+        </button>
+      </form>
+    </div>
+
+    {% else %}
+    <!-- Clearance in progress -->
+    <div class="portal-card p-4 mb-3">
+      <div class="d-flex align-items-center justify-content-between mb-1">
+        <h6 class="fw-bold mb-0">Clearance Status</h6>
+        {% if clearance.overall_status == 'cleared' %}
+        <span class="badge bg-success py-2 px-3">
+          <i class="bi bi-check-circle me-1"></i>Fully Cleared
+        </span>
+        {% elif clearance.overall_status == 'blocked' %}
+        <span class="badge bg-danger py-2 px-3">
+          <i class="bi bi-x-circle me-1"></i>Blocked
+        </span>
+        {% else %}
+        <span class="badge bg-warning text-dark py-2 px-3">
+          <i class="bi bi-hourglass-split me-1"></i>In Progress
+        </span>
+        {% endif %}
+      </div>
+      <div class="text-muted" style="font-size:.78rem;">
+        Applied: {{ clearance.requested_at|date:"d M Y" }} ·
+        Academic Year: {{ clearance.academic_year }}
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="portal-card p-3 mb-3">
+      {% with cleared_count=item_statuses|filter_cleared total_count=item_statuses|length %}
+      {% with pct=cleared_count|pct_of:total_count %}
+      <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;">
+        <span class="fw-semibold">Clearance Progress</span>
+        <span class="text-muted">{{ cleared_count }} / {{ total_count }} departments cleared</span>
+      </div>
+      <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:{{ pct }}%;
+                    background:{% if pct == 100 %}#16A34A{% elif pct >= 50 %}#2563EB{% else %}#D97706{% endif %};
+                    border-radius:4px;transition:width .4s ease;"></div>
+      </div>
+      {% endwith %}
+      {% endwith %}
+    </div>
+
+    <!-- Item-by-item checklist -->
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold" style="font-size:.85rem;">Department Clearance</div>
+      {% for item_status in item_statuses %}
+      <div class="d-flex align-items-center gap-3 px-4 py-3
+                  {% if not forloop.last %}border-bottom{% endif %}">
+        <!-- Status icon -->
+        <div class="flex-shrink-0"
+             style="width:36px;height:36px;border-radius:50%;
+                    background:{% if item_status.status == 'cleared' %}#D1FAE5
+                               {% elif item_status.status == 'blocked' %}#FEE2E2
+                               {% elif item_status.status == 'waived' %}#E0E7FF
+                               {% else %}#FEF3C7{% endif %};
+                    display:flex;align-items:center;justify-content:center;">
+          <i class="bi {% if item_status.status == 'cleared' %}bi-check-lg text-success
+                        {% elif item_status.status == 'blocked' %}bi-x-lg text-danger
+                        {% elif item_status.status == 'waived' %}bi-dash text-primary
+                        {% else %}bi-hourglass text-warning{% endif %}"
+             style="font-size:.9rem;"></i>
+        </div>
+
+        <div class="flex-grow-1">
+          <div class="fw-semibold" style="font-size:.83rem;">{{ item_status.item.name }}</div>
+          <div class="text-muted" style="font-size:.72rem;">
+            {{ item_status.item.get_department_display }}
+            {% if item_status.remarks %}
+             · {{ item_status.remarks }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="text-end flex-shrink-0">
+          {% if item_status.status == 'cleared' %}
+          <div style="font-size:.7rem;color:#16A34A;font-weight:600;">Cleared</div>
+          <div style="font-size:.68rem;color:#6c757d;">{{ item_status.cleared_at|date:"d M" }}</div>
+          {% elif item_status.status == 'blocked' %}
+          <span class="badge bg-danger" style="font-size:.65rem;">Blocked</span>
+          {% elif item_status.status == 'waived' %}
+          <span class="badge bg-secondary" style="font-size:.65rem;">Waived</span>
+          {% else %}
+          <span class="badge bg-warning text-dark" style="font-size:.65rem;">Pending</span>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4" style="font-size:.82rem;">
+        No clearance items found. Contact the Registrar.
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Info sidebar -->
+  <div class="col-lg-5">
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-question-circle me-2 text-primary"></i>How Clearance Works</h6>
+      <ol class="ps-3" style="font-size:.8rem;line-height:1.7;">
+        <li>Submit your clearance request through this page.</li>
+        <li>Each department reviews its own records (library fines, fee balance, equipment, etc.).</li>
+        <li>Departments mark you as "Cleared" once all obligations are settled.</li>
+        <li>Once all departments clear you, the Registrar issues your clearance certificate.</li>
+        <li>Your clearance certificate is required to collect results slips, report cards, and transcripts.</li>
+      </ol>
+      <div class="alert alert-warning py-2 mt-3" style="font-size:.78rem;border-radius:6px;">
+        <i class="bi bi-clock me-1"></i>
+        Clearance processing may take <strong>3–5 working days</strong>.
+        Contact the relevant department directly if an item remains pending after 5 days.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

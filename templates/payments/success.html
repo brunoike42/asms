@@ -1,0 +1,64 @@
+{% extends "base/base.html" %}
+{% block title %}Payment Confirmed | ASMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-lg-5 col-md-7">
+    <div class="card border-0 shadow text-center p-4">
+
+      <div class="mb-3">
+        <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center"
+             style="width:80px;height:80px;">
+          <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem;"></i>
+        </div>
+      </div>
+
+      <h4 class="fw-bold text-success mb-1">Payment Confirmed!</h4>
+      <p class="text-muted small mb-4">
+        Your payment has been received and your fee account has been updated.
+      </p>
+
+      <!-- Receipt-style summary -->
+      <div class="text-start p-3 bg-light rounded mb-4 small">
+        <div class="row g-2">
+          <div class="col-5 text-muted fw-semibold">Student</div>
+          <div class="col-7">{{ txn.student.first_name }} {{ txn.student.last_name }}</div>
+
+          <div class="col-5 text-muted fw-semibold">Amount Paid</div>
+          <div class="col-7 fw-bold text-success">UGX {{ txn.amount|floatformat:0 }}</div>
+
+          <div class="col-5 text-muted fw-semibold">Payment Method</div>
+          <div class="col-7">{{ txn.payment_method|default:"Online" }}</div>
+
+          {% if txn.payment_account %}
+          <div class="col-5 text-muted fw-semibold">Account</div>
+          <div class="col-7">{{ txn.payment_account }}</div>
+          {% endif %}
+
+          <div class="col-5 text-muted fw-semibold">Reference</div>
+          <div class="col-7">{{ txn.confirmation_code|default:txn.merchant_reference }}</div>
+
+          <div class="col-5 text-muted fw-semibold">Date & Time</div>
+          <div class="col-7">{{ txn.completed_at|date:"d M Y H:i"|default:"—" }}</div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <a href="{% url 'finance:invoice_detail' pk=txn.invoice_id %}"
+           class="btn btn-success">
+          <i class="bi bi-receipt me-2"></i> View Updated Invoice
+        </a>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+          Back to Dashboard
+        </a>
+      </div>
+
+      <div class="text-muted mt-3 small">
+        <i class="bi bi-envelope me-1"></i>
+        A receipt has been sent to {{ txn.payer_email|default:"your registered email" }}.
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

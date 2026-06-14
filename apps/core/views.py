@@ -424,10 +424,10 @@ def finance_dashboard(request):
     total_collected   = FeeInvoice.objects.aggregate(t=Sum('amount_paid'))['t'] or 0
     outstanding       = total_invoiced - total_collected
     collected_today   = Payment.objects.filter(
-        payment_date__date=today
+        payment_date=today
     ).aggregate(t=Sum('amount'))['t'] or 0
     collected_month   = Payment.objects.filter(
-        payment_date__date__gte=month_start
+        payment_date__gte=month_start
     ).aggregate(t=Sum('amount'))['t'] or 0
     overdue_invoices  = FeeInvoice.objects.filter(
         status__in=['pending', 'overdue']

@@ -1,0 +1,92 @@
+{% extends "parent/base.html" %}
+{% block title %}Library — {{ student.first_name }}{% endblock %}
+{% block content %}
+<p class="pp-stitle">
+  <i class="bi bi-book-fill" style="color:#185FA5;margin-right:6px"></i>
+  Library — {{ student.first_name }} {{ student.last_name }}
+</p>
+
+<div class="pp-metrics">
+  <div class="pp-metric {% if current_books %}warning{% endif %}">
+    <p class="ml">Books borrowed</p>
+    <p class="mv">{{ current_books|length }}</p>
+    <p class="ms">Currently out</p>
+  </div>
+  <div class="pp-metric {% if total_fine %}danger{% endif %}">
+    <p class="ml">Outstanding fine</p>
+    <p class="mv">{% if total_fine %}UGX {{ total_fine|floatformat:0 }}{% else %}None{% endif %}</p>
+    <p class="ms">{% if total_fine %}Pay at library desk{% else %}All clear{% endif %}</p>
+  </div>
+  <div class="pp-metric">
+    <p class="ml">Books returned</p>
+    <p class="mv">{{ history|length }}</p>
+    <p class="ms">This term</p>
+  </div>
+</div>
+
+<!-- Current books -->
+<div class="pp-card">
+  <p class="pp-stitle" style="font-size:13px">Currently Borrowed</p>
+  {% if current_books %}
+  <table class="pp-tbl">
+    <thead>
+      <tr>
+        <th>Title</th><th>Borrowed</th><th>Due date</th><th style="text-align:right">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in current_books %}
+      <tr>
+        <td>
+          <p style="font-weight:500;margin:0;font-size:12px">{{ b.book.title }}</p>
+          {% if b.book.barcode %}
+          <p style="font-size:10px;color:var(--pp-muted);margin:1px 0 0">{{ b.book.barcode }}</p>
+          {% endif %}
+        </td>
+        <td>{{ b.borrowed_at|date:"d M" }}</td>
+        <td {% if b.is_overdue %} style="color:var(--pp-danger);font-weight:500"{% endif %}>
+          {{ b.due_date|date:"d M" }}
+          {% if b.is_overdue %}
+          <div style="font-size:10px">Overdue</div>
+          {% endif %}
+        </td>
+        <td style="text-align:right">
+          {% if b.is_overdue %}
+          <span class="pp-badge danger">Overdue</span>
+          {% else %}
+          <span class="pp-badge success">On time</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--pp-muted);font-size:12px;text-align:center;padding:16px 0;margin:0">
+    No books currently borrowed.
+  </p>
+  {% endif %}
+</div>
+
+<!-- History -->
+{% if history %}
+<div class="pp-card">
+  <p class="pp-stitle" style="font-size:13px">Return History</p>
+  <table class="pp-tbl">
+    <thead><tr><th>Title</th><th>Returned</th><th style="text-align:right">Fine</th></tr></thead>
+    <tbody>
+      {% for b in history %}
+      <tr>
+        <td style="font-weight:500">{{ b.book.title }}</td>
+        <td>{{ b.returned_at|date:"d M Y" }}</td>
+        <td style="text-align:right">
+          {% if b.fine_paid %}<span class="pp-badge success">UGX {{ b.fine_paid|floatformat:0 }}</span>
+          {% else %}<span class="pp-badge grey">None</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

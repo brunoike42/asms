@@ -1,0 +1,434 @@
+{% extends "base/base.html" %}
+{% block title %}{{ incident.reference_number }} | Discipline{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <h4 class="mb-0 fw-bold">{{ incident.reference_number }}</h4>
+      <span class="badge {{ incident.get_severity_badge_class }}">{{ incident.get_severity_display }}</span>
+      <span class="badge {{ incident.get_status_badge_class }}">{{ incident.get_status_display }}</span>
+      {% if incident.counselling_flag_raised %}
+      <span class="badge bg-danger"><i class="bi bi-flag-fill me-1"></i>Counselling Flagged</span>
+      {% endif %}
+    </div>
+    <div class="text-muted small">
+      Logged {{ incident.report_datetime|date:"d M Y H:i" }} by
+      {{ incident.reported_by.get_full_name|default:incident.reported_by.username }}
+      {% if incident.term %} · {{ incident.term.name }}{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if incident.reported_by == request.user or can_manage %}
+    <a href="{% url 'discipline:incident_edit' pk=incident.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    {% endif %}
+    <a href="{% url 'discipline:incident_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show border-0" role="alert">
+  {{ msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if term_count >= 3 %}
+<div class="alert alert-danger border-0 mb-4">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <strong>{{ incident.student.first_name }} has {{ term_count }} incident{{ term_count|pluralize }} this term.</strong>
+  This has {% if incident.counselling_flag_raised %}already{% else %}not yet{% endif %} triggered a counselling welfare case.
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Left: Incident Details + Workflow -->
+  <div class="col-lg-8">
+
+    <!-- Core Details -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Incident Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">STUDENT</div>
+            <a href="{% url 'discipline:student_history' student_pk=incident.student.pk %}" class="fw-semibold text-decoration-none">
+              {{ incident.student.first_name }} {{ incident.student.last_name }}
+            </a>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">CATEGORY</div>
+            <div>{{ incident.category.name }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted fw-semibold">DATE</div>
+            <div>{{ incident.incident_date|date:"d M Y" }}{% if incident.incident_time %} at {{ incident.incident_time|time:"H:i" }}{% endif %}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted fw-semibold">LOCATION</div>
+            <div>{{ incident.get_location_display }}{% if incident.location_detail %} — {{ incident.location_detail }}{% endif %}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted fw-semibold">DAYS OPEN</div>
+            <div>{{ incident.days_open }} day{{ incident.days_open|pluralize }}</div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="small text-muted fw-semibold mb-1">DESCRIPTION</div>
+          <div class="p-3 bg-light rounded small lh-lg">{{ incident.description|linebreaks }}</div>
+        </div>
+        {% if co_accused %}
+        <div>
+          <div class="small text-muted fw-semibold mb-1">OTHER STUDENTS INVOLVED</div>
+          {% for s in co_accused %}
+          <span class="badge bg-secondary me-1">{{ s.first_name }} {{ s.last_name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Investigation Notes -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-search me-2"></i>Investigation</h6>
+        {% if incident.investigation_completed_at %}
+        <small class="text-muted">Completed {{ incident.investigation_completed_at|date:"d M H:i" }}</small>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if incident.investigation_notes %}
+        <div class="p-3 bg-light rounded small mb-3">{{ incident.investigation_notes|linebreaks }}</div>
+        {% else %}
+        <p class="text-muted small mb-3">No investigation notes recorded yet.</p>
+        {% endif %}
+        {% if can_manage or incident.reported_by == request.user %}
+        <form method="post" action="{% url 'discipline:save_investigation' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-8">
+              {{ investigation_form.investigation_notes }}
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-primary btn-sm w-100">Save Investigation Notes</button>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Consequences -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-gavel me-2"></i>Consequences</h6>
+      </div>
+      <div class="card-body">
+        {% for con in consequences %}
+        <div class="border rounded p-3 mb-3 {% if con.approval_status == 'pending_approval' %}border-warning{% elif con.approval_status == 'approved' or con.approval_status == 'completed' %}border-success{% elif con.approval_status == 'rejected' %}border-danger{% endif %}">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="fw-semibold small">{{ con.get_consequence_type_display }}</span>
+              {% if con.demerit_points %}<span class="badge bg-secondary ms-2">{{ con.demerit_points }} demerits</span>{% endif %}
+            </div>
+            <span class="badge {% if con.approval_status == 'pending_approval' %}bg-warning text-dark{% elif con.approval_status == 'approved' %}bg-primary{% elif con.approval_status == 'completed' %}bg-success{% elif con.approval_status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %} small">
+              {{ con.get_approval_status_display }}
+            </span>
+          </div>
+          <div class="small text-muted mb-1">{{ con.description }}</div>
+          {% if con.start_date %}
+          <div class="small text-muted">{{ con.start_date|date:"d M" }}{% if con.end_date %} – {{ con.end_date|date:"d M Y" }}{% endif %}{% if con.duration_days %} ({{ con.duration_days }} day{{ con.duration_days|pluralize }}){% endif %}</div>
+          {% endif %}
+          {% if con.approval_status == 'pending_approval' and can_manage %}
+          <div class="mt-2">
+            <form method="post" action="{% url 'discipline:approve_consequence' pk=incident.pk consequence_pk=con.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-success btn-sm me-1">Approve</button>
+            </form>
+            <form method="post" action="{% url 'discipline:approve_consequence' pk=incident.pk consequence_pk=con.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Reject</button>
+            </form>
+          </div>
+          {% elif con.approval_status == 'approved' and can_manage %}
+          <form method="post" action="{% url 'discipline:complete_consequence' pk=incident.pk consequence_pk=con.pk %}" class="mt-2">
+            {% csrf_token %}
+            <div class="input-group input-group-sm">
+              <input type="text" name="completion_notes" class="form-control" placeholder="Completion notes…">
+              <button type="submit" class="btn btn-outline-success">Mark Complete</button>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted small">No consequences assigned yet.</p>
+        {% endfor %}
+
+        {% if can_manage or incident.reported_by == request.user %}
+        <hr class="my-3">
+        <h6 class="small fw-semibold text-muted mb-3">ADD CONSEQUENCE</h6>
+        <form method="post" action="{% url 'discipline:add_consequence' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-4">{{ consequence_form.consequence_type }}</div>
+            <div class="col-md-8">{{ consequence_form.description }}</div>
+            <div class="col-md-3">{{ consequence_form.demerit_points }}<div class="form-text">Demerit pts</div></div>
+            <div class="col-md-3">{{ consequence_form.start_date }}<div class="form-text">Start date</div></div>
+            <div class="col-md-3">{{ consequence_form.end_date }}<div class="form-text">End date</div></div>
+            <div class="col-md-3">{{ consequence_form.duration_days }}<div class="form-text">Duration days</div></div>
+            <div class="col-12">{{ consequence_form.rationale }}<div class="form-text">Rationale (optional)</div></div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-warning btn-sm w-100">Assign Consequence</button>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Witnesses -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-people me-2"></i>Witnesses ({{ witnesses.count }})</h6>
+      </div>
+      <div class="card-body">
+        {% for w in witnesses %}
+        <div class="d-flex justify-content-between align-items-start mb-2 p-2 bg-light rounded small">
+          <div>
+            <span class="fw-semibold">
+              {% if w.witness_student %}{{ w.witness_student.first_name }} {{ w.witness_student.last_name }}
+              {% elif w.witness_staff %}{{ w.witness_staff.get_full_name }}
+              {% else %}{{ w.witness_name }}{% endif %}
+            </span>
+            <span class="text-muted ms-2">({{ w.get_witness_type_display }})</span>
+            {% if w.statement %}<div class="text-muted mt-1">{{ w.statement }}</div>{% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-3">No witnesses recorded.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'discipline:add_witness' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-3">{{ witness_form.witness_type }}</div>
+            <div class="col-md-3">{{ witness_form.witness_name }}<div class="form-text">External name</div></div>
+            <div class="col-md-4">{{ witness_form.statement }}</div>
+            <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary btn-sm w-100">Add Witness</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Evidence -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-paperclip me-2"></i>Evidence ({{ evidence.count }})</h6>
+      </div>
+      <div class="card-body">
+        {% for ev in evidence %}
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded small">
+          <div>
+            <span class="fw-semibold">{{ ev.title }}</span>
+            <span class="text-muted ms-2">({{ ev.get_evidence_type_display }})</span>
+            {% if ev.is_confidential %}<span class="badge bg-danger ms-1 small">Confidential</span>{% endif %}
+          </div>
+          {% if ev.file %}<a href="{{ ev.file.url }}" target="_blank" class="btn btn-outline-secondary btn-sm py-0">View</a>
+          {% elif ev.file_url %}<a href="{{ ev.file_url }}" target="_blank" class="btn btn-outline-secondary btn-sm py-0">View</a>{% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-3">No evidence uploaded.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'discipline:add_evidence' pk=incident.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-3">{{ evidence_form.evidence_type }}</div>
+            <div class="col-md-4">{{ evidence_form.title }}</div>
+            <div class="col-md-3">{{ evidence_form.file }}</div>
+            <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary btn-sm w-100">Upload</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel: Status, Parent, Resolution -->
+  <div class="col-lg-4">
+
+    <!-- Student at a glance -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Student Snapshot</h6>
+      </div>
+      <div class="card-body">
+        <div class="fw-bold mb-1">{{ incident.student.first_name }} {{ incident.student.last_name }}</div>
+        {% if incident.student.current_class %}
+        <div class="text-muted small mb-2">{{ incident.student.current_class }}</div>
+        {% endif %}
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{% url 'discipline:student_history' student_pk=incident.student.pk %}"
+             class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-clock-history me-1"></i> Full Behaviour Record
+          </a>
+          {% if incident.counselling_case %}
+          <a href="{% url 'counselling:case_detail' pk=incident.counselling_case.pk %}"
+             class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-heart-pulse me-1"></i> Welfare Case
+          </a>
+          {% endif %}
+        </div>
+        {% if term_count %}
+        <div class="mt-3 p-2 {% if term_count >= 3 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-light{% endif %} rounded small">
+          <strong>{{ term_count }}</strong> incident{{ term_count|pluralize }} this term
+          {% if term_count >= 3 %}<div class="text-danger mt-1 small">Counselling threshold reached</div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Parent Communication -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-telephone me-2"></i>Parent Communication</h6>
+      </div>
+      <div class="card-body">
+        {% if incident.parent_notified %}
+        <div class="alert alert-success border-0 py-2 small">
+          <i class="bi bi-check-circle me-1"></i>
+          Notified {{ incident.parent_notified_at|date:"d M Y H:i" }}
+          {% if incident.parent_notification_method %} via {{ incident.get_parent_notification_method_display }}{% endif %}
+        </div>
+        {% else %}
+        <div class="alert alert-warning border-0 py-2 small">
+          <i class="bi bi-exclamation-circle me-1"></i> Parent not yet notified
+        </div>
+        <form method="post" action="{% url 'discipline:mark_parent_notified' pk=incident.pk %}" class="mb-0">
+          {% csrf_token %}
+          <div class="mb-2">{{ parent_form.parent_notification_method }}</div>
+          <div class="mb-2">{{ parent_form.parent_notification_note }}</div>
+          <button type="submit" class="btn btn-warning btn-sm w-100">Record Notification</button>
+        </form>
+        {% endif %}
+        {% if incident.parent_acknowledged %}
+        <div class="mt-2 text-success small">
+          <i class="bi bi-check2-all me-1"></i>
+          Parent acknowledged {{ incident.parent_acknowledged_at|date:"d M H:i" }}
+          {% if incident.parent_acknowledgement_note %}<div class="text-muted">"{{ incident.parent_acknowledgement_note }}"</div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Principal Review -->
+    {% if incident.requires_principal_approval %}
+    <div class="card border-0 shadow-sm mb-4 border-top border-3 {% if incident.principal_reviewed %}border-success{% else %}border-warning{% endif %}">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-person-badge me-2"></i>Principal Review</h6>
+      </div>
+      <div class="card-body">
+        {% if incident.principal_reviewed %}
+        <div class="text-success small mb-1">
+          <i class="bi bi-check-circle me-1"></i>
+          Reviewed by {{ incident.principal_reviewed_by.get_full_name }} on {{ incident.principal_reviewed_at|date:"d M H:i" }}
+        </div>
+        {% if incident.principal_notes %}
+        <div class="p-2 bg-light rounded small">{{ incident.principal_notes }}</div>
+        {% endif %}
+        {% elif can_manage %}
+        <p class="text-muted small mb-2">This incident requires your review and sign-off.</p>
+        <form method="post" action="{% url 'discipline:principal_review' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ principal_form.principal_notes }}</div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Record Principal Review</button>
+        </form>
+        {% else %}
+        <div class="text-warning small">Awaiting principal review.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Resolution -->
+    {% if incident.is_open %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-check2-circle me-2"></i>Resolve Incident</h6>
+      </div>
+      <div class="card-body">
+        {% if can_manage or incident.reported_by == request.user %}
+        <form method="post" action="{% url 'discipline:resolve_incident' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ resolution_form.resolution_summary }}</div>
+          <button type="submit" class="btn btn-success btn-sm w-100">Mark as Resolved</button>
+        </form>
+        {% else %}
+        <p class="text-muted small">Awaiting resolution by management.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-success">
+      <div class="card-body py-3">
+        <div class="text-success fw-semibold small"><i class="bi bi-check-circle-fill me-1"></i>{{ incident.get_status_display }}</div>
+        {% if incident.resolved_at %}<div class="text-muted small">{{ incident.resolved_at|date:"d M Y H:i" }}</div>{% endif %}
+        {% if incident.resolution_summary %}<div class="small mt-2 text-muted">{{ incident.resolution_summary }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Appeal -->
+    {% if incident.status == 'consequence_applied' and not incident.is_appealed %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 text-secondary">Lodge an Appeal</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'discipline:appeal_incident' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ appeal_form.appeal_reason }}</div>
+          <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Submit Appeal</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if incident.is_appealed %}
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-info">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Appeal</h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-1">Lodged {{ incident.appeal_lodged_at|date:"d M Y" }}</p>
+        <div class="p-2 bg-light rounded small mb-2">{{ incident.appeal_reason }}</div>
+        {% if can_manage and not incident.appeal_reviewed_at %}
+        <form method="post" action="{% url 'discipline:appeal_outcome' pk=incident.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ appeal_outcome_form.appeal_upheld }}</div>
+          <div class="mb-2">{{ appeal_outcome_form.appeal_outcome }}</div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Record Appeal Decision</button>
+        </form>
+        {% elif incident.appeal_reviewed_at %}
+        <div class="small">
+          Decision: <strong>{% if incident.appeal_upheld %}Upheld ✓{% else %}Dismissed ✗{% endif %}</strong><br>
+          <span class="text-muted">{{ incident.appeal_outcome }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

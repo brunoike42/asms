@@ -1,0 +1,416 @@
+{% extends "base/base.html" %}
+{% block title %}{{ case.reference_number }} | Welfare{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <h4 class="mb-0 fw-bold">{{ case.reference_number }}</h4>
+      <span class="badge {{ case.get_priority_badge_class }}">{{ case.get_priority_display }}</span>
+      <span class="badge {{ case.get_status_badge_class }}">{{ case.get_status_display }}</span>
+      {% if case.involves_safeguarding %}<span class="badge bg-dark">Safeguarding</span>{% endif %}
+      {% if case.involves_self_harm_risk %}<span class="badge bg-danger">Self-Harm Risk</span>{% endif %}
+      {% if case.auto_opened %}<span class="badge bg-secondary">Auto-opened</span>{% endif %}
+    </div>
+    <div class="text-muted small">
+      Opened {{ case.created_at|date:"d M Y H:i" }} by {{ case.opened_by.get_full_name|default:case.opened_by.username }}
+      {% if case.term %} · {{ case.term.name }}{% endif %}
+      · {{ case.days_open }} day{{ case.days_open|pluralize }} open
+    </div>
+  </div>
+  <a href="{% url 'counselling:case_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show border-0" role="alert">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if case.escalated and not case.principal_responded_at %}
+<div class="alert alert-danger border-0 mb-4">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <strong>Escalated to principal</strong> on {{ case.escalated_at|date:"d M Y" }}.
+  Reason: {{ case.escalation_reason }}
+  {% if can_manage %}
+  <hr class="my-2">
+  <form method="post" action="{% url 'counselling:principal_response' pk=case.pk %}">
+    {% csrf_token %}
+    <div class="row g-2">
+      <div class="col-md-9">{{ principal_form.principal_response }}</div>
+      <div class="col-md-3"><button type="submit" class="btn btn-primary btn-sm w-100">Record Response</button></div>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Main Column -->
+  <div class="col-lg-8">
+
+    <!-- Case Details -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0">Case Details <span class="badge bg-secondary ms-2 small">Confidential</span></h6>
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#updateForm">
+          <i class="bi bi-pencil me-1"></i> Update
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">STUDENT</div>
+            <a href="{% url 'counselling:student_welfare_history' student_pk=case.student.pk %}" class="fw-semibold text-decoration-none">
+              {{ case.student.first_name }} {{ case.student.last_name }}
+            </a>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">TYPE</div>
+            <div>{{ case.get_case_type_display }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">ASSIGNED COUNSELLOR</div>
+            <div>{{ case.assigned_counsellor.get_full_name|default:"Unassigned" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">TRIGGER</div>
+            <div>{{ case.get_trigger_display }}</div>
+          </div>
+          {% if case.risk_score_at_opening %}
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">RISK SCORE AT OPENING</div>
+            <div class="fw-bold {% if case.risk_score_at_opening >= 71 %}text-danger{% elif case.risk_score_at_opening >= 41 %}text-warning{% endif %}">
+              {{ case.risk_score_at_opening }}/100
+            </div>
+          </div>
+          {% endif %}
+          {% if case.next_review_date %}
+          <div class="col-md-6">
+            <div class="small text-muted fw-semibold">NEXT REVIEW</div>
+            <div class="{% if case.next_review_date < today %}text-danger fw-bold{% endif %}">
+              {{ case.next_review_date|date:"d M Y" }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="p-3 bg-light rounded small lh-lg">{{ case.description|linebreaks }}</div>
+
+        <!-- Update form (collapsed) -->
+        <div class="collapse mt-3" id="updateForm">
+          <hr>
+          <form method="post" action="{% url 'counselling:update_case' pk=case.pk %}">
+            {% csrf_token %}
+            <div class="row g-2">
+              <div class="col-md-3">{{ update_form.status }}<div class="form-text">Status</div></div>
+              <div class="col-md-3">{{ update_form.priority }}<div class="form-text">Priority</div></div>
+              <div class="col-md-3">{{ update_form.next_review_date }}<div class="form-text">Review date</div></div>
+              <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Save</button>
+              </div>
+              <div class="col-12">{{ update_form.follow_up_notes }}<div class="form-text">Follow-up notes</div></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Notes -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0">
+          <i class="bi bi-journal-text me-2"></i>
+          Session Notes <span class="badge bg-secondary ms-1 small">Confidential · {{ sessions.count }}</span>
+        </h6>
+      </div>
+      <div class="card-body">
+        <!-- Existing sessions -->
+        {% for s in sessions %}
+        <div class="border rounded p-3 mb-3 {% if s.urgency_level == 'crisis' %}border-danger{% elif s.urgency_level == 'urgent' %}border-warning{% else %}border-light{% endif %}">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="fw-semibold small">{{ s.get_session_type_display }}</span>
+              {% if s.duration_minutes %}<span class="text-muted small ms-2">({{ s.duration_minutes }} min)</span>{% endif %}
+              {% if s.safeguarding_concern_raised %}<span class="badge bg-danger ms-1 small">Safeguarding</span>{% endif %}
+            </div>
+            <div class="text-end">
+              <div class="small fw-semibold">{{ s.session_date|date:"d M Y" }}</div>
+              <div class="text-muted" style="font-size:0.7rem">{{ s.conducted_by.get_full_name }}</div>
+            </div>
+          </div>
+          {% if s.student_mood %}<div class="small text-muted mb-1">Mood: {{ s.get_student_mood_display }}</div>{% endif %}
+          {% if s.presenting_issues %}<div class="small mb-1"><strong>Issues:</strong> {{ s.presenting_issues }}</div>{% endif %}
+          <div class="small p-2 bg-light rounded mb-2 lh-lg">{{ s.session_notes }}</div>
+          {% if s.actions_agreed %}
+          <div class="small"><strong>Student agreed to:</strong> {{ s.actions_agreed }}</div>
+          {% endif %}
+          {% if s.follow_up_date %}
+          <div class="small text-muted mt-1">
+            <i class="bi bi-calendar me-1"></i>Follow-up: {{ s.follow_up_date|date:"d M Y" }}
+            {% if s.urgency_level != 'routine' %}<span class="badge {{ s.urgency_level|yesno:'bg-danger,bg-warning' }} ms-1 small">{{ s.get_urgency_level_display }}</span>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-3">No sessions recorded yet.</p>
+        {% endfor %}
+
+        <!-- Add Session Form -->
+        <hr class="my-3">
+        <h6 class="small fw-semibold text-muted mb-3">ADD SESSION NOTE</h6>
+        <form method="post" action="{% url 'counselling:add_session' pk=case.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-3">{{ session_form.session_date }}<div class="form-text">Date</div></div>
+            <div class="col-md-3">{{ session_form.session_time }}<div class="form-text">Time</div></div>
+            <div class="col-md-3">{{ session_form.session_type }}<div class="form-text">Type</div></div>
+            <div class="col-md-3">{{ session_form.duration_minutes }}<div class="form-text">Duration (min)</div></div>
+            <div class="col-md-3">{{ session_form.student_mood }}<div class="form-text">Student mood</div></div>
+            <div class="col-md-3">
+              <div class="form-check mt-4">
+                {{ session_form.student_attended }}
+                <label class="form-check-label small">Student attended</label>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-check mt-4">
+                {{ session_form.parent_attended }}
+                <label class="form-check-label small">Parent attended</label>
+              </div>
+            </div>
+            <div class="col-12">{{ session_form.presenting_issues }}<div class="form-text">Presenting issues</div></div>
+            <div class="col-12">{{ session_form.session_notes }}<div class="form-text fw-semibold">Session notes (confidential) *</div></div>
+            <div class="col-md-6">{{ session_form.actions_agreed }}<div class="form-text">Student agreed to…</div></div>
+            <div class="col-md-6">{{ session_form.counsellor_actions }}<div class="form-text">Counsellor will…</div></div>
+            <div class="col-md-3">{{ session_form.follow_up_date }}<div class="form-text">Follow-up date</div></div>
+            <div class="col-md-3">{{ session_form.urgency_level }}<div class="form-text">Urgency</div></div>
+            <div class="col-md-6">
+              <div class="form-check mt-4">
+                {{ session_form.safeguarding_concern_raised }}
+                <label class="form-check-label small fw-semibold text-danger">Safeguarding concern raised</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-primary btn-sm w-100">Save Session Note</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Actions Log -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-list-check me-2"></i>Actions Log ({{ actions.count }})</h6>
+      </div>
+      <div class="card-body">
+        {% for a in actions %}
+        <div class="d-flex justify-content-between align-items-start mb-2 p-2 bg-light rounded small">
+          <div>
+            <span class="fw-semibold">{{ a.get_action_type_display }}</span>
+            <div class="text-muted">{{ a.description }}</div>
+            {% if a.outcome_notes %}<div class="text-muted small">{{ a.outcome_notes }}</div>{% endif %}
+          </div>
+          <div class="text-end ms-2">
+            <span class="badge {% if a.outcome == 'successful' %}bg-success{% elif a.outcome == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %} small">{{ a.get_outcome_display }}</span>
+            <div class="text-muted" style="font-size:0.65rem">{{ a.action_date|date:"d M" }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-3">No actions recorded yet.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'counselling:add_action' pk=case.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-3">{{ action_form.action_type }}</div>
+            <div class="col-md-5">{{ action_form.description }}</div>
+            <div class="col-md-2">{{ action_form.outcome }}</div>
+            <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary btn-sm w-100">Add</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- External Referrals -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-arrow-up-right-circle me-2"></i>External Referrals ({{ referrals.count }})</h6>
+      </div>
+      <div class="card-body">
+        {% for r in referrals %}
+        <div class="d-flex justify-content-between align-items-start mb-2 p-2 bg-light rounded small">
+          <div>
+            <span class="fw-semibold">{{ r.referred_to_name }}</span>
+            <span class="text-muted ms-2">({{ r.get_referral_type_display }})</span>
+            <div class="text-muted">{{ r.reason|truncatechars:80 }}</div>
+          </div>
+          <span class="badge bg-secondary ms-2 small">{{ r.get_status_display }}</span>
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-3">No external referrals made.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'counselling:add_referral' pk=case.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-md-3">{{ referral_form.referral_type }}</div>
+            <div class="col-md-4">{{ referral_form.referred_to_name }}</div>
+            <div class="col-md-3">{{ referral_form.referred_to_contact }}</div>
+            <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary btn-sm w-100">Add</button></div>
+            <div class="col-12">{{ referral_form.reason }}<div class="form-text">Reason for referral</div></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column -->
+  <div class="col-lg-4">
+
+    <!-- Student Info -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Student</h6>
+      </div>
+      <div class="card-body">
+        <div class="fw-bold">{{ case.student.first_name }} {{ case.student.last_name }}</div>
+        {% if risk_entry %}
+        <div class="mt-2 p-2 rounded {% if risk_entry.risk_score >= 71 %}bg-danger bg-opacity-10{% elif risk_entry.risk_score >= 41 %}bg-warning bg-opacity-10{% else %}bg-light{% endif %}">
+          <div class="small fw-semibold">Current Risk Score</div>
+          <div class="fs-4 fw-bold {% if risk_entry.risk_score >= 71 %}text-danger{% elif risk_entry.risk_score >= 41 %}text-warning{% else %}text-success{% endif %}">
+            {{ risk_entry.risk_score }}<span class="fs-6 text-muted">/100</span>
+          </div>
+          <div class="small text-muted">
+            Att: {{ risk_entry.attendance_pct|floatformat:0 }}% ·
+            Incidents: {{ risk_entry.incident_count }} ·
+            Arrears: {{ risk_entry.fee_arrears_days }}d
+          </div>
+        </div>
+        {% endif %}
+        <div class="mt-2 d-flex gap-1 flex-wrap">
+          <a href="{% url 'discipline:student_history' student_pk=case.student.pk %}" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-shield-exclamation me-1"></i>Discipline
+          </a>
+          <a href="{% url 'counselling:student_welfare_history' student_pk=case.student.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-clock-history me-1"></i>All Cases
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Linked Discipline Incidents -->
+    {% if linked_incidents %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 small">Linked Discipline Incidents</h6>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for inc in linked_incidents %}
+          <li class="list-group-item px-3 py-2 small">
+            <a href="{% url 'discipline:incident_detail' pk=inc.pk %}" class="text-decoration-none fw-semibold">
+              {{ inc.reference_number }}
+            </a>
+            <span class="text-muted ms-2">{{ inc.category.name }} · {{ inc.incident_date|date:"d M" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Bursary Application -->
+    <div class="card border-0 shadow-sm mb-4 {% if bursary and bursary.status == 'submitted' %}border-warning border-top border-3{% endif %}">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-cash-stack me-2"></i>Fee Relief / Bursary</h6>
+      </div>
+      <div class="card-body">
+        {% if bursary %}
+        <div class="mb-2">
+          <span class="badge {% if bursary.status == 'submitted' %}bg-warning text-dark{% elif bursary.status == 'approved' %}bg-success{% elif bursary.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+            {{ bursary.get_status_display }}
+          </span>
+          <div class="small mt-1">
+            Type: {{ bursary.get_waiver_type_display }}<br>
+            Requested: UGX {{ bursary.amount_requested|floatformat:0 }}
+            {% if bursary.amount_approved %}<br>Approved: UGX {{ bursary.amount_approved|floatformat:0 }}{% endif %}
+          </div>
+        </div>
+        {% if bursary.status == 'submitted' and can_manage %}
+        <form method="post" action="{% url 'counselling:approve_bursary' pk=case.pk bursary_pk=bursary.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ bursary_approval_form.amount_approved }}<div class="form-text">Amount to approve (UGX)</div></div>
+          <div class="mb-2">{{ bursary_approval_form.approval_notes }}</div>
+          <div class="d-flex gap-2">
+            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm flex-fill">Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-sm flex-fill">Reject</button>
+          </div>
+        </form>
+        {% endif %}
+        {% elif bursary_form %}
+        <p class="text-muted small mb-2">No bursary application yet.</p>
+        <form method="post" action="{% url 'counselling:create_bursary' pk=case.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% for field in bursary_form %}
+          <div class="mb-2">
+            <label class="form-label fw-semibold small">{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-warning btn-sm w-100">Submit Bursary Application</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Escalation & Resolution -->
+    {% if case.is_open %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 small">Case Actions</h6>
+      </div>
+      <div class="card-body">
+        {% if not case.escalated %}
+        <button class="btn btn-outline-danger btn-sm w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#escalateForm">
+          <i class="bi bi-arrow-up-circle me-1"></i> Escalate to Principal
+        </button>
+        <div class="collapse mb-2" id="escalateForm">
+          <form method="post" action="{% url 'counselling:escalate_case' pk=case.pk %}">
+            {% csrf_token %}
+            {{ escalation_form.escalation_reason }}
+            <button type="submit" class="btn btn-danger btn-sm w-100 mt-2">Confirm Escalation</button>
+          </form>
+        </div>
+        {% endif %}
+        <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="collapse" data-bs-target="#resolveForm">
+          <i class="bi bi-check2-circle me-1"></i> Resolve Case
+        </button>
+        <div class="collapse mt-2" id="resolveForm">
+          <form method="post" action="{% url 'counselling:resolve_case' pk=case.pk %}">
+            {% csrf_token %}
+            <div class="mb-2">{{ resolution_form.outcome }}</div>
+            <div class="mb-2">{{ resolution_form.resolution_summary }}</div>
+            <button type="submit" class="btn btn-success btn-sm w-100">Confirm Resolution</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-success">
+      <div class="card-body py-3">
+        <div class="text-success fw-semibold small"><i class="bi bi-check-circle-fill me-1"></i>{{ case.get_status_display }}</div>
+        {% if case.resolved_at %}<div class="text-muted small">{{ case.resolved_at|date:"d M Y" }}</div>{% endif %}
+        {% if case.resolution_summary %}<div class="small mt-1 text-muted">{{ case.resolution_summary }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

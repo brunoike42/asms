@@ -1,0 +1,192 @@
+{% extends "student_portal/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="row g-3 justify-content-center">
+  <div class="col-lg-8">
+
+    {% if not enrollment %}
+    <!-- No enrollment -->
+    <div class="portal-card p-5 text-center">
+      <i class="bi bi-clipboard-x fs-1 d-block mb-3 text-warning"></i>
+      <h6 class="fw-bold">No Enrollment Found</h6>
+      <p class="text-muted mb-3" style="font-size:.83rem;">
+        You must complete term enrollment before an exam permit can be issued.
+      </p>
+      <a href="{% url 'student_portal:term_enrollment' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-clipboard-check me-1"></i>Go to Enrollment
+      </a>
+    </div>
+
+    {% elif permit and permit.status == 'issued' %}
+    <!-- PERMIT ISSUED -->
+    <div class="portal-card overflow-hidden">
+
+      <!-- Permit header strip -->
+      <div style="background:linear-gradient(135deg,#1B4F72 0%,#0891B2 100%);padding:1.5rem 2rem;">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <img src="{{ request.tenant.logo.url|default:'' }}" alt="" height="40"
+               style="{% if not request.tenant.logo %}display:none{% endif %}">
+          <span class="text-white opacity-75" style="font-size:.75rem;">
+            {{ request.tenant.name }}
+          </span>
+        </div>
+        <h5 class="text-white fw-bold mb-0 mt-2">EXAMINATION PERMIT</h5>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.75);">
+          {{ permit.permit_number }}
+        </div>
+      </div>
+
+      <!-- Permit body -->
+      <div class="p-4">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Student Name</div>
+            <div class="fw-bold">{{ student.user.get_full_name }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Student ID</div>
+            <div class="fw-bold">{{ student.student_id }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Class / Programme</div>
+            <div class="fw-bold">{{ student.current_class }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Term / Semester</div>
+            <div class="fw-bold">{{ enrollment.term }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Issued On</div>
+            <div class="fw-bold">{{ permit.issued_at|date:"d M Y" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Status</div>
+            <span class="badge bg-success py-1 px-2">
+              <i class="bi bi-check-circle me-1"></i>Valid
+            </span>
+          </div>
+        </div>
+
+        <!-- Registered subjects -->
+        <div class="fw-bold mb-2" style="font-size:.83rem;">Registered Course Units</div>
+        <div class="table-responsive mb-4">
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:.78rem;">
+            <thead style="background:#F0F4F8;">
+              <tr>
+                <th>#</th>
+                <th>Subject / Course Unit</th>
+                <th>Code</th>
+                <th>Paper Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for reg in enrollment.course_registrations.all %}
+              <tr>
+                <td class="text-muted">{{ forloop.counter }}</td>
+                <td class="fw-medium">{{ reg.subject.name }}</td>
+                <td class="text-muted">{{ reg.subject.code }}</td>
+                <td>
+                  <span class="badge {% if reg.paper_type == 'normal' %}bg-primary{% else %}bg-warning text-dark{% endif %}"
+                        style="font-size:.68rem;">
+                    {{ reg.get_paper_type_display }}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center text-muted py-3">No course units registered.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Validity note -->
+        <div class="alert alert-info py-2 mb-4" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-info-circle me-1"></i>
+          This permit is valid only for the examination period of <strong>{{ enrollment.term }}</strong>.
+          Present a printed or digital copy to the invigilator before each examination.
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-2">
+          {% if permit.pdf_path %}
+          <a href="{{ permit.pdf_path }}" target="_blank" class="btn btn-primary btn-sm">
+            <i class="bi bi-download me-1"></i>Download PDF
+          </a>
+          {% endif %}
+          <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i>Print
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {% elif permit and permit.status == 'blocked' %}
+    <!-- PERMIT BLOCKED -->
+    <div class="portal-card p-4 text-center">
+      <i class="bi bi-shield-exclamation fs-1 d-block mb-3 text-danger"></i>
+      <h6 class="fw-bold text-danger">Exam Permit Blocked</h6>
+      <p class="text-muted mb-3" style="font-size:.83rem;">
+        Your exam permit could not be issued due to the following reason:
+      </p>
+      <div class="alert alert-danger py-2" style="font-size:.83rem;">
+        {{ permit.blocked_reason }}
+      </div>
+      <p class="text-muted mb-3" style="font-size:.8rem;">
+        Resolve the issue above and contact the Academic Registrar to have your permit released.
+      </p>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="{% url 'student_portal:fee_account' %}" class="btn btn-sm btn-warning">Pay Fees</a>
+        <a href="{% url 'student_portal:messages' %}" class="btn btn-sm btn-outline-secondary">Contact Registrar</a>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- PERMIT PENDING -->
+    <div class="portal-card p-4 text-center">
+      <i class="bi bi-hourglass-split fs-1 d-block mb-3 text-warning"></i>
+      <h6 class="fw-bold">Exam Permit Pending</h6>
+      <p class="text-muted mb-4" style="font-size:.83rem;">
+        Your permit has not yet been issued. All of the following must be completed:
+      </p>
+
+      <!-- Clearance checklist -->
+      <div class="text-start mx-auto" style="max-width:360px;">
+        {% for label, done in checklist %}
+        <div class="d-flex align-items-center gap-3 py-2 border-bottom">
+          <span class="flex-shrink-0"
+                style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                       background:{% if done %}#D1FAE5{% else %}#FEF3C7{% endif %};">
+            <i class="bi {% if done %}bi-check text-success{% else %}bi-dash text-warning{% endif %}"
+               style="font-size:.78rem;"></i>
+          </span>
+          <span style="font-size:.83rem;">{{ label }}</span>
+          {% if done %}
+          <i class="bi bi-check-circle-fill text-success ms-auto"></i>
+          {% else %}
+          <i class="bi bi-circle text-muted ms-auto"></i>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <p class="text-muted mt-4" style="font-size:.78rem;">
+        Permits are auto-generated nightly once all conditions are met.
+        If you believe this is an error, contact the Academic Registrar.
+      </p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  @media print {
+    .portal-sidebar, .portal-topbar, .btn, .alert-info { display: none !important; }
+    .portal-main { margin: 0 !important; padding: 0 !important; }
+    .portal-card { border: 1px solid #ccc !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}

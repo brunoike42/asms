@@ -1,0 +1,49 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+{% if certificates %}
+<div class="row g-3">
+  {% for cert in certificates %}
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="portal-card overflow-hidden h-100">
+      <!-- Certificate preview banner -->
+      <div style="background:linear-gradient(135deg,#1B4F72 0%,#0891B2 100%);padding:1.5rem;text-align:center;color:#fff;">
+        <i class="bi bi-award-fill" style="font-size:2.2rem;"></i>
+        <div class="fw-bold mt-2" style="font-size:.95rem;">{{ cert.title|default:cert.get_doc_type_display }}</div>
+      </div>
+      <div class="p-3">
+        <div class="text-muted mb-2" style="font-size:.78rem;">
+          Issued {{ cert.created_at|date:"d M Y" }}
+        </div>
+        {% if cert.verification_url %}
+        <div class="d-flex align-items-center gap-1 mb-2" style="font-size:.7rem;color:#6c757d;">
+          <i class="bi bi-shield-check"></i>
+          <span class="text-truncate">Verify: {{ cert.verification_url }}</span>
+        </div>
+        {% endif %}
+        <div class="d-flex gap-2">
+          <a href="{{ cert.file_path }}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill" style="font-size:.75rem;">
+            <i class="bi bi-eye me-1"></i>View
+          </a>
+          <a href="{{ cert.file_path }}" download class="btn btn-sm btn-outline-secondary flex-fill" style="font-size:.75rem;">
+            <i class="bi bi-download me-1"></i>Save
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-award fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No certificates yet</div>
+  <div style="font-size:.82rem;max-width:380px;margin:0 auto;">
+    Digital certificates for participation, achievement, and course completion will appear here as they are issued by your school.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "student_portal/base.html" %}
+{% load humanize portal_extras %}
+
+{% block page_actions %}
+<a href="?download=pdf" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+  <i class="bi bi-file-earmark-pdf"></i> Download PDF
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Student identity header -->
+<div class="portal-card p-4 mb-3">
+  <div class="row align-items-center">
+    <div class="col-md-8">
+      <h5 class="fw-bold mb-1">{{ student.user.get_full_name }}</h5>
+      <div class="d-flex flex-wrap gap-3 text-muted" style="font-size:.8rem;">
+        <span><i class="bi bi-person-badge me-1"></i>{{ student.student_id }}</span>
+        <span><i class="bi bi-building me-1"></i>{{ student.current_class }}</span>
+        <span><i class="bi bi-calendar me-1"></i>Admitted {{ student.admission_date|date:"M Y"|default:"—" }}</span>
+      </div>
+    </div>
+    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+      <div style="font-size:.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">Generated</div>
+      <div style="font-size:.82rem;font-weight:600;">{% now "d M Y, H:i" %}</div>
+      <div class="badge bg-secondary mt-1" style="font-size:.68rem;">Unofficial — For Reference Only</div>
+    </div>
+  </div>
+</div>
+
+{% if by_year %}
+  {% for academic_year, terms_dict in by_year.items %}
+  <div class="portal-card mb-3">
+
+    <!-- Year header -->
+    <div class="px-4 py-3 d-flex align-items-center justify-content-between"
+         style="background:linear-gradient(135deg,#1B4F72 0%,#2E86C1 100%);border-radius:10px 10px 0 0;">
+      <div>
+        <div class="fw-bold text-white">{{ academic_year }}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.7);">
+          {{ academic_year.start_date|date:"d M Y" }} — {{ academic_year.end_date|date:"d M Y" }}
+        </div>
+      </div>
+      <!-- Year summary (average across all results in this year) -->
+      {% with year_results=terms_dict.values|sum_results %}
+      <div class="text-end">
+        <div style="font-size:.7rem;color:rgba(255,255,255,.7);">Year Average</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#2ECC71;">
+          {{ year_results.avg|default:"—" }}%
+        </div>
+      </div>
+      {% endwith %}
+    </div>
+
+    <!-- Terms within this year -->
+    {% for term, results_list in terms_dict.items %}
+    <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-semibold" style="font-size:.85rem;">{{ term }}</div>
+        <a href="{% url 'student_portal:results' %}?term={{ term.id }}"
+           style="font-size:.72rem;color:#6c757d;">View report card →</a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0" style="font-size:.8rem;">
+          <thead style="background:#F8FAFC;">
+            <tr>
+              <th style="font-weight:600;color:#374151;">Subject</th>
+              <th class="text-center" style="font-weight:600;color:#374151;">Marks</th>
+              <th class="text-center" style="font-weight:600;color:#374151;">Grade</th>
+              <th class="text-center d-none d-md-table-cell" style="font-weight:600;color:#374151;">Points</th>
+              <th class="text-center d-none d-md-table-cell" style="font-weight:600;color:#374151;">Position</th>
+              <th class="text-center d-none d-md-table-cell" style="font-weight:600;color:#374151;">Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in results_list %}
+            <tr>
+              <td class="fw-medium">{{ result.subject.name }}</td>
+              <td class="text-center">
+                <span class="fw-bold"
+                      style="color:{% if result.marks >= 80 %}#16A34A{% elif result.marks >= 60 %}#1B4F72{% elif result.marks >= 50 %}#D97706{% else %}#DC2626{% endif %};">
+                  {{ result.marks|floatformat:1 }}
+                </span>
+                <span class="text-muted" style="font-size:.7rem;">/{{ result.max_marks|default:'100' }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge
+                  {% if result.grade == 'A' or result.grade == 'D1' or result.grade == 'D2' %}bg-success
+                  {% elif result.grade == 'B' or result.grade == 'C' or result.grade == 'D3' or result.grade == 'D4' %}bg-primary
+                  {% elif result.grade == 'F' or result.grade == 'D9' or result.grade == 'F9' %}bg-danger
+                  {% else %}bg-secondary{% endif %}"
+                  style="font-size:.72rem;min-width:28px;">
+                  {{ result.grade }}
+                </span>
+              </td>
+              <td class="text-center text-muted d-none d-md-table-cell">{{ result.points|default:'—' }}</td>
+              <td class="text-center text-muted d-none d-md-table-cell">{{ result.class_position|default:'—' }}</td>
+              <td class="text-center d-none d-md-table-cell">
+                <span style="font-size:.72rem;color:{% if result.is_pass %}#16A34A{% else %}#DC2626{% endif %};">
+                  {% if result.is_pass %}Pass{% else %}Fail{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <!-- Term totals row -->
+          <tfoot style="background:#F8FAFC;">
+            <tr>
+              <td class="fw-bold" style="font-size:.78rem;">Term Average</td>
+              <td class="text-center fw-bold">
+                {% with avg=results_list|avg_marks %}{{ avg|floatformat:1 }}{% endwith %}
+              </td>
+              <td class="text-center" colspan="4"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-file-earmark-text fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No academic records yet</div>
+  <div style="font-size:.82rem;">Your cumulative transcript will appear here once results are published.</div>
+</div>
+{% endif %}
+
+<!-- Signature block (for printed version) -->
+<div class="portal-card p-4 mt-3 d-flex align-items-center justify-content-between">
+  <div style="font-size:.75rem;color:#6c757d;">
+    <i class="bi bi-info-circle me-1"></i>
+    This is an unofficial transcript generated from the ASMS student portal.
+    For an official certified transcript, please contact the Academic Registrar.
+  </div>
+  <div class="text-end">
+    <div style="border-top:1px solid #6c757d;width:160px;padding-top:4px;font-size:.7rem;color:#6c757d;">
+      Registrar's Signature
+    </div>
+  </div>
+</div>
+
+{% endblock %}

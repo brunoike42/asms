@@ -1,0 +1,63 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+<div class="portal-card">
+  {% for item in page_obj %}
+  <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <div class="d-flex align-items-start gap-3">
+      <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+           style="width:38px;height:38px;
+                  background:{% if item.priority == 'high' %}#FEE2E2{% elif item.priority == 'medium' %}#FEF3C7{% else %}#E0F2FE{% endif %};">
+        <i class="bi {% if item.priority == 'high' %}bi-exclamation-circle text-danger
+                      {% elif item.priority == 'medium' %}bi-info-circle text-warning
+                      {% else %}bi-megaphone text-info{% endif %}"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="fw-bold" style="font-size:.86rem;">{{ item.title }}</span>
+          {% if item.priority == 'high' %}
+          <span class="badge bg-danger" style="font-size:.6rem;">Important</span>
+          {% endif %}
+        </div>
+        <div style="font-size:.82rem;line-height:1.6;color:#374151;">
+          {{ item.body|linebreaksbr }}
+        </div>
+        <div class="text-muted mt-2" style="font-size:.7rem;">
+          <i class="bi bi-clock me-1"></i>{{ item.published_at|date:"d M Y, H:i" }}
+          {% if item.posted_by %} · Posted by {{ item.posted_by }}{% endif %}
+        </div>
+        {% if item.attachment_path %}
+        <a href="{{ item.attachment_path }}" target="_blank" class="d-inline-flex align-items-center gap-1 mt-2"
+           style="font-size:.75rem;">
+          <i class="bi bi-paperclip"></i> Attachment
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-megaphone fs-1 d-block mb-2"></i>
+    <div class="fw-semibold">No announcements yet</div>
+    <div style="font-size:.82rem;">School-wide announcements will appear here.</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

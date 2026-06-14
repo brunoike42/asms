@@ -48,6 +48,12 @@ LOCAL_APPS = [
     'apps.library',
     'apps.lms',
     'apps.assignments',
+    'apps.discipline',
+    'apps.counselling',
+    'apps.payments',
+    'apps.parent_portal',
+    'apps.student_portal',
+    
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -80,6 +86,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.core.context_processors.tenant_context',  # ← Tenant in all templates
+                'apps.parent_portal.context_processors.parent_context',  # ← Parent Portal context
             ],
         },
     },
@@ -174,9 +181,10 @@ AFRICASTALKING_USERNAME = os.getenv('AFRICASTALKING_USERNAME', 'sandbox')
 AFRICASTALKING_SENDER_ID = os.getenv('AFRICASTALKING_SENDER_ID', 'ASMS')
 
 # ── Payments ──────────────────────────────────────────
-FLUTTERWAVE_PUBLIC_KEY = os.getenv('FLUTTERWAVE_PUBLIC_KEY', '')
-FLUTTERWAVE_SECRET_KEY = os.getenv('FLUTTERWAVE_SECRET_KEY', '')
-FLUTTERWAVE_WEBHOOK_SECRET = os.getenv('FLUTTERWAVE_WEBHOOK_SECRET', '')
+PESAPAL_CONSUMER_KEY    = os.getenv('PESAPAL_CONSUMER_KEY', '')
+PESAPAL_CONSUMER_SECRET = os.getenv('PESAPAL_CONSUMER_SECRET', '')
+PESAPAL_IPN_ID          = os.getenv('PESAPAL_IPN_ID', '')
+PESAPAL_SANDBOX         = os.getenv('PESAPAL_SANDBOX', 'True') == 'True'
 
 # ── Platform ──────────────────────────────────────────
 PLATFORM_DOMAIN = os.getenv('PLATFORM_DOMAIN', 'asms.app')

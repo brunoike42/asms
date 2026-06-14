@@ -1,0 +1,136 @@
+{% extends "parent/base.html" %}
+{% block title %}Fees — {{ student.first_name }} | Parent Portal{% endblock %}
+
+{% block content %}
+
+<!-- Balance Summary (FACTS-inspired) -->
+<div class="pp-card" style="background:linear-gradient(135deg,#1a56db,#1e40af);color:#fff;border:none;">
+  <div style="font-size:12px;opacity:.8;margin-bottom:4px;">Total Outstanding Balance</div>
+  <div style="font-size:36px;font-weight:800;line-height:1;">
+    UGX {{ total_outstanding|floatformat:0 }}
+  </div>
+  <div style="font-size:12px;opacity:.8;margin-top:4px;">
+    {{ student.first_name }} {{ student.last_name }}
+    {% if student.current_class %} · {{ student.current_class }}{% endif %}
+  </div>
+  {% if total_outstanding > 0 %}
+  <div style="margin-top:14px;">
+    {% for inv in invoices %}
+    {% if inv.amount_outstanding > 0 %}
+    <a href="{% url 'payments:initiate' invoice_pk=inv.pk %}"
+       style="display:inline-block;background:#fff;color:#1a56db;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">
+      <i class="bi bi-phone-fill me-2"></i>Pay with MoMo / Card
+    </a>
+    
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="margin-top:10px;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;display:inline-block;">
+    <i class="bi bi-check-circle-fill me-2"></i> All fees paid — thank you!
+  </div>
+  {% endif %}
+</div>
+
+<!-- Payment Summary Pills -->
+<div class="stat-row">
+  <div class="stat-pill {% if total_outstanding > 0 %}red{% else %}green{% endif %}">
+    <div class="val">UGX {{ total_outstanding|floatformat:0 }}</div>
+    <div class="lbl">Outstanding</div>
+  </div>
+  <div class="stat-pill green">
+    <div class="val">UGX {{ total_paid|floatformat:0 }}</div>
+    <div class="lbl">Total Paid</div>
+  </div>
+</div>
+
+<!-- Invoices (FACTS instalment-style view) -->
+<div class="pp-section-label">Invoices</div>
+{% for inv in invoices %}
+<div class="pp-card">
+  <div class="pp-card-header">
+    <div>
+      <div style="font-weight:700;font-size:14px;">Invoice #{{ inv.pk }}</div>
+      <div style="font-size:11px;color:var(--pp-muted);">
+        {% if inv.term %}{{ inv.term }}{% endif %}
+        {% if inv.created_at %} · {{ inv.created_at|date:"d M Y" }}{% endif %}
+      </div>
+    </div>
+    <span class="pp-badge {% if inv.status == 'paid' %}green{% elif inv.status == 'partial' %}amber{% else %}red{% endif %}">
+      {{ inv.status|capfirst }}
+    </span>
+  </div>
+
+  <!-- Amount progress bar (FACTS-inspired) -->
+  <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:12px;">
+    <span style="color:var(--pp-muted);">Paid: UGX {{ inv.amount_paid|default:0|floatformat:0 }}</span>
+    <span style="font-weight:600;">Total: UGX {{ inv.total_amount|default:0|floatformat:0 }}</span>
+  </div>
+  {% with total=inv.total_amount|default:1 paid=inv.amount_paid|default:0 %}
+  <div class="pp-progress mb-3">
+    <div class="pp-progress-bar"
+         style="width:{% widthratio paid total 100 %}%;background:{% if inv.status == 'paid' %}#0e9f6e{% else %}#e3a008{% endif %};">
+    </div>
+  </div>
+  {% endwith %}
+
+  {% if inv.amount_outstanding > 0 %}
+  <a href="{% url 'payments:initiate' invoice_pk=inv.pk %}"
+     class="btn btn-primary btn-sm w-100">
+    <i class="bi bi-phone me-2"></i>
+    Pay UGX {{ inv.amount_outstanding|floatformat:0 }} Now
+  </a>
+  {% endif %}
+</div>
+{% empty %}
+<div class="pp-card text-center py-4">
+  <div style="color:var(--pp-muted);font-size:13px;">No invoices found.</div>
+</div>
+{% endfor %}
+
+<!-- Payment History -->
+{% if payments %}
+<div class="pp-section-label">Payment History</div>
+<div class="pp-card">
+  {% for p in payments %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-check-circle-fill" style="color:#0e9f6e;font-size:16px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">UGX {{ p.amount|floatformat:0 }}</div>
+      <div class="item-sub">
+        {{ p.payment_method|default:"Manual" }}
+        {% if p.reference %} · {{ p.reference }}{% endif %}
+        · {{ p.created_at|date:"d M Y" }}
+      </div>
+    </div>
+    <span class="pp-badge green">Confirmed</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Online Transaction History (PesaPal) -->
+{% if online_txns %}
+<div class="pp-section-label">Online Transactions</div>
+<div class="pp-card">
+  {% for txn in online_txns %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-credit-card-fill" style="color:#1a56db;font-size:16px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">UGX {{ txn.amount|floatformat:0 }}</div>
+      <div class="item-sub">
+        {{ txn.payment_method|default:"PesaPal" }} · {{ txn.initiated_at|date:"d M Y" }}
+        {% if txn.confirmation_code %} · {{ txn.confirmation_code }}{% endif %}
+      </div>
+    </div>
+    <span class="pp-badge {{ txn.get_status_badge_class }}">{{ txn.get_status_display }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

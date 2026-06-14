@@ -1,0 +1,142 @@
+{% extends "parent/base.html" %}
+{% block title %}Messages | Parent Portal{% endblock %}
+{% block content %}
+<p class="pp-stitle">
+  <i class="bi bi-chat-dots-fill" style="color:#185FA5;margin-right:6px"></i>
+  Messages
+</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+  <!-- ── Inbox ── -->
+  <div>
+    <div class="pp-card">
+      <p class="pp-stitle" style="font-size:13px">Inbox</p>
+      {% if received %}
+        {% for msg in received %}
+        <div style="display:flex;gap:9px;padding:9px 0;border-bottom:0.5px solid var(--pp-border)">
+          <div style="width:30px;height:30px;border-radius:50%;background:#E6F0FB;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:10px;font-weight:500;color:#0C447C;flex-shrink:0">
+            {{ msg.sender.first_name|first }}{{ msg.sender.last_name|first }}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <p style="font-size:12px;font-weight:500;margin:0">
+                {{ msg.sender.get_full_name }}
+                {% if msg.student %}
+                <span style="font-size:10px;color:var(--pp-muted)">re: {{ msg.student.first_name }}</span>
+                {% endif %}
+              </p>
+              <span style="font-size:10px;color:var(--pp-muted)">{{ msg.created_at|date:"d M" }}</span>
+            </div>
+            <p style="font-size:12px;font-weight:500;color:var(--pp-text);margin:2px 0 1px">{{ msg.subject }}</p>
+            <p style="font-size:11px;color:var(--pp-muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              {{ msg.body|truncatechars:80 }}
+            </p>
+          </div>
+          {% if not msg.is_read %}
+          <span style="width:7px;height:7px;background:#185FA5;border-radius:50%;flex-shrink:0;margin-top:6px"></span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="font-size:12px;color:var(--pp-muted);text-align:center;padding:20px 0;margin:0">
+          No messages yet.
+        </p>
+      {% endif %}
+    </div>
+
+    <!-- ── Sent ── -->
+    {% if sent %}
+    <div class="pp-card">
+      <p class="pp-stitle" style="font-size:13px">Sent</p>
+      {% for msg in sent %}
+      <div style="padding:8px 0;border-bottom:0.5px solid var(--pp-border)">
+        <div style="display:flex;justify-content:space-between">
+          <p style="font-size:12px;font-weight:500;margin:0">To: {{ msg.recipient.get_full_name }}</p>
+          <span style="font-size:10px;color:var(--pp-muted)">{{ msg.created_at|date:"d M" }}</span>
+        </div>
+        <p style="font-size:11px;color:var(--pp-muted);margin:2px 0 0">{{ msg.subject }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Compose ── -->
+  <div>
+    <div class="pp-card">
+      <p class="pp-stitle" style="font-size:13px">
+        <i class="bi bi-pencil-fill" style="margin-right:5px"></i>Compose Message
+      </p>
+      <form method="post" action="{% url 'parent:send_message' %}">
+        {% csrf_token %}
+
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">To (Teacher / School)</label>
+          <select name="recipient_id" required
+                  style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
+                         border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
+            <option value="">— Select teacher —</option>
+            {% for t in teachers %}
+            <option value="{{ t.pk }}">{{ t.get_full_name }}{% if t.role %} · {{ t.get_role_display }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Regarding (child)</label>
+          <select name="student_pk"
+                  style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
+                         border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
+            <option value="">— General (no specific child) —</option>
+            {% for s in students %}
+            <option value="{{ s.pk }}">{{ s.first_name }} {{ s.last_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Subject</label>
+          <input type="text" name="subject" required
+                 placeholder="e.g. Absence on Monday 10 June"
+                 style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
+                        border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Message</label>
+          <textarea name="body" required rows="5"
+                    placeholder="Write your message here…"
+                    style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
+                           border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;
+                           resize:vertical"></textarea>
+        </div>
+
+        <button type="submit"
+                style="background:#185FA5;color:#fff;border:none;padding:8px 18px;
+                       border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;
+                       font-family:'Inter',sans-serif;width:100%">
+          <i class="bi bi-send-fill" style="margin-right:5px"></i>Send Message
+        </button>
+      </form>
+    </div>
+
+    <!-- Book a meeting block -->
+    <div class="pp-card">
+      <p class="pp-stitle" style="font-size:13px">
+        <i class="bi bi-calendar-event-fill" style="margin-right:5px"></i>Book a Meeting
+      </p>
+      {% if students %}
+      {% with s=students.0 %}
+      <a href="{% url 'parent:book_meeting' student_pk=s.pk %}" class="pp-act-btn" style="width:100%;justify-content:center">
+        <i class="bi bi-calendar-plus-fill"></i> Request parent-teacher meeting
+      </a>
+      {% endwith %}
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

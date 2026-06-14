@@ -1,0 +1,56 @@
+{% extends "student_portal/base.html" %}
+{% load portal_extras %}
+
+{% block content %}
+
+<div class="portal-card">
+  {% for quiz in quizzes %}
+  {% with attempt=attempt_map|dict_get:quiz.id %}
+  <div class="d-flex align-items-center gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+
+    <!-- Icon -->
+    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+         style="width:42px;height:42px;
+                background:{% if attempt and attempt.is_completed %}#D1FAE5{% elif attempt %}#DBEAFE{% else %}#F1F5F9{% endif %};">
+      <i class="bi {% if attempt and attempt.is_completed %}bi-clipboard-check text-success
+                    {% elif attempt %}bi-clipboard-data text-primary
+                    {% else %}bi-patch-question text-secondary{% endif %}" style="font-size:1.1rem;"></i>
+    </div>
+
+    <div class="flex-grow-1">
+      <div class="fw-semibold" style="font-size:.85rem;">{{ quiz.title }}</div>
+      <div class="text-muted" style="font-size:.74rem;">
+        {{ quiz.subject.name }} ·
+        {{ quiz.question_count }} questions ·
+        {{ quiz.duration_minutes }} min
+        {% if quiz.available_until %} · Closes {{ quiz.available_until|date:"d M, H:i" }}{% endif %}
+      </div>
+    </div>
+
+    <div class="text-end flex-shrink-0">
+      {% if attempt and attempt.is_completed %}
+        <div class="fw-bold" style="font-size:.9rem;color:#16A34A;">
+          {{ attempt.score }}/{{ quiz.total_marks }}
+        </div>
+        <a href="#" style="font-size:.72rem;">Review →</a>
+      {% elif attempt %}
+        <span class="badge bg-primary mb-1" style="font-size:.7rem;">In Progress</span><br>
+        <a href="#" class="btn btn-sm btn-primary" style="font-size:.72rem;padding:.2rem .6rem;">Continue</a>
+      {% else %}
+        <a href="#" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;padding:.2rem .6rem;">
+          <i class="bi bi-play-fill"></i> Start
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endwith %}
+  {% empty %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-patch-question fs-1 d-block mb-2"></i>
+    <div class="fw-semibold">No quizzes available</div>
+    <div style="font-size:.82rem;">Quizzes assigned by your teachers will appear here.</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

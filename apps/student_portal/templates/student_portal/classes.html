@@ -1,0 +1,96 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+<!-- Class header -->
+<div class="portal-card p-4 mb-3">
+  <div class="row align-items-center">
+    <div class="col-md-8">
+      <h5 class="fw-bold mb-1">{{ current_class }}</h5>
+      <div class="d-flex flex-wrap gap-3 text-muted" style="font-size:.8rem;">
+        <span><i class="bi bi-person-badge me-1"></i>{{ student.student_id }}</span>
+        <span><i class="bi bi-people me-1"></i>{{ classmates|length|add:1 }} students</span>
+        {% if current_class.class_teacher %}
+        <span><i class="bi bi-person-workspace me-1"></i>Class Teacher: {{ current_class.class_teacher }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+      <a href="{% url 'student_portal:timetable' %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-grid-3x3 me-1"></i>View Timetable
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Enrolled subjects -->
+  <div class="col-lg-7">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-journal-bookmark text-primary"></i> Enrolled Subjects
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size:.83rem;">
+          <thead style="background:#F8FAFC;">
+            <tr>
+              <th class="ps-4">Subject</th>
+              <th>Teacher</th>
+              <th class="text-center">LMS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cs in class_subjects %}
+            <tr>
+              <td class="ps-4">
+                <div class="fw-semibold">{{ cs.subject.name }}</div>
+                <div class="text-muted" style="font-size:.7rem;">{{ cs.subject.code }}</div>
+              </td>
+              <td class="text-muted">{{ cs.teacher|default:'Not assigned' }}</td>
+              <td class="text-center">
+                <a href="#" class="btn btn-sm btn-outline-secondary" style="font-size:.7rem;padding:.15rem .5rem;">
+                  <i class="bi bi-box-arrow-up-right"></i> Resources
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-4">No subjects assigned yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Classmates -->
+  <div class="col-lg-5">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-people text-success"></i> Classmates
+        <span class="badge bg-secondary ms-auto" style="font-size:.65rem;">{{ classmates|length }}</span>
+      </div>
+      <div style="max-height:420px;overflow-y:auto;">
+        {% for mate in classmates %}
+        <div class="d-flex align-items-center gap-3 px-4 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+               style="width:32px;height:32px;background:#E0E7FF;color:#3730A3;font-size:.75rem;font-weight:700;">
+            {{ mate.user.first_name|first|upper }}{{ mate.user.last_name|first|upper }}
+          </div>
+          <div style="font-size:.82rem;">
+            <div class="fw-medium">{{ mate.user.get_full_name }}</div>
+            <div class="text-muted" style="font-size:.7rem;">{{ mate.student_id }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4" style="font-size:.82rem;">No classmates listed.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

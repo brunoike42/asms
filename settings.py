@@ -14,6 +14,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+      'django.contrib.humanize',                    # for {{ value|intcomma }} — add if missing
+    'apps.student_portal.apps.StudentPortalConfig',
     # ASMS Apps
     'core',
     'students',
@@ -55,6 +57,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.tenant_context',
+                'apps.parent_portal.context_processors.parent_students',
             ],
         },
     },

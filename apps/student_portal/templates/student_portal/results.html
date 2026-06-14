@@ -1,0 +1,119 @@
+{% extends "student_portal/base.html" %}
+{% load humanize portal_extras %}
+
+{% block page_actions %}
+{% if report_card and report_card.pdf_path %}
+<a href="{{ report_card.pdf_path }}" target="_blank"
+   class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+  <i class="bi bi-file-earmark-pdf"></i> Report Card PDF
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Term filter tabs -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="{% url 'student_portal:results' %}"
+     class="btn btn-sm {% if not term_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    All Terms
+  </a>
+  {% for t in terms %}
+  <a href="?term={{ t.id }}"
+     class="btn btn-sm {% if term_filter == t.id|stringformat:'s' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    {{ t }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if results_by_term %}
+  {% for term, result_list in results_by_term.items %}
+  <div class="portal-card mb-3">
+
+    <!-- Term header -->
+    <div class="px-4 py-3 border-bottom d-flex align-items-center justify-content-between"
+         style="background:#F8FAFC;">
+      <div>
+        <div class="fw-bold" style="font-size:.88rem;">{{ term }}</div>
+        <div class="text-muted" style="font-size:.72rem;">
+          {{ term.start_date|date:"d M Y" }} — {{ term.end_date|date:"d M Y" }}
+        </div>
+      </div>
+      <a href="{% url 'student_portal:transcript' %}" style="font-size:.75rem;color:#6c757d;">
+        Full transcript →
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.83rem;">
+        <thead style="background:#F8FAFC;">
+          <tr>
+            <th class="ps-4">Subject</th>
+            <th class="text-center">Marks</th>
+            <th class="text-center">Grade</th>
+            <th class="text-center d-none d-md-table-cell">Points</th>
+            <th class="text-center d-none d-md-table-cell">Position</th>
+            <th class="text-center d-none d-sm-table-cell">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for result in result_list %}
+          <tr>
+            <td class="ps-4 fw-medium">{{ result.subject.name }}</td>
+            <td class="text-center">
+              <span class="fw-bold"
+                    style="color:{% if result.marks >= 80 %}#16A34A{% elif result.marks >= 60 %}#1B4F72{% elif result.marks >= 50 %}#D97706{% else %}#DC2626{% endif %};">
+                {{ result.marks|floatformat:0 }}
+              </span>
+              <span class="text-muted" style="font-size:.72rem;">/{{ result.max_marks|default:'100' }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge
+                {% if result.grade in 'A D1 D2' %}bg-success
+                {% elif result.grade in 'B C D3 D4 D5' %}bg-primary
+                {% elif result.grade in 'F F9 D9' %}bg-danger
+                {% else %}bg-secondary{% endif %}"
+                style="font-size:.72rem;min-width:30px;">
+                {{ result.grade }}
+              </span>
+            </td>
+            <td class="text-center text-muted d-none d-md-table-cell">{{ result.points|default:'—' }}</td>
+            <td class="text-center text-muted d-none d-md-table-cell">
+              {{ result.class_position|default:'—' }}
+            </td>
+            <td class="text-center d-none d-sm-table-cell">
+              <span style="font-size:.72rem;font-weight:600;
+                color:{% if result.is_pass %}#16A34A{% else %}#DC2626{% endif %};">
+                {% if result.is_pass %}PASS{% else %}FAIL{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Term summary -->
+    {% with n=result_list|length %}
+    <div class="px-4 py-2 border-top bg-light d-flex flex-wrap gap-4" style="font-size:.78rem;">
+      <div><span class="text-muted">Subjects:</span> <strong>{{ n }}</strong></div>
+      <div><span class="text-muted">Average:</span>
+        <strong>{{ result_list|avg_marks }}%</strong>
+      </div>
+      <div><span class="text-muted">Overall Position:</span>
+        <strong>{{ result_list.0.overall_position|default:'—' }}</strong>
+      </div>
+    </div>
+    {% endwith %}
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-bar-chart fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No results yet</div>
+  <div style="font-size:.82rem;">Results will appear here once published by your teachers.</div>
+</div>
+{% endif %}
+
+{% endblock %}

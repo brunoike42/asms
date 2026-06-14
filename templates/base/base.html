@@ -191,7 +191,13 @@
         <i class="bi bi-folder-fill"></i> Resources
       </a>      {% endif %}
 
-
+<div class="nav-section-label">Welfare</div>
+      <a href="{% url 'discipline:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'discipline' %} active{% endif %}">
+        <i class="bi bi-shield-exclamation"></i> Discipline
+      </a>
+      <a href="{% url 'counselling:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'counselling' %} active{% endif %}">
+        <i class="bi bi-heart-pulse"></i> Counselling & Welfare
+      </a>
       
       {% if can_see_finance %}<div class="nav-section-label">Finance</div>
       <a href="{% url 'finance:invoice_list' %}" class="sidebar-link"><i class="bi bi-cash-stack"></i> Fee Management</a>
@@ -208,7 +214,12 @@
       
       {% if can_see_communication %}<div class="nav-section-label">Communication</div>
       <a href="#" class="sidebar-link disabled"><i class="bi bi-chat-dots-fill"></i> Messaging <span class="badge bg-secondary ms-auto" style="font-size:.6rem">Soon</span></a>      {% endif %}
-
+    {% if request.user.role == 'school_admin' or request.user.role == 'super_admin' %}
+<div class="nav-section-label">Portals</div>
+<a href="{% url 'parent:dashboard' %}" class="sidebar-link">
+  <i class="bi bi-people-fill"></i> Parent Portal
+</a>
+{% endif %}
 
       <div class="nav-section-label">Account</div>
       <a href="{% url 'accounts:profile' %}" class="sidebar-link"><i class="bi bi-person-circle"></i> My Profile</a>

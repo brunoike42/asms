@@ -1,0 +1,116 @@
+{% extends "student_portal/base.html" %}
+
+{% block page_actions %}
+<span class="badge bg-secondary py-2 px-3" style="font-size:.75rem;">
+  {{ enrollment.term }} · {{ registered_ids|length }} unit{{ registered_ids|length|pluralize }} registered
+</span>
+{% endblock %}
+
+{% block content %}
+
+{% if not enrollment.is_confirmed %}
+<div class="alert alert-warning d-flex gap-2 align-items-center py-2 mb-3">
+  <i class="bi bi-exclamation-triangle flex-shrink-0"></i>
+  <span style="font-size:.83rem;">
+    Your term enrollment is not yet confirmed.
+    <a href="{% url 'student_portal:term_enrollment' %}" class="alert-link">Confirm enrollment first →</a>
+  </span>
+</div>
+{% endif %}
+
+<div class="portal-card">
+  <div class="px-4 pt-4 pb-3 border-bottom">
+    <h6 class="fw-bold mb-1">Course Unit Registration — {{ enrollment.term }}</h6>
+    <p class="text-muted mb-0" style="font-size:.82rem;">
+      Select all subjects/course units you will be sitting this term.
+      Indicate whether each is a normal paper, retake, or supplementary.
+      Changes are locked once the registration window closes.
+    </p>
+  </div>
+
+  <form method="post" id="courseRegForm">
+    {% csrf_token %}
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.83rem;">
+        <thead style="background:#F8FAFC;">
+          <tr>
+            <th style="width:44px;" class="ps-4">
+              <input type="checkbox" class="form-check-input" id="selectAll" title="Select all">
+            </th>
+            <th>Subject / Course Unit</th>
+            <th style="width:160px;">Department</th>
+            <th style="width:180px;">Paper Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cs in available_subjects %}
+          <tr>
+            <td class="ps-4">
+              <input type="checkbox" class="form-check-input subject-check"
+                     name="subject_ids" value="{{ cs.subject.id }}"
+                     {% if cs.subject.id in registered_ids %}checked{% endif %}>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ cs.subject.name }}</div>
+              <div class="text-muted" style="font-size:.72rem;">{{ cs.subject.code }}</div>
+            </td>
+            <td class="text-muted">{{ cs.subject.department|default:'—' }}</td>
+            <td>
+              <select name="paper_types" class="form-select form-select-sm paper-type-sel"
+                      style="font-size:.78rem;">
+                {% for val, label in paper_type_choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-5">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              No subjects available for your class. Contact the academic registrar.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between px-4 py-3 border-top bg-light">
+      <span style="font-size:.8rem;color:#6c757d;">
+        <span id="selectedCount">{{ registered_ids|length }}</span> unit{{ registered_ids|length|pluralize }} selected
+      </span>
+      <div class="d-flex gap-2">
+        <a href="{% url 'student_portal:term_enrollment' %}" class="btn btn-sm btn-outline-secondary">
+          ← Back to Enrollment
+        </a>
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-floppy me-1"></i>Save Registration
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Select-all toggle
+const selectAll = document.getElementById('selectAll');
+const checks    = document.querySelectorAll('.subject-check');
+const countEl   = document.getElementById('selectedCount');
+
+selectAll.addEventListener('change', () => {
+  checks.forEach(c => c.checked = selectAll.checked);
+  updateCount();
+});
+checks.forEach(c => c.addEventListener('change', updateCount));
+
+function updateCount() {
+  const n = document.querySelectorAll('.subject-check:checked').length;
+  countEl.textContent = n;
+}
+</script>
+{% endblock %}

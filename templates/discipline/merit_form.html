@@ -1,0 +1,55 @@
+{% extends "base/base.html" %}
+{% block title %}Award Merit | ASMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">Award Merit or Commendation</h4>
+  <a href="{% url 'discipline:merit_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-4">
+          Use this form to record positive student behaviour — academic excellence, good citizenship, improvement, and community contributions. Parent will be notified.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Student <span class="text-danger">*</span></label>
+            {{ form.student }}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Merit Type</label>
+              {{ form.merit_type }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">Points (1–50)</label>
+              {{ form.merit_points }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">Date</label>
+              {{ form.award_date }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Title <span class="text-danger">*</span></label>
+            {{ form.title }}
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Description</label>
+            {{ form.description }}
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-award me-2"></i> Award Merit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

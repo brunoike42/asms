@@ -19,6 +19,10 @@ urlpatterns = [
     path('lms/', include('apps.lms.urls')),
     path('assignments/', include('apps.assignments.urls')),
     path('library/', include('apps.library.urls')),
-
+    path('discipline/', include('apps.discipline.urls', namespace='discipline')),
+    path('counselling/', include('apps.counselling.urls', namespace='counselling')),
+    path('payments/', include('apps.payments.urls', namespace='payments')),
+     path('parent/',       include('apps.parent_portal.urls', namespace='parent')), 
+    path('portal/', include('apps.student_portal.urls', namespace='student_portal')),
     path('',               lambda r: redirect('core:dashboard'), name='home'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

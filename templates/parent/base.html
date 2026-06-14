@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Parent Portal{% endblock %} | {% if request.tenant %}{{ request.tenant.name }}{% else %}ASMS{% endif %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --pp-header:   #042C53;
+      --pp-sidebar:  #0C447C;
+      --pp-accent:   #185FA5;
+      --pp-primary:  #1B3A6B;
+      --pp-teal:     #0A7B8C;
+      --pp-gold:     #EF9F27;
+      --pp-danger:   #E24B4A;
+      --pp-success:  #1D9E75;
+      --pp-warning:  #D97706;
+      --pp-bg:       #F0F4F8;
+      --pp-card:     #ffffff;
+      --pp-text:     #0F1A2E;
+      --pp-muted:    #6B7A90;
+      --pp-border:   #E2E8EF;
+      --sidebar-w:   172px;
+      --header-h:    50px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; font-size: 13px;
+           background: var(--pp-bg); color: var(--pp-text); margin: 0; }
+
+    /* ── Header ─────────────────────────────────────── */
+    .pp-header {
+      position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+      background: var(--pp-header); display: flex; align-items: center;
+      padding: 0 14px; gap: 12px; z-index: 1040;
+      box-shadow: 0 1px 0 rgba(255,255,255,.06);
+    }
+    .pp-brand { display: flex; align-items: center; gap: 8px;
+                text-decoration: none; flex-shrink: 0; }
+    .pp-brand-icon {
+      width: 28px; height: 28px; background: var(--pp-accent);
+      border-radius: 6px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .pp-brand-icon i { color: #B5D4F4; font-size: 14px; }
+    .pp-brand-name  { font-size: 12px; font-weight: 500; color: #B5D4F4; }
+    .pp-brand-sub   { font-size: 10px; color: #85B7EB; }
+
+    /* Child switcher pills */
+    .pp-child-pills { display: flex; gap: 6px; flex: 1;
+                      overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pp-child-pills::-webkit-scrollbar { display: none; }
+    .pp-child-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 20px;
+      border: 1.5px solid rgba(255,255,255,.15);
+      background: transparent; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: all .15s;
+      text-decoration: none; flex-shrink: 0;
+    }
+    .pp-child-pill.active {
+      border-color: var(--pp-gold);
+      background: rgba(239,159,39,.12);
+    }
+    .pp-child-pill .pill-av {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 600;
+    }
+    .pp-child-pill       .pill-name { font-size: 11px; color: #B5D4F4; font-weight: 400; }
+    .pp-child-pill.active .pill-name { color: #FAC775; font-weight: 500; }
+    .pp-child-pill .pill-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pp-success);
+    }
+    .pp-child-pill.active .pill-dot { background: var(--pp-gold); }
+
+    /* Header right */
+    .pp-header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .pp-notif-btn {
+      position: relative; color: #B5D4F4; border: none;
+      background: none; cursor: pointer; padding: 0;
+      font-size: 17px; line-height: 1; text-decoration: none;
+    }
+    .pp-notif-badge {
+      position: absolute; top: -5px; right: -6px;
+      width: 14px; height: 14px; background: var(--pp-danger);
+      border-radius: 50%; font-size: 8px; color: #fff; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pp-user-av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--pp-accent); color: #B5D4F4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; text-decoration: none;
+    }
+
+    /* ── Sidebar ────────────────────────────────────── */
+    .pp-sidebar {
+      position: fixed; top: var(--header-h); left: 0;
+      width: var(--sidebar-w); height: calc(100vh - var(--header-h));
+      background: var(--pp-sidebar); overflow-y: auto;
+      overflow-x: hidden; z-index: 1030; padding: 8px 0;
+    }
+    .pp-sidebar::-webkit-scrollbar { width: 3px; }
+    .pp-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+
+    .pp-sb-student {
+      padding: 9px 13px 10px;
+      border-bottom: 0.5px solid rgba(255,255,255,.1); margin-bottom: 4px;
+    }
+    .pp-sb-student .sn { font-size: 12px; font-weight: 500; color: #fff; margin: 0; }
+    .pp-sb-student .sc { font-size: 10px; color: #85B7EB; margin: 0; }
+
+    .pp-nav-grp {
+      padding: 5px 13px 3px; font-size: 10px; font-weight: 500;
+      color: #85B7EB; letter-spacing: .04em; text-transform: uppercase; margin-top: 4px;
+    }
+    .pp-nav-lnk {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 13px; cursor: pointer; font-size: 12px; font-weight: 400;
+      color: #B5D4F4; border: none; background: transparent;
+      width: 100%; text-align: left; text-decoration: none;
+      transition: background .12s, color .12s; font-family: 'Inter', sans-serif;
+    }
+    .pp-nav-lnk i { font-size: 13px; flex-shrink: 0; width: 16px; }
+    .pp-nav-lnk:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .pp-nav-lnk.active { background: var(--pp-accent); color: #fff; font-weight: 500; }
+    .pp-nav-lnk .nav-bdg {
+      margin-left: auto; background: var(--pp-danger); color: #fff;
+      font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 10px;
+    }
+    .pp-aci {
+      padding: 9px 13px; border-top: 0.5px solid rgba(255,255,255,.1); margin-top: 6px;
+    }
+    .pp-aci .al { font-size: 10px; color: #85B7EB; margin: 0 0 3px; font-weight: 500; }
+    .pp-aci .at { font-size: 10px; color: #B5D4F4; margin: 0; line-height: 1.5; }
+
+    /* ── Main content ───────────────────────────────── */
+    .pp-main {
+      margin-left: var(--sidebar-w); margin-top: var(--header-h);
+      padding: 16px 20px; min-height: calc(100vh - var(--header-h));
+    }
+
+    /* ── Cards ─────────────────────────────────────── */
+    .pp-card {
+      background: var(--pp-card); border: 0.5px solid var(--pp-border);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+    }
+    .pp-card:last-child { margin-bottom: 0; }
+    a.pp-card, .pp-card[onclick] { display: block; text-decoration: none; color: inherit; }
+    a.pp-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.08); }
+
+    /* ── Metric cards ───────────────────────────────── */
+    .pp-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr));
+                  gap: 9px; margin-bottom: 12px; }
+    .pp-metric {
+      background: #F4F7FB; border: 0.5px solid var(--pp-border);
+      border-radius: 8px; padding: 11px 13px;
+    }
+    .pp-metric .ml { font-size: 11px; color: var(--pp-muted); margin: 0 0 3px; }
+    .pp-metric .mv { font-size: 21px; font-weight: 500; margin: 0; line-height: 1; color: var(--pp-text); }
+    .pp-metric .ms { font-size: 10px; color: var(--pp-muted); margin: 2px 0 0; }
+    .pp-metric.danger  .mv { color: var(--pp-danger); }
+    .pp-metric.warning .mv { color: var(--pp-warning); }
+    .pp-metric.success .mv { color: var(--pp-success); }
+
+    /* ── Section title ──────────────────────────────── */
+    .pp-stitle { font-size: 14px; font-weight: 500; color: var(--pp-text); margin: 0 0 11px; }
+
+    /* ── Tables ─────────────────────────────────────── */
+    .pp-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .pp-tbl th {
+      text-align: left; padding: 6px 9px; font-size: 11px; font-weight: 500;
+      color: var(--pp-muted); border-bottom: 0.5px solid var(--pp-border); background: #F4F7FB;
+    }
+    .pp-tbl td { padding: 7px 9px; border-bottom: 0.5px solid var(--pp-border); }
+    .pp-tbl tr:last-child td { border-bottom: none; }
+    .pp-tbl tbody tr:hover { background: #F8FAFC; }
+
+    /* ── Badges ─────────────────────────────────────── */
+    .pp-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px;
+                font-weight: 500; display: inline-block; }
+    .pp-badge.danger  { background: #FDECEA; color: #C0392B; }
+    .pp-badge.warning { background: #FEF6E4; color: #9A5C00; }
+    .pp-badge.success { background: #E6F6EF; color: #0D6E4A; }
+    .pp-badge.info    { background: #E6F0FB; color: #0C447C; }
+    .pp-badge.grey    { background: #F0F2F5; color: #5A6478; }
+
+    /* ── Progress bar ───────────────────────────────── */
+    .pp-prog { height: 8px; border-radius: 4px; background: var(--pp-border); overflow: hidden; }
+    .pp-prog-bar { height: 100%; border-radius: 4px; transition: width .4s; }
+
+    /* ── Alert banners ──────────────────────────────── */
+    .pp-alert {
+      border-radius: 8px; padding: 9px 13px; margin-bottom: 12px;
+      display: flex; align-items: flex-start; gap: 9px; font-size: 12px;
+    }
+    .pp-alert i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .pp-alert.danger  { background: #FDECEA; border: 0.5px solid #F5C6C3; color: #8B1A1A; }
+    .pp-alert.warning { background: #FEF6E4; border: 0.5px solid #F5D898; color: #7A4A00; }
+    .pp-alert.info    { background: #E6F0FB; border: 0.5px solid #AECDEE; color: #0C447C; }
+    .pp-alert.success { background: #E6F6EF; border: 0.5px solid #A1DCC0; color: #0D5C3A; }
+
+    /* ── Action buttons ─────────────────────────────── */
+    .pp-act-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 10px; border-radius: 7px;
+      border: 0.5px solid var(--pp-border); background: var(--pp-card);
+      cursor: pointer; font-size: 11px; font-family: 'Inter', sans-serif;
+      color: var(--pp-text); text-decoration: none; transition: background .12s;
+    }
+    .pp-act-btn:hover { background: #F4F7FB; }
+    .pp-act-btn i { font-size: 12px; }
+
+    /* ── Payment buttons ────────────────────────────── */
+    .pp-pay-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      border: 0.5px solid var(--pp-border); background: var(--pp-card);
+      cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif;
+      color: var(--pp-text); width: 100%; text-align: left;
+      margin-bottom: 8px; transition: background .12s;
+    }
+    .pp-pay-btn:hover { background: #F4F7FB; }
+    .pp-pay-btn .pay-ic {
+      width: 26px; height: 26px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; flex-shrink: 0;
+    }
+    .pp-pay-btn .pay-arr { margin-left: auto; color: var(--pp-muted); font-size: 13px; }
+
+    /* ── List items ─────────────────────────────────── */
+    .pp-li {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 0; border-bottom: 0.5px solid var(--pp-border);
+    }
+    .pp-li:last-child { border-bottom: none; }
+    .pp-li:hover { background: #F8FAFC; margin: 0 -14px; padding: 9px 14px; border-radius: 6px; }
+    .pp-li .li-ic {
+      width: 32px; height: 32px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 14px;
+    }
+    .pp-li .li-m  { flex: 1; min-width: 0; }
+    .pp-li .li-t  { font-weight: 500; font-size: 12px; }
+    .pp-li .li-s  { font-size: 11px; color: var(--pp-muted); }
+
+    /* ── Toast ──────────────────────────────────────── */
+    .pp-toasts {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%); z-index: 2000;
+      width: 90%; max-width: 360px;
+    }
+    .pp-toast {
+      background: #1f2937; color: #fff; padding: 11px 14px;
+      border-radius: 8px; font-size: 12px; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    }
+
+    /* ── Timetable grid ─────────────────────────────── */
+    .tt-cell {
+      padding: 3px 5px; border-radius: 4px; font-size: 10px;
+      font-weight: 500; text-align: center;
+    }
+
+    /* ── Responsive mobile sidebar ──────────────────── */
+    @media (max-width: 768px) {
+      .pp-sidebar { transform: translateX(-100%); transition: transform .25s; }
+      .pp-sidebar.open { transform: translateX(0); }
+      .pp-main { margin-left: 0; padding: 12px 14px; }
+      .pp-overlay { display: none; position: fixed; inset: 0;
+                    background: rgba(0,0,0,.4); z-index: 1025; }
+      .pp-overlay.show { display: block; }
+      .pp-mob-btn { display: flex !important; }
+    }
+    @media (min-width: 769px) { .pp-mob-btn { display: none !important; } }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="pp-header">
+  <button class="pp-mob-btn" onclick="toggleSB()"
+          style="display:none;background:none;border:none;color:#B5D4F4;font-size:18px;cursor:pointer;padding:0;flex-shrink:0">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <a href="{% url 'parent:dashboard' %}" class="pp-brand">
+    <div class="pp-brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div>
+      <div class="pp-brand-name">{% if request.tenant %}{{ request.tenant.name }}{% else %}ASMS{% endif %}</div>
+      <div class="pp-brand-sub">Parent portal</div>
+    </div>
+  </a>
+
+  {% if students %}
+  <div class="pp-child-pills">
+    {% for s in students %}
+    <a href="{% url 'parent:child_academic' student_pk=s.pk %}"
+       class="pp-child-pill {% if student and student.pk == s.pk %}active{% endif %}">
+      <div class="pill-av" style="background:{% if forloop.first %}#185FA5;color:#B5D4F4{% else %}#0F6E56;color:#9FE1CB{% endif %}">
+        {{ s.first_name|first }}{{ s.last_name|first }}
+      </div>
+      <span class="pill-name">{{ s.first_name }}</span>
+      <span class="pill-dot"></span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="pp-header-right">
+    <a href="{% url 'parent:notifications' %}" class="pp-notif-btn">
+      <i class="bi bi-bell-fill"></i>
+      {% if unread_count %}<span class="pp-notif-badge">{{ unread_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'parent:profile' %}" class="pp-user-av">
+      {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+    </a>
+  </div>
+</header>
+
+<div class="pp-overlay" id="ppOv" onclick="toggleSB()"></div>
+
+<!-- ── Sidebar ── -->
+{% with nav_s=student|default:active_student %}
+<nav class="pp-sidebar" id="ppSB">
+  {% if nav_s %}
+  <div class="pp-sb-student">
+    <p class="sn">{{ nav_s.first_name }} {{ nav_s.last_name }}</p>
+    <p class="sc">{% if nav_s.current_class %}{{ nav_s.current_class }}{% else %}—{% endif %}</p>
+  </div>
+  {% endif %}
+
+  <div class="pp-nav-grp">Overview</div>
+  <a href="{% url 'parent:dashboard' %}"
+     class="pp-nav-lnk {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    <i class="bi bi-house-fill"></i> Dashboard
+  </a>
+  <a href="{% url 'parent:notifications' %}"
+     class="pp-nav-lnk {% if 'notif' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-megaphone-fill"></i> Notices
+    {% if unread_count %}<span class="nav-bdg">{{ unread_count }}</span>{% endif %}
+  </a>
+
+  {% if nav_s %}
+  <div class="pp-nav-grp">Child's life</div>
+  <a href="{% url 'parent:child_attendance' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-calendar-check-fill"></i> Attendance
+  </a>
+  <a href="{% url 'parent:child_academic' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'academic' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-bar-chart-fill"></i> Academic
+  </a>
+  <a href="{% url 'parent:child_assignments' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'assign' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-clipboard-fill"></i> Assignments
+  </a>
+  <a href="{% url 'parent:child_timetable' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'timetable' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-clock-fill"></i> Timetable
+  </a>
+  <a href="{% url 'parent:child_library' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'library' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-book-fill"></i> Library
+  </a>
+  <a href="{% url 'parent:child_behaviour' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'behav' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-shield-fill"></i> Behaviour
+  </a>
+
+  <div class="pp-nav-grp">Finance & docs</div>
+  <a href="{% url 'parent:child_fees' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'fees' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-credit-card-fill"></i> Fees & Payments
+  </a>
+  <a href="{% url 'parent:child_documents' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'doc' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-file-earmark-fill"></i> Documents
+  </a>
+  {% endif %}
+
+  <div class="pp-nav-grp">Communication</div>
+  <a href="{% url 'parent:messages' %}"
+     class="pp-nav-lnk {% if 'message' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-chat-dots-fill"></i> Messages
+    {% if unread_messages %}<span class="nav-bdg">{{ unread_messages }}</span>{% endif %}
+  </a>
+
+  <div class="pp-nav-grp">Account</div>
+  <a href="{% url 'parent:profile' %}"
+     class="pp-nav-lnk {% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-person-fill"></i> My Profile
+  </a>
+  <a href="{% url 'accounts:logout' %}" class="pp-nav-lnk">
+    <i class="bi bi-box-arrow-left"></i> Logout
+  </a>
+
+  <div class="pp-aci">
+    <p class="al">ACI insight</p>
+    <p class="at">"Parents who check this portal weekly see 40% better outcomes in East African schools."</p>
+  </div>
+  {# ── Canteen (Phase 4) ── #}
+  {% if nav_s %}
+  <div class="pp-nav-grp">Services</div>
+  <a href="{% url 'parent:child_canteen' nav_s.pk %}"
+     class="pp-nav-link{% if active_section == 'canteen' %} active{% endif %}">
+    <i class="bi bi-cup-straw"></i> Canteen
+  </a>
+  <a href="{% url 'parent:child_health' nav_s.pk %}"
+     class="pp-nav-link{% if active_section == 'health' %} active{% endif %}">
+    <i class="bi bi-heart-pulse"></i> Health
+  </a>
+  <a href="{% url 'parent:child_transport' nav_s.pk %}"
+     class="pp-nav-link{% if active_section == 'transport' %} active{% endif %}">
+    <i class="bi bi-bus-front"></i> Transport
+  </a>
+  {% endif %}
+</nav>
+{% endwith %}
+
+<!-- ── Toasts ── -->
+{% if messages %}
+<div class="pp-toasts" id="ppToasts">
+  {% for msg in messages %}
+  <div class="pp-toast">
+    {% if 'error' in msg.tags %}<i class="bi bi-exclamation-circle-fill" style="color:#E24B4A"></i>
+    {% elif 'success' in msg.tags %}<i class="bi bi-check-circle-fill" style="color:#1D9E75"></i>
+    {% else %}<i class="bi bi-info-circle-fill" style="color:#185FA5"></i>{% endif %}
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Main ── -->
+<main class="pp-main">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSB() {
+  document.getElementById('ppSB').classList.toggle('open');
+  document.getElementById('ppOv').classList.toggle('show');
+}
+setTimeout(() => {
+  const t = document.getElementById('ppToasts');
+  if (t) { t.style.transition='opacity .4s'; t.style.opacity='0';
+            setTimeout(() => t.remove(), 400); }
+}, 3500);
+{% if request.user.is_authenticated %}
+setInterval(() => {
+  fetch("{% url 'parent:notification_count' %}")
+    .then(r => r.json())
+    .then(d => {
+      document.querySelectorAll('.pp-notif-badge').forEach(el => {
+        el.textContent = d.unread || ''; el.style.display = d.unread ? '' : 'none';
+      });
+    }).catch(() => {});
+}, 60000);
+{% endif %}
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

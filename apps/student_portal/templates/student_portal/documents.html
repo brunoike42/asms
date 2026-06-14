@@ -1,0 +1,60 @@
+{% extends "student_portal/base.html" %}
+{% load portal_extras %}
+
+{% block content %}
+
+{% if documents %}
+<!-- Group documents by type -->
+{% regroup documents by doc_type as doc_groups %}
+
+{% for group in doc_groups %}
+<div class="portal-card mb-3">
+  <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+    <i class="bi
+      {% if group.grouper == 'report_card' %}bi-bar-chart text-success
+      {% elif group.grouper == 'admission_letter' %}bi-file-earmark-text text-primary
+      {% elif group.grouper == 'id_card' %}bi-person-vcard text-info
+      {% elif group.grouper == 'certificate' %}bi-award text-warning
+      {% elif group.grouper == 'receipt' %}bi-receipt text-secondary
+      {% else %}bi-file-earmark text-muted{% endif %}"></i>
+    {{ group.grouper|default:"document"|humanize_key }}
+    <span class="badge bg-secondary ms-auto" style="font-size:.65rem;">{{ group.list|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+      <tbody>
+        {% for doc in group.list %}
+        <tr>
+          <td class="ps-4">
+            <div class="fw-medium">{{ doc.title|default:doc.get_doc_type_display }}</div>
+            <div class="text-muted" style="font-size:.7rem;">
+              {{ doc.term|default:"" }}{% if doc.term %} · {% endif %}{{ doc.created_at|date:"d M Y" }}
+            </div>
+          </td>
+          <td class="text-end pe-4" style="white-space:nowrap;">
+            <a href="{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;">
+              <i class="bi bi-eye me-1"></i>View
+            </a>
+            <a href="{{ doc.file_path }}" download class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;">
+              <i class="bi bi-download me-1"></i>Download
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="portal-card p-5 text-center text-muted">
+  <i class="bi bi-folder2-open fs-1 d-block mb-3"></i>
+  <div class="fw-semibold">No documents yet</div>
+  <div style="font-size:.82rem;">
+    Report cards, admission letters, ID cards, and certificates will appear here once generated.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

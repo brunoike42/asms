@@ -1,0 +1,141 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+
+    {% if existing %}
+    <div class="portal-card p-4 mb-3" style="border-left:4px solid #7C3AED;">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-door-open fs-3 text-purple flex-shrink-0" style="color:#7C3AED;"></i>
+        <div>
+          <div class="fw-bold">Leave Request Under Review</div>
+          <div style="font-size:.8rem;color:#6c757d;">
+            Submitted {{ existing.submitted_at|date:"d M Y" }} ·
+            Type: <strong>{{ existing.get_leave_type_display }}</strong> ·
+            From: <strong>{{ existing.from_term }}</strong>
+          </div>
+          {% if existing.admin_comment %}
+          <div class="mt-2 p-2 rounded" style="background:#F5F3FF;font-size:.78rem;">
+            <strong>Registrar comment:</strong> {{ existing.admin_comment }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not existing %}
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-1">Leave of Absence / Deferment Request</h6>
+      <p class="text-muted mb-4" style="font-size:.82rem;">
+        Apply to temporarily suspend your studies. During a leave of absence, your student record is preserved
+        and you may return in a future term. Your student ID and academic history are retained.
+      </p>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Reason / Leave Type</label>
+            {{ form.leave_type }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Leave Starting From</label>
+            {{ form.from_term }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">
+            Expected Return Term
+            <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          {{ form.expected_return_term }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Full Explanation</label>
+          {{ form.reason }}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">
+            Supporting Document
+            <span class="text-muted fw-normal">(medical certificate, etc. — optional but recommended)</span>
+          </label>
+          <input type="file" name="supporting_document" class="form-control form-control-sm" accept=".pdf,.jpg,.png">
+        </div>
+
+        <div class="alert alert-warning py-2 mb-3" style="font-size:.78rem;border-radius:6px;">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Ensure you have discussed this decision with your parent/guardian and your class teacher before applying.
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'student_portal:dashboard' %}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-send me-1"></i>Submit Request
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- History -->
+    {% if history %}
+    <div class="portal-card mt-3">
+      <div class="px-4 py-3 border-bottom fw-bold" style="font-size:.83rem;">Leave History</div>
+      {% for req in history %}
+      <div class="d-flex align-items-start gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        <span class="badge mt-1
+          {% if req.status == 'approved' %}bg-success
+          {% elif req.status == 'rejected' %}bg-danger
+          {% elif req.status == 'reinstated' %}bg-info
+          {% else %}bg-warning text-dark{% endif %}"
+          style="font-size:.65rem;">{{ req.get_status_display }}</span>
+        <div style="font-size:.8rem;">
+          <div class="fw-medium">{{ req.get_leave_type_display }}</div>
+          <div class="text-muted" style="font-size:.72rem;">
+            From {{ req.from_term }}
+            {% if req.expected_return_term %} · Return: {{ req.expected_return_term }}{% endif %}
+          </div>
+          <div class="text-muted" style="font-size:.72rem;">Submitted {{ req.submitted_at|date:"d M Y" }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-lg-5">
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-shield-check me-2 text-success"></i>Your Protections</h6>
+      <div class="d-flex flex-column gap-3" style="font-size:.8rem;">
+        <div class="d-flex gap-2">
+          <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+          <div><strong>Student ID retained</strong> — your registration number does not change.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+          <div><strong>Academic records preserved</strong> — all results and transcripts are kept permanently.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+          <div><strong>Portal access maintained</strong> — you can still view documents during leave.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <i class="bi bi-exclamation-circle text-warning flex-shrink-0 mt-1"></i>
+          <div><strong>Fee implications</strong> — the Finance Office will advise on fee adjustments. Contact them before applying.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <i class="bi bi-exclamation-circle text-warning flex-shrink-0 mt-1"></i>
+          <div><strong>Maximum leave period</strong> is typically one academic year (two terms). Extensions require a new application.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

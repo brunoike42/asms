@@ -1,0 +1,87 @@
+{% extends "student_portal/base.html" %}
+{% load portal_extras %}
+
+{% block page_actions %}
+<a href="?download=pdf" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+  <i class="bi bi-file-earmark-pdf"></i> Download PDF
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Desktop: 5-column grid -->
+<div class="portal-card p-3 d-none d-md-block">
+  <div class="row g-2">
+    {% for day_idx, day_name in day_names_indexed %}
+    <div class="col">
+      <div class="text-center py-2 rounded-top fw-bold"
+           style="font-size:.8rem;
+                  background:{% if day_idx == today_idx %}#1B4F72{% else %}#F1F5F9{% endif %};
+                  color:{% if day_idx == today_idx %}#fff{% else %}#374151{% endif %};">
+        {{ day_name }}
+        {% if day_idx == today_idx %}
+        <div style="font-size:.65rem;font-weight:400;opacity:.8;">Today</div>
+        {% endif %}
+      </div>
+      <div style="min-height:380px;background:#FAFBFC;border-radius:0 0 6px 6px;padding:.4rem;">
+        {% with day_entries=days|index:day_idx %}
+        {% for entry in day_entries %}
+        <div class="mb-2 p-2 rounded"
+             style="background:#fff;border:1px solid #E5E9F0;border-left:3px solid #2E86C1;">
+          <div style="font-size:.68rem;color:#6c757d;">
+            {{ entry.start_time|time:"H:i" }}–{{ entry.end_time|time:"H:i" }}
+          </div>
+          <div class="fw-semibold" style="font-size:.78rem;">{{ entry.subject.name }}</div>
+          <div class="text-muted" style="font-size:.68rem;">
+            {{ entry.teacher|default:'—' }}{% if entry.room %} · {{ entry.room }}{% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-3" style="font-size:.72rem;">No lessons</div>
+        {% endfor %}
+        {% endwith %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Mobile: stacked day cards -->
+<div class="d-md-none d-flex flex-column gap-3">
+  {% for day_idx, day_name in day_names_indexed %}
+  <div class="portal-card">
+    <div class="px-3 py-2 fw-bold d-flex align-items-center justify-content-between"
+         style="font-size:.85rem;
+                background:{% if day_idx == today_idx %}#1B4F72{% else %}#F1F5F9{% endif %};
+                color:{% if day_idx == today_idx %}#fff{% else %}#374151{% endif %};
+                border-radius:10px 10px 0 0;">
+      {{ day_name }}
+      {% if day_idx == today_idx %}
+      <span class="badge bg-light text-dark" style="font-size:.65rem;">Today</span>
+      {% endif %}
+    </div>
+    <div class="p-2">
+      {% with day_entries=days|index:day_idx %}
+      {% for entry in day_entries %}
+      <div class="d-flex gap-3 p-2 {% if not forloop.last %}border-bottom{% endif %}">
+        <div class="text-center flex-shrink-0" style="min-width:50px;">
+          <div style="font-size:.7rem;color:#6c757d;">{{ entry.start_time|time:"H:i" }}</div>
+          <div style="font-size:.65rem;color:#6c757d;">{{ entry.end_time|time:"H:i" }}</div>
+        </div>
+        <div>
+          <div class="fw-semibold" style="font-size:.82rem;">{{ entry.subject.name }}</div>
+          <div class="text-muted" style="font-size:.7rem;">
+            {{ entry.teacher|default:'—' }}{% if entry.room %} · {{ entry.room }}{% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-3" style="font-size:.78rem;">No lessons scheduled</div>
+      {% endfor %}
+      {% endwith %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

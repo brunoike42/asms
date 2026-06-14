@@ -1,0 +1,82 @@
+{% extends "parent/base.html" %}
+{% block title %}Assignments — {{ student.first_name }} | Parent Portal{% endblock %}
+{% block content %}
+
+<div style="font-weight:700;font-size:16px;margin-bottom:12px;">{{ student.first_name }}'s Assignments</div>
+
+<!-- Tab Stats (Class Charts homework tracker) -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+  <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid var(--pp-border);">
+    <div style="font-size:20px;font-weight:800;color:#1a56db;">{{ pending|length }}</div>
+    <div style="font-size:10px;color:var(--pp-muted);">Pending</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid var(--pp-border);">
+    <div style="font-size:20px;font-weight:800;color:#e02424;">{{ overdue|length }}</div>
+    <div style="font-size:10px;color:var(--pp-muted);">Overdue</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid var(--pp-border);">
+    <div style="font-size:20px;font-weight:800;color:#e3a008;">{{ submitted|length }}</div>
+    <div style="font-size:10px;color:var(--pp-muted);">Submitted</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid var(--pp-border);">
+    <div style="font-size:20px;font-weight:800;color:#0e9f6e;">{{ graded|length }}</div>
+    <div style="font-size:10px;color:var(--pp-muted);">Graded</div>
+  </div>
+</div>
+
+{% if overdue %}
+<div class="pp-alert urgent mb-3">
+  <i class="bi bi-exclamation-triangle-fill" style="font-size:18px;flex-shrink:0;"></i>
+  <div>{{ overdue|length }} assignment{{ overdue|length|pluralize }} overdue. Please follow up with {{ student.first_name }}.</div>
+</div>
+{% endif %}
+
+{% if pending %}
+<div class="pp-section-label">Upcoming</div>
+<div class="pp-card">
+  {% for a in pending %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-pencil-square" style="color:#1a56db;font-size:16px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ a.title }}</div>
+      <div class="item-sub">
+        {% if a.subject %}{{ a.subject.name }} · {% endif %}
+        Due {{ a.due_date|date:"d M Y" }}
+      </div>
+    </div>
+    <span class="pp-badge blue">Pending</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if graded %}
+<div class="pp-section-label">Graded</div>
+<div class="pp-card">
+  {% for a in graded %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-check-circle-fill" style="color:#0e9f6e;font-size:16px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ a.title }}</div>
+      <div class="item-sub">Due {{ a.due_date|date:"d M" }}</div>
+    </div>
+    <div style="font-weight:800;font-size:16px;color:#0e9f6e;">
+      {% if a.submission.marks %}{{ a.submission.marks }}{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if not assignments %}
+<div class="pp-card text-center py-4">
+  <i class="bi bi-journal-check" style="font-size:2.5rem;color:var(--pp-muted);display:block;margin-bottom:8px;"></i>
+  <div style="color:var(--pp-muted);font-size:13px;">No assignments found for {{ student.first_name }}'s class.</div>
+</div>
+{% endif %}
+
+{% endblock %}

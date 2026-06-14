@@ -1,0 +1,197 @@
+{% extends "student_portal/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<!-- Summary bar -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Total Billed</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#1B4F72;">
+        {{ total_billed|intcomma }}
+      </div>
+      <div style="font-size:.7rem;color:#6c757d;">UGX</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Total Paid</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#16A34A;">
+        {{ total_paid|intcomma }}
+      </div>
+      <div style="font-size:.7rem;color:#6c757d;">UGX</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Balance Due</div>
+      <div style="font-size:1.4rem;font-weight:800;
+        color:{% if balance > 0 %}#DC2626{% else %}#16A34A{% endif %};">
+        {% if balance <= 0 %}✓ 0{% else %}{{ balance|intcomma }}{% endif %}
+      </div>
+      <div style="font-size:.7rem;color:#6c757d;">UGX</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="portal-card p-3 d-flex align-items-center justify-content-center">
+      {% if balance > 0 %}
+      <button class="btn btn-warning btn-sm fw-bold w-100" data-bs-toggle="modal" data-bs-target="#payModal">
+        <i class="bi bi-phone me-1"></i>Pay via MoMo / Card
+      </button>
+      {% else %}
+      <div class="text-center">
+        <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
+        <div style="font-size:.78rem;color:#16A34A;font-weight:600;">All Cleared</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Invoices -->
+  <div class="col-lg-7">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-receipt text-primary"></i> Fee Invoices
+      </div>
+      {% for invoice in invoices %}
+      <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="fw-semibold" style="font-size:.83rem;">{{ invoice.term }}</div>
+            <div class="text-muted" style="font-size:.72rem;">
+              Invoice #{{ invoice.id }} · Issued {{ invoice.created_at|date:"d M Y" }}
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold" style="font-size:.9rem;">{{ invoice.total|intcomma }} UGX</div>
+            <span class="badge
+              {% if invoice.status == 'paid' %}bg-success
+              {% elif invoice.status == 'partial' %}bg-warning text-dark
+              {% else %}bg-danger{% endif %}"
+              style="font-size:.65rem;">
+              {{ invoice.get_status_display }}
+            </span>
+          </div>
+        </div>
+        <!-- Itemised breakdown (collapsed) -->
+        {% if invoice.items_json %}
+        <details class="mt-2">
+          <summary style="font-size:.75rem;color:#6c757d;cursor:pointer;">View breakdown</summary>
+          <div class="mt-2 ps-2" style="font-size:.75rem;">
+            {% for item in invoice.items %}
+            <div class="d-flex justify-content-between py-1 border-bottom text-muted">
+              <span>{{ item.name }}</span>
+              <span>{{ item.amount|intcomma }} UGX</span>
+            </div>
+            {% endfor %}
+          </div>
+        </details>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4" style="font-size:.82rem;">No invoices yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Payments -->
+  <div class="col-lg-5">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-clock-history text-success"></i> Payment History
+      </div>
+      {% for payment in payments %}
+      <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}
+                  d-flex align-items-center gap-3">
+        <div class="flex-shrink-0"
+             style="width:34px;height:34px;border-radius:50%;background:#D1FAE5;
+                    display:flex;align-items:center;justify-content:center;">
+          <i class="bi bi-check text-success"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold" style="font-size:.82rem;">
+            {{ payment.amount|intcomma }} UGX
+          </div>
+          <div class="text-muted" style="font-size:.72rem;">
+            {{ payment.get_method_display }} · {{ payment.created_at|date:"d M Y H:i" }}
+          </div>
+          {% if payment.reference %}
+          <div class="text-muted" style="font-size:.7rem;">Ref: {{ payment.reference }}</div>
+          {% endif %}
+        </div>
+        <a href="#" style="font-size:.72rem;color:#6c757d;white-space:nowrap;">Receipt →</a>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4" style="font-size:.82rem;">No payments recorded yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- MoMo payment modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold">Pay School Fees</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-4" style="font-size:.82rem;">
+          Outstanding balance: <strong class="text-danger">{{ balance|intcomma }} UGX</strong>
+        </p>
+
+        <div class="d-flex flex-column gap-2">
+          <!-- MTN MoMo -->
+          <button class="btn btn-outline-warning fw-bold d-flex align-items-center gap-3 p-3"
+                  style="border-radius:8px;text-align:left;"
+                  onclick="initiatePayment('mtn_momo')">
+            <span style="font-size:1.4rem;">📱</span>
+            <div>
+              <div style="font-size:.85rem;">MTN Mobile Money</div>
+              <div style="font-size:.72rem;font-weight:400;color:#6c757d;">You'll receive a USSD push on your phone</div>
+            </div>
+          </button>
+
+          <!-- Airtel Money -->
+          <button class="btn btn-outline-danger fw-bold d-flex align-items-center gap-3 p-3"
+                  style="border-radius:8px;text-align:left;"
+                  onclick="initiatePayment('airtel_money')">
+            <span style="font-size:1.4rem;">📱</span>
+            <div>
+              <div style="font-size:.85rem;">Airtel Money</div>
+              <div style="font-size:.72rem;font-weight:400;color:#6c757d;">USSD push confirmation</div>
+            </div>
+          </button>
+
+          <!-- Card -->
+          <button class="btn btn-outline-primary fw-bold d-flex align-items-center gap-3 p-3"
+                  style="border-radius:8px;text-align:left;"
+                  onclick="initiatePayment('card')">
+            <span style="font-size:1.4rem;">💳</span>
+            <div>
+              <div style="font-size:.85rem;">Credit / Debit Card</div>
+              <div style="font-size:.72rem;font-weight:400;color:#6c757d;">Via Flutterwave — Visa / Mastercard</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function initiatePayment(method) {
+  // Redirect to server-side payment initiation endpoint
+  window.location.href = `/portal/fees/pay/?method=${method}`;
+}
+</script>
+{% endblock %}

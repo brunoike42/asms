@@ -1,0 +1,112 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+<!-- Balance cards -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Merit Points</div>
+      <div style="font-size:2rem;font-weight:800;color:#16A34A;">+{{ merit_total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Demerit Points</div>
+      <div style="font-size:2rem;font-weight:800;color:#DC2626;">−{{ demerit_total }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="portal-card p-3 text-center">
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;">Net Balance</div>
+      <div style="font-size:2rem;font-weight:800;color:{% if net_balance >= 0 %}#16A34A{% else %}#DC2626{% endif %};">
+        {% if net_balance > 0 %}+{% endif %}{{ net_balance }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Merits -->
+  <div class="col-lg-6">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-star-fill text-success"></i> Merit Awards
+      </div>
+      {% for merit in merit_records %}
+      <div class="d-flex align-items-center gap-3 px-4 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+        <span class="badge bg-success" style="font-size:.7rem;">+{{ merit.points }}</span>
+        <div class="flex-grow-1" style="font-size:.82rem;">
+          <div class="fw-medium">{{ merit.reason }}</div>
+          <div class="text-muted" style="font-size:.7rem;">
+            {{ merit.awarded_on|date:"d M Y" }} · {{ merit.awarded_by|default:'—' }}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4" style="font-size:.82rem;">No merit awards this term.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Demerits -->
+  <div class="col-lg-6">
+    <div class="portal-card">
+      <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+        <i class="bi bi-dash-circle-fill text-danger"></i> Demerit Records
+      </div>
+      {% for demerit in demerit_records %}
+      <div class="d-flex align-items-center gap-3 px-4 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+        <span class="badge bg-danger" style="font-size:.7rem;">−{{ demerit.points }}</span>
+        <div class="flex-grow-1" style="font-size:.82rem;">
+          <div class="fw-medium">{{ demerit.reason }}</div>
+          <div class="text-muted" style="font-size:.7rem;">
+            {{ demerit.awarded_on|date:"d M Y" }} · {{ demerit.awarded_by|default:'—' }}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4" style="font-size:.82rem;">No demerit records this term.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Recent discipline incidents -->
+<div class="portal-card mt-3">
+  <div class="px-4 py-3 border-bottom fw-bold d-flex align-items-center gap-2" style="font-size:.85rem;">
+    <i class="bi bi-journal-text text-secondary"></i> Recent Discipline Incidents
+  </div>
+  {% for incident in incidents %}
+  <div class="d-flex align-items-start gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+         style="width:36px;height:36px;background:#FEF3C7;">
+      <i class="bi bi-exclamation-triangle text-warning"></i>
+    </div>
+    <div class="flex-grow-1" style="font-size:.82rem;">
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold">{{ incident.get_incident_type_display|default:incident.incident_type }}</span>
+        {% if incident.consequence %}
+        <span class="badge bg-secondary" style="font-size:.65rem;">{{ incident.get_consequence_display|default:incident.consequence }}</span>
+        {% endif %}
+      </div>
+      <div class="text-muted">{{ incident.description|truncatechars:120 }}</div>
+      <div class="text-muted" style="font-size:.7rem;">{{ incident.date|date:"d M Y" }}</div>
+    </div>
+    {% if incident.acknowledged %}
+    <span class="badge bg-success flex-shrink-0" style="font-size:.65rem;">Acknowledged</span>
+    {% else %}
+    <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:.65rem;">Pending</span>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="text-center text-muted py-4" style="font-size:.82rem;">
+    <i class="bi bi-emoji-smile fs-3 d-block mb-2 text-success"></i>
+    No discipline incidents on record. Keep it up!
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "parent/base.html" %}
+{% block title %}Documents — {{ student.first_name }}{% endblock %}
+{% block content %}
+<p class="pp-stitle">
+  <i class="bi bi-file-earmark-fill" style="color:#185FA5;margin-right:6px"></i>
+  Documents — {{ student.first_name }} {{ student.last_name }}
+</p>
+<p style="font-size:11px;color:var(--pp-muted);margin:-8px 0 14px">
+  All documents are permanently archived and available at any time.
+</p>
+
+<div class="pp-card">
+  <table class="pp-tbl">
+    <thead>
+      <tr><th>Document</th><th>Date issued</th><th>Type</th><th style="text-align:right">Download</th></tr>
+    </thead>
+    <tbody>
+      {% for doc in documents %}
+      <tr>
+        <td style="font-weight:500">{{ doc.title }}</td>
+        <td>{{ doc.created_at|date:"d M Y" }}</td>
+        <td>
+          <span class="pp-badge
+            {% if 'report' in doc.doc_type|lower %}info
+            {% elif 'invoice' in doc.doc_type|lower %}warning
+            {% elif 'receipt' in doc.doc_type|lower %}success
+            {% else %}grey{% endif %}">
+            {{ doc.doc_type|default:"Document" }}
+          </span>
+        </td>
+        <td style="text-align:right">
+          {% if doc.file %}
+          <a href="{{ doc.file.url }}" target="_blank"
+             style="font-size:11px;padding:3px 8px;border-radius:4px;border:0.5px solid var(--pp-border);background:transparent;cursor:pointer;font-family:'Inter',sans-serif;color:var(--pp-text);display:inline-flex;align-items:center;gap:3px;text-decoration:none">
+            <i class="bi bi-download" style="font-size:11px"></i> PDF
+          </a>
+          {% else %}
+          <span style="font-size:11px;color:var(--pp-muted)">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center;padding:20px;color:var(--pp-muted)">
+          No documents available yet. Report cards, invoices, and receipts will appear here.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

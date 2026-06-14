@@ -1,0 +1,107 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+
+    {% if existing %}
+    <!-- Pending request exists -->
+    <div class="portal-card p-4 mb-3" style="border-left:4px solid #D97706;">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-hourglass-split fs-3 text-warning flex-shrink-0"></i>
+        <div>
+          <div class="fw-bold">Request Under Review</div>
+          <div style="font-size:.8rem;color:#6c757d;">
+            You submitted a change request on {{ existing.submitted_at|date:"d M Y" }}.
+            Requested: <strong>{{ existing.requested_class }}</strong>
+          </div>
+          {% if existing.admin_comment %}
+          <div class="mt-2 p-2 rounded" style="background:#FEF3C7;font-size:.78rem;">
+            <strong>Registrar comment:</strong> {{ existing.admin_comment }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not existing %}
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-1">Programme / Stream Change Request</h6>
+      <p class="text-muted mb-4" style="font-size:.82rem;">
+        Apply to change your class, stream, or programme of study.
+        Requests are reviewed by the Academic Registrar and are subject to availability of places.
+        You are currently in <strong>{{ student.current_class }}</strong>.
+      </p>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Requested Class / Stream / Programme</label>
+          {{ form.requested_class }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Reason for Change</label>
+          {{ form.reason }}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">
+            Supporting Document
+            <span class="text-muted fw-normal">(optional — medical note, recommendation letter, etc.)</span>
+          </label>
+          <input type="file" name="supporting_document" class="form-control form-control-sm" accept=".pdf,.jpg,.png">
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'student_portal:dashboard' %}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-send me-1"></i>Submit Request
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- History -->
+    {% if history %}
+    <div class="portal-card mt-3">
+      <div class="px-4 py-3 border-bottom fw-bold" style="font-size:.83rem;">Request History</div>
+      {% for req in history %}
+      <div class="d-flex align-items-center gap-3 px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        <span class="badge
+          {% if req.status == 'approved' %}bg-success
+          {% elif req.status == 'rejected' %}bg-danger
+          {% else %}bg-warning text-dark{% endif %}"
+          style="font-size:.68rem;min-width:64px;">
+          {{ req.get_status_display }}
+        </span>
+        <div class="flex-grow-1" style="font-size:.8rem;">
+          <span class="fw-medium">{{ req.current_class }}</span>
+          <i class="bi bi-arrow-right mx-1 text-muted"></i>
+          <span class="fw-medium">{{ req.requested_class }}</span>
+          <div class="text-muted" style="font-size:.72rem;">{{ req.submitted_at|date:"d M Y" }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-lg-5">
+    <div class="portal-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-info"></i>Important Notes</h6>
+      <ul class="ps-3 mb-0" style="font-size:.8rem;line-height:1.8;">
+        <li>Changes are only possible within the first four weeks of a term.</li>
+        <li>Approval depends on available places in the requested class/stream.</li>
+        <li>The Registrar may contact you for a brief interview.</li>
+        <li>Once approved, your timetable and subject assignments update automatically.</li>
+        <li>Changes may affect your fee structure — the Finance Office will notify you.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

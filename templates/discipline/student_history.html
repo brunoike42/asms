@@ -1,0 +1,165 @@
+{% extends "base/base.html" %}
+{% block title %}Behaviour Record — {{ student.first_name }} {{ student.last_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">{{ student.first_name }} {{ student.last_name }}</h4>
+    <div class="text-muted small">Full Behaviour & Discipline Record</div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if user_role in 'teacher,principal,school_admin,super_admin,vice_principal' %}
+    <a href="{% url 'discipline:incident_create' %}?student={{ student.pk }}" class="btn btn-danger btn-sm">
+      <i class="bi bi-plus-lg me-1"></i> Log Incident
+    </a>
+    <a href="{% url 'discipline:merit_create' %}?student={{ student.pk }}" class="btn btn-success btn-sm">
+      <i class="bi bi-award me-1"></i> Award Merit
+    </a>
+    {% endif %}
+    <a href="{% url 'discipline:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-3 fw-bold {% if stats.total_incidents > 5 %}text-danger{% elif stats.total_incidents > 2 %}text-warning{% else %}text-secondary{% endif %}">
+        {{ stats.total_incidents }}
+      </div>
+      <div class="small text-muted">Total Incidents</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-3 fw-bold {% if stats.open_incidents > 0 %}text-warning{% else %}text-success{% endif %}">
+        {{ stats.open_incidents }}
+      </div>
+      <div class="small text-muted">Open / Pending</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-3 fw-bold text-danger">{{ stats.suspensions }}</div>
+      <div class="small text-muted">Suspensions</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 h-100">
+      <div class="fs-3 fw-bold text-success">{{ stats.total_merits }}</div>
+      <div class="small text-muted">Merit Points</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <!-- Incidents -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0">Incidents ({{ incidents.count }})</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Reference</th>
+              <th>Category</th>
+              <th>Severity</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in incidents %}
+            <tr>
+              <td>
+                <a href="{% url 'discipline:incident_detail' pk=inc.pk %}" class="small fw-semibold text-decoration-none">
+                  {{ inc.reference_number }}
+                </a>
+              </td>
+              <td class="small">{{ inc.category.name }}</td>
+              <td><span class="badge {{ inc.get_severity_badge_class }} small">{{ inc.get_severity_display }}</span></td>
+              <td class="small text-muted">{{ inc.incident_date|date:"d M Y" }}</td>
+              <td><span class="badge {{ inc.get_status_badge_class }} small">{{ inc.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3 small">No incidents on record.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Merits -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0">Merits & Commendations ({{ merits.count }})</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Title</th><th>Type</th><th>Points</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            {% for m in merits %}
+            <tr>
+              <td class="small fw-semibold">{{ m.title }}</td>
+              <td class="small">{{ m.get_merit_type_display }}</td>
+              <td><span class="badge bg-success">+{{ m.merit_points }}</span></td>
+              <td class="small text-muted">{{ m.award_date|date:"d M Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3 small">No merits recorded.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Term-by-term summaries -->
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="fw-semibold mb-0">Term Summaries</h6>
+      </div>
+      <div class="card-body p-0">
+        {% for s in summaries %}
+        <div class="px-3 py-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-semibold small">{{ s.term.name }}</span>
+            {% if s.counselling_flag_raised %}
+            <span class="badge bg-danger small"><i class="bi bi-flag-fill me-1"></i>Welfare Flag</span>
+            {% endif %}
+          </div>
+          <div class="row g-2 text-center">
+            <div class="col-4">
+              <div class="small fw-bold {% if s.total_incidents >= 3 %}text-danger{% elif s.total_incidents > 0 %}text-warning{% else %}text-success{% endif %}">
+                {{ s.total_incidents }}
+              </div>
+              <div class="small text-muted" style="font-size:0.7rem">Incidents</div>
+            </div>
+            <div class="col-4">
+              <div class="small fw-bold text-danger">{{ s.total_demerit_points }}</div>
+              <div class="small text-muted" style="font-size:0.7rem">Demerits</div>
+            </div>
+            <div class="col-4">
+              <div class="small fw-bold text-success">{{ s.total_merit_points }}</div>
+              <div class="small text-muted" style="font-size:0.7rem">Merits</div>
+            </div>
+          </div>
+          {% if s.suspension_days %}
+          <div class="text-danger small mt-1">{{ s.suspensions_served }} suspension{{ s.suspensions_served|pluralize }}, {{ s.suspension_days }} day{{ s.suspension_days|pluralize }}</div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4 small">No term summaries yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

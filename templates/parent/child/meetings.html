@@ -1,0 +1,70 @@
+{% extends "parent/base.html" %}
+{% block title %}Meetings | Parent Portal{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div style="font-weight:700;font-size:16px;">Meetings — {{ student.first_name }}</div>
+  <a href="{% url 'parent:book_meeting' student_pk=student.pk %}"
+     style="background:#1a56db;color:#fff;padding:7px 14px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">
+    <i class="bi bi-plus me-1"></i>Book New
+  </a>
+</div>
+
+{% for meeting in meetings %}
+<div class="pp-card">
+  <div class="pp-card-header">
+    <div>
+      <div style="font-weight:700;font-size:14px;">{{ meeting.get_meeting_type_display }}</div>
+      <div style="font-size:12px;color:var(--pp-muted);">
+        {{ meeting.preferred_date|date:"d M Y" }} at {{ meeting.preferred_time|time:"H:i" }}
+        {% if meeting.teacher %} · {{ meeting.teacher.get_full_name }}{% endif %}
+      </div>
+    </div>
+    <span class="pp-badge {% if meeting.status == 'confirmed' %}green{% elif meeting.status == 'completed' %}blue{% elif meeting.status == 'cancelled' %}red{% else %}amber{% endif %}">
+      {{ meeting.get_status_display }}
+    </span>
+  </div>
+  {% if meeting.parent_notes %}
+  <div style="font-size:12px;color:var(--pp-muted);background:var(--pp-bg);border-radius:8px;padding:8px;margin-bottom:10px;">
+    "{{ meeting.parent_notes }}"
+  </div>
+  {% endif %}
+  {% if meeting.video_link %}
+  <a href="{{ meeting.video_link }}" target="_blank" class="pp-badge blue d-inline-block">
+    <i class="bi bi-camera-video me-1"></i>Join Video Call
+  </a>
+  {% endif %}
+  {% if meeting.status == 'completed' and not meeting.parent_rating %}
+  <div style="margin-top:10px;border-top:1px solid var(--pp-border);padding-top:10px;">
+    <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Rate this meeting</div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="booking_pk" value="{{ meeting.pk }}">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        {% for i in "12345" %}
+        <label style="cursor:pointer;">
+          <input type="radio" name="rating" value="{{ i }}" style="display:none;">
+          <span style="font-size:22px;">⭐</span>
+        </label>
+        {% endfor %}
+      </div>
+      <textarea name="feedback" class="form-control form-control-sm" rows="2"
+                placeholder="How was the meeting?"></textarea>
+      <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Submit Rating</button>
+    </form>
+  </div>
+  {% elif meeting.parent_rating %}
+  <div style="font-size:12px;color:var(--pp-muted);margin-top:8px;">
+    Your rating: {% for i in "12345"|slice:":meeting.parent_rating" %}⭐{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="pp-card text-center py-5">
+  <i class="bi bi-calendar-x" style="font-size:2.5rem;color:var(--pp-muted);display:block;margin-bottom:8px;"></i>
+  <div style="font-weight:600;margin-bottom:4px;">No meetings yet</div>
+  <a href="{% url 'parent:book_meeting' student_pk=student.pk %}" class="pp-badge blue d-inline-block mt-2">Book your first meeting →</a>
+</div>
+{% endfor %}
+
+{% endblock %}

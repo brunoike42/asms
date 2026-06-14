@@ -1,0 +1,550 @@
+{% load static humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title }} | Student Portal — {{ request.tenant.name }}{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- FullCalendar (lazy-loaded on calendar page) -->
+  {% block extra_css %}{% endblock %}
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --portal-primary:   #1B4F72;   /* ASMS deep navy  */
+      --portal-accent:    #2ECC71;   /* Success green   */
+      --portal-warning:   #F39C12;   /* Amber           */
+      --portal-danger:    #E74C3C;   /* Alert red       */
+      --sidebar-bg:       #0F2D4A;   /* Darker navy     */
+      --sidebar-text:     #BDC3C7;
+      --sidebar-active:   #2ECC71;
+      --sidebar-hover:    rgba(255,255,255,0.08);
+      --topbar-height:    60px;
+      --sidebar-width:    260px;
+      --sidebar-collapsed: 64px;
+    }
+
+    /* ── Layout skeleton ────────────────────────────────────────── */
+    body { background: #F4F6F9; min-height: 100vh; overflow-x: hidden; }
+
+    .portal-topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1030;
+      height: var(--topbar-height);
+      background: #fff;
+      border-bottom: 1px solid #E0E4E8;
+      display: flex; align-items: center;
+      padding: 0 1.25rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    .portal-topbar .school-name {
+      font-weight: 700; font-size: .9rem;
+      color: var(--portal-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .portal-sidebar {
+      position: fixed; top: var(--topbar-height); left: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      overflow-y: auto; overflow-x: hidden;
+      transition: width .25s ease;
+      z-index: 1020;
+      scrollbar-width: thin; scrollbar-color: #2c4a60 transparent;
+    }
+    .portal-sidebar::-webkit-scrollbar { width: 4px; }
+    .portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .portal-sidebar::-webkit-scrollbar-thumb { background: #2c4a60; }
+
+    .sidebar-student-card {
+      padding: 1.25rem 1rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .sidebar-student-card img {
+      width: 44px; height: 44px;
+      border-radius: 50%; border: 2px solid var(--portal-accent);
+      object-fit: cover;
+    }
+    .sidebar-student-card .student-name {
+      font-size: .85rem; font-weight: 600; color: #fff;
+      margin: 0; line-height: 1.2;
+    }
+    .sidebar-student-card .student-id {
+      font-size: .72rem; color: var(--sidebar-text);
+    }
+
+    /* Section label */
+    .sidebar-section-label {
+      padding: .6rem 1rem .3rem;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: rgba(255,255,255,.3);
+    }
+
+    /* Nav link */
+    .sidebar-link {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .5rem 1rem;
+      color: var(--sidebar-text);
+      text-decoration: none;
+      font-size: .84rem;
+      border-radius: 0;
+      transition: background .15s, color .15s;
+      position: relative;
+      white-space: nowrap;
+    }
+    .sidebar-link:hover {
+      background: var(--sidebar-hover);
+      color: #fff;
+    }
+    .sidebar-link.active {
+      color: var(--sidebar-active);
+      background: rgba(46,204,113,.1);
+    }
+    .sidebar-link.active::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--sidebar-active);
+    }
+    .sidebar-link .bi { font-size: 1rem; flex-shrink: 0; width: 20px; }
+    .sidebar-link .badge-count {
+      margin-left: auto;
+      background: var(--portal-danger);
+      color: #fff; font-size: .65rem;
+      padding: 1px 5px; border-radius: 10px;
+    }
+    .sidebar-link .phase-chip {
+      margin-left: auto;
+      background: #2c4a60;
+      color: var(--portal-warning); font-size: .6rem;
+      padding: 1px 5px; border-radius: 4px;
+      font-weight: 700; letter-spacing: .04em;
+    }
+
+    /* Main content */
+    .portal-main {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--topbar-height);
+      padding: 1.5rem;
+      transition: margin-left .25s ease;
+      min-height: calc(100vh - var(--topbar-height));
+    }
+
+    /* Topbar notification bell */
+    .notif-bell-btn { position: relative; }
+    .notif-badge {
+      position: absolute; top: 0; right: 0;
+      width: 17px; height: 17px;
+      background: var(--portal-danger);
+      color: #fff; font-size: .6rem;
+      border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      border: 2px solid #fff;
+    }
+
+    /* Stat mini-cards in topbar */
+    .topbar-stat {
+      display: flex; align-items: center; gap: .35rem;
+      padding: .2rem .65rem;
+      border-radius: 20px;
+      background: #f0f4f8;
+      font-size: .78rem;
+    }
+    .topbar-stat .label { color: #6c757d; }
+    .topbar-stat .value { font-weight: 700; color: var(--portal-primary); }
+
+    /* Page card */
+    .portal-card {
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #E8ECF0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    }
+
+    /* Mobile collapse */
+    @media (max-width: 768px) {
+      .portal-sidebar { transform: translateX(-100%); }
+      .portal-sidebar.open { transform: translateX(0); }
+      .portal-main { margin-left: 0; padding: 1rem; }
+      .sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,.45); z-index: 1010;
+      }
+      .sidebar-overlay.visible { display: block; }
+    }
+  </style>
+</head>
+
+<body>
+<!-- ══════════════════════════════════════════════
+     TOP BAR
+══════════════════════════════════════════════ -->
+<header class="portal-topbar">
+  <!-- Sidebar toggle (mobile) -->
+  <button class="btn btn-sm btn-link text-dark me-2 d-md-none" id="sidebarToggle">
+    <i class="bi bi-list fs-5"></i>
+  </button>
+
+  <!-- School branding -->
+  <span class="school-name me-auto">{{ request.tenant.name }}</span>
+
+  <!-- Quick stats (desktop) -->
+  <div class="d-none d-md-flex gap-2 me-3">
+    {% if student %}
+    <div class="topbar-stat">
+      <i class="bi bi-calendar-check text-success"></i>
+      <span class="label">Attendance</span>
+      <span class="value">{{ attendance_pct|default:'—' }}%</span>
+    </div>
+    <div class="topbar-stat {% if fee_balance > 0 %}text-danger{% endif %}">
+      <i class="bi bi-cash-coin {% if fee_balance > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+      <span class="label">Balance</span>
+      <span class="value">{{ fee_balance|default:0|intcomma }} UGX</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Notification bell -->
+  <button class="btn btn-sm btn-link text-dark notif-bell-btn me-1"
+          id="notifBellBtn" title="Notifications">
+    <i class="bi bi-bell fs-5"></i>
+    {% if unread_notif_count and unread_notif_count > 0 %}
+    <span class="notif-badge">{{ unread_notif_count }}</span>
+    {% endif %}
+  </button>
+
+  <!-- User dropdown -->
+  <div class="dropdown">
+    <button class="btn btn-sm btn-link text-dark dropdown-toggle d-flex align-items-center gap-2"
+            data-bs-toggle="dropdown">
+      {% if student and student.photo %}
+      <img src="{{ student.photo.url }}" class="rounded-circle" width="30" height="30" style="object-fit:cover">
+      {% else %}
+      <span class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center text-white"
+            style="width:30px;height:30px;font-size:.75rem;font-weight:700;">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </span>
+      {% endif %}
+      <span class="d-none d-sm-inline" style="font-size:.82rem;font-weight:600;">
+        {{ request.user.first_name }}
+      </span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+      <li class="dropdown-header text-muted" style="font-size:.75rem;">
+        {{ student.student_id|default:'—' }}
+      </li>
+      <li><a class="dropdown-item" href="{% url 'student_portal:profile' %}">
+        <i class="bi bi-person me-2"></i>Profile & Settings
+      </a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+        <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+      </a></li>
+    </ul>
+  </div>
+</header>
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════ -->
+<nav class="portal-sidebar" id="portalSidebar">
+
+  <!-- Student identity card -->
+  <div class="sidebar-student-card">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      {% if student and student.photo %}
+      <img src="{{ student.photo.url }}" alt="{{ student }}">
+      {% else %}
+      <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle"
+           style="width:44px;height:44px;font-size:1rem;font-weight:700;flex-shrink:0;">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div class="overflow-hidden">
+        <p class="student-name">{{ request.user.get_full_name }}</p>
+        <span class="student-id">{{ student.student_id }} · {{ student.current_class }}</span>
+      </div>
+    </div>
+    {% if enrollment and enrollment.is_confirmed %}
+    <span class="badge bg-success mt-1" style="font-size:.65rem;">
+      <i class="bi bi-check-circle me-1"></i>Enrolled — {{ enrollment.term }}
+    </span>
+    {% elif enrollment %}
+    <span class="badge bg-warning text-dark mt-1" style="font-size:.65rem;">
+      <i class="bi bi-exclamation-circle me-1"></i>Enrollment Pending
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- ── DAILY ACTIVITY ─────────────────────────────────────────── -->
+  <div class="sidebar-section-label">Daily Activity</div>
+  <a href="{% url 'student_portal:dashboard' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    <i class="bi bi-house-door"></i> Dashboard
+  </a>
+  <a href="{% url 'student_portal:classes' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'classes' %}active{% endif %}">
+    <i class="bi bi-people"></i> My Classes
+  </a>
+  <a href="{% url 'student_portal:timetable' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'timetable' %}active{% endif %}">
+    <i class="bi bi-grid-3x3"></i> Timetable
+  </a>
+  <a href="{% url 'student_portal:assignments' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'assignments' %}active{% endif %}">
+    <i class="bi bi-journal-text"></i> Assignments
+    {% if pending_assignments and pending_assignments > 0 %}
+    <span class="badge-count">{{ pending_assignments }}</span>
+    {% endif %}
+  </a>
+  <a href="{% url 'student_portal:quizzes' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'quizzes' %}active{% endif %}">
+    <i class="bi bi-patch-question"></i> Quizzes & Tests
+  </a>
+  <a href="{% url 'student_portal:academic_calendar' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'academic_calendar' %}active{% endif %}">
+    <i class="bi bi-calendar3"></i> Academic Calendar
+  </a>
+
+  <!-- ── ACADEMIC RECORDS ───────────────────────────────────────── -->
+  <div class="sidebar-section-label">Academic Records</div>
+  <a href="{% url 'student_portal:results' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'results' %}active{% endif %}">
+    <i class="bi bi-bar-chart-line"></i> My Results
+  </a>
+  <a href="{% url 'student_portal:transcript' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'transcript' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text"></i> Transcript
+  </a>
+  <a href="{% url 'student_portal:attendance' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'attendance' %}active{% endif %}">
+    <i class="bi bi-calendar-check"></i> Attendance
+  </a>
+  <a href="{% url 'student_portal:exam_permit' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'exam_permit' %}active{% endif %}">
+    <i class="bi bi-ticket-detailed"></i> Exam Permit
+  </a>
+  <a href="{% url 'student_portal:exam_appeals' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'exam_appeals' %}active{% endif %}">
+    <i class="bi bi-flag"></i> Exam Appeals
+  </a>
+
+  <!-- ── REGISTRATION (institution-type dependent) ─────────────── -->
+  <div class="sidebar-section-label">Registration & Admin</div>
+  <a href="{% url 'student_portal:term_enrollment' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'term_enrollment' %}active{% endif %}">
+    <i class="bi bi-clipboard-check"></i> Term Enrollment
+  </a>
+  <a href="{% url 'student_portal:course_registration' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'course_registration' %}active{% endif %}">
+    <i class="bi bi-ui-checks"></i> Course Registration
+  </a>
+  <a href="{% url 'student_portal:program_change' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'program_change' %}active{% endif %}">
+    <i class="bi bi-arrow-left-right"></i> Programme Change
+  </a>
+  <a href="{% url 'student_portal:leave_of_absence' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'leave_of_absence' %}active{% endif %}">
+    <i class="bi bi-door-open"></i> Leave of Absence
+  </a>
+  <a href="{% url 'student_portal:academic_clearance' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'academic_clearance' %}active{% endif %}">
+    <i class="bi bi-shield-check"></i> Academic Clearance
+  </a>
+
+  <!-- ── FINANCE & SERVICES ─────────────────────────────────────── -->
+  <div class="sidebar-section-label">Finance & Services</div>
+  <a href="{% url 'student_portal:fee_account' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'fee_account' %}active{% endif %}">
+    <i class="bi bi-cash-stack"></i> Fee Account
+  </a>
+  <a href="{% url 'student_portal:library' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'library' %}active{% endif %}">
+    <i class="bi bi-book"></i> Library
+  </a>
+  <a href="{% url 'student_portal:meal_account' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'meal_account' %}active{% endif %}">
+    <i class="bi bi-cup-hot"></i> Meal Account
+  </a>
+  <a href="{% url 'student_portal:transport' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'transport' %}active{% endif %}">
+    <i class="bi bi-bus-front"></i> Transport
+  </a>
+
+  <!-- ── STUDENT LIFE ───────────────────────────────────────────── -->
+  <div class="sidebar-section-label">Student Life</div>
+  <a href="{% url 'student_portal:messages' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'messages' %}active{% endif %}">
+    <i class="bi bi-chat-dots"></i> Messages
+    {% if unread_messages_count and unread_messages_count > 0 %}
+    <span class="badge-count">{{ unread_messages_count }}</span>
+    {% endif %}
+  </a>
+  <a href="{% url 'student_portal:noticeboard' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'noticeboard' %}active{% endif %}">
+    <i class="bi bi-megaphone"></i> Noticeboard
+  </a>
+  <a href="{% url 'student_portal:merits' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'merits' %}active{% endif %}">
+    <i class="bi bi-star"></i> My Merits
+  </a>
+  <a href="{% url 'student_portal:documents' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'documents' %}active{% endif %}">
+    <i class="bi bi-folder2"></i> My Documents
+  </a>
+
+  <!-- ── INTELLIGENCE ───────────────────────────────────────────── -->
+  <div class="sidebar-section-label">Intelligence</div>
+  <a href="{% url 'student_portal:career_guidance' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'career_guidance' %}active{% endif %}">
+    <i class="bi bi-compass"></i> Career Guidance
+    <span class="phase-chip">PH7</span>
+  </a>
+  <a href="{% url 'student_portal:ai_assistant' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'ai_assistant' %}active{% endif %}">
+    <i class="bi bi-robot"></i> AI Study Assistant
+    <span class="phase-chip">PH7</span>
+  </a>
+
+  <!-- ── PERSONAL ───────────────────────────────────────────────── -->
+  <div class="sidebar-section-label">Personal</div>
+  <a href="{% url 'student_portal:certificates' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'certificates' %}active{% endif %}">
+    <i class="bi bi-award"></i> E-Certificates
+  </a>
+  <a href="{% url 'student_portal:profile' %}"
+     class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+    <i class="bi bi-person-gear"></i> Profile & Settings
+  </a>
+
+  <div style="height:2rem;"></div>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════ -->
+<main class="portal-main" id="portalMain">
+
+  <!-- Django messages -->
+  {% if messages %}
+  <div class="mb-3">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+      <i class="bi {% if msg.tags == 'success' %}bi-check-circle{% elif msg.tags == 'error' or msg.tags == 'danger' %}bi-x-circle{% else %}bi-info-circle{% endif %} me-2"></i>
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0 fw-bold text-dark" style="letter-spacing:-.02em;">
+      {{ page_title }}
+    </h5>
+    {% block page_actions %}{% endblock %}
+  </div>
+
+  <!-- Page body -->
+  {% block content %}{% endblock %}
+
+</main>
+
+<!-- Notification dropdown panel -->
+<div class="dropdown-menu shadow-lg p-0 overflow-hidden"
+     id="notifPanel"
+     style="position:fixed;top:60px;right:10px;width:320px;display:none;border-radius:10px;z-index:1040;">
+  <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+    <span class="fw-bold" style="font-size:.85rem;">Notifications</span>
+    <a href="#" id="markAllRead" style="font-size:.75rem;">Mark all read</a>
+  </div>
+  <div id="notifList" style="max-height:360px;overflow-y:auto;">
+    <div class="text-center text-muted py-4" style="font-size:.82rem;">
+      <i class="bi bi-bell-slash fs-3 d-block mb-2"></i> No new notifications
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* ── Sidebar toggle (mobile) ──────────────────────────────────── */
+const sidebar  = document.getElementById('portalSidebar');
+const overlay  = document.getElementById('sidebarOverlay');
+const toggle   = document.getElementById('sidebarToggle');
+
+toggle?.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('visible');
+});
+overlay?.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('visible');
+});
+
+/* ── Sidebar scroll restoration (sessionStorage) ─────────────── */
+const SCROLL_KEY = 'sidebarScroll';
+sidebar.scrollTop = sessionStorage.getItem(SCROLL_KEY) || 0;
+sidebar.addEventListener('scroll', () => {
+  sessionStorage.setItem(SCROLL_KEY, sidebar.scrollTop);
+});
+
+/* ── Notification panel ───────────────────────────────────────── */
+const bellBtn   = document.getElementById('notifBellBtn');
+const notifPanel = document.getElementById('notifPanel');
+
+bellBtn?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const visible = notifPanel.style.display === 'block';
+  notifPanel.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    try {
+      const res  = await fetch("{% url 'student_portal:notifications_feed' %}");
+      const data = await res.json();
+      renderNotifications(data.items);
+    } catch (err) { console.error(err); }
+  }
+});
+
+document.addEventListener('click', () => {
+  notifPanel.style.display = 'none';
+});
+
+function renderNotifications(items) {
+  const list = document.getElementById('notifList');
+  if (!items.length) return;
+  list.innerHTML = items.map(n => `
+    <a href="${n.url || '#'}"
+       class="d-flex gap-2 p-3 border-bottom text-decoration-none ${n.is_read ? '' : 'bg-light'}"
+       data-id="${n.id}"
+       style="font-size:.8rem;color:#333;">
+      <div>
+        <div class="fw-semibold">${n.title}</div>
+        <div class="text-muted" style="font-size:.75rem;">${n.body}</div>
+      </div>
+    </a>
+  `).join('');
+  // Mark read on click
+  list.querySelectorAll('a[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      fetch(`/portal/ajax/notifications/${el.dataset.id}/read/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+      });
+    });
+  });
+}
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

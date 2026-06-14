@@ -1,0 +1,247 @@
+{% extends "base/base.html" %}
+{% block title %}Counselling & Welfare | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Counselling & Welfare</h4>
+    <small class="text-muted">Student wellbeing and welfare case management</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'counselling:at_risk_dashboard' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-graph-up-arrow me-1"></i> At-Risk Register
+    </a>
+    <a href="{% url 'counselling:case_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i> Open Case
+    </a>
+    <a href="{% url 'counselling:case_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list me-1"></i> All Cases
+    </a>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ stats.open_cases }}</div>
+        <div class="small text-muted">Open Cases</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold {% if stats.high_priority > 0 %}text-danger{% else %}text-success{% endif %}">
+          {{ stats.high_priority }}
+        </div>
+        <div class="small text-muted">High / Critical Priority</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold {% if stats.overdue_review > 0 %}text-warning{% else %}text-success{% endif %}">
+          {{ stats.overdue_review }}
+        </div>
+        <div class="small text-muted">Overdue for Review</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ stats.resolved_this_year }}</div>
+        <div class="small text-muted">Resolved This Year</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% if stats.escalated > 0 %}
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 bg-danger text-white">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold">{{ stats.escalated }}</div>
+        <div class="small opacity-75">Escalated to Principal</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if stats.safeguarding > 0 %}
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 bg-dark text-white">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold">{{ stats.safeguarding }}</div>
+        <div class="small opacity-75">Safeguarding Concerns</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold {% if stats.pending_bursary > 0 %}text-warning{% else %}text-secondary{% endif %}">
+          {{ stats.pending_bursary }}
+        </div>
+        <div class="small text-muted">Bursary Applications Pending</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- At-Risk Students -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-graph-up-arrow text-danger me-2"></i>Highest Risk Students</h6>
+        <a href="{% url 'counselling:at_risk_dashboard' %}" class="btn btn-sm btn-outline-danger py-0">Full Register</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for r in at_risk %}
+          <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <a href="{% url 'counselling:student_welfare_history' student_pk=r.student.pk %}"
+                   class="fw-semibold text-decoration-none small text-dark">
+                  {{ r.student.first_name }} {{ r.student.last_name }}
+                </a>
+                <div class="text-muted" style="font-size:0.7rem">
+                  Att: {{ r.attendance_pct|floatformat:0 }}% ·
+                  Incidents: {{ r.incident_count }} ·
+                  Arrears: {{ r.fee_arrears_days }}d
+                </div>
+              </div>
+              <div class="text-end">
+                <span class="badge {% if r.risk_score >= 71 %}bg-danger{% elif r.risk_score >= 41 %}bg-warning text-dark{% else %}bg-secondary{% endif %} fw-bold">
+                  {{ r.risk_score }}
+                </span>
+                {% if not r.counsellor_actioned %}
+                <div class="text-danger" style="font-size:0.65rem">UNACTIONED</div>
+                {% endif %}
+              </div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-center text-muted py-4 small">
+            <i class="bi bi-shield-check fs-3 d-block mb-2 opacity-25"></i>
+            No high-risk students at this time.
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent Cases -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Urgent Cases</h6>
+        <a href="{% url 'counselling:case_list' %}?priority=high" class="btn btn-sm btn-outline-warning py-0">All</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for case in urgent_cases %}
+          <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1 me-2">
+                <a href="{% url 'counselling:case_detail' pk=case.pk %}"
+                   class="fw-semibold text-decoration-none small text-dark">
+                  {{ case.reference_number }}
+                </a>
+                <div class="small text-muted">{{ case.student.first_name }} {{ case.student.last_name }}</div>
+                <div class="small text-muted">{{ case.get_case_type_display }}</div>
+              </div>
+              <div class="text-end">
+                <span class="badge {{ case.get_priority_badge_class }} small">{{ case.get_priority_display }}</span>
+                <div class="text-muted mt-1" style="font-size:0.65rem">{{ case.days_open }}d open</div>
+              </div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-center text-muted py-4 small">No urgent cases.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Overdue + Sessions + Types -->
+  <div class="col-md-4">
+
+    <!-- Overdue Reviews -->
+    {% if overdue_cases %}
+    <div class="card border-0 shadow-sm mb-3 border-top border-3 border-warning">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 small"><i class="bi bi-clock text-warning me-1"></i>Overdue for Review</h6>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for case in overdue_cases %}
+          <li class="list-group-item px-3 py-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <a href="{% url 'counselling:case_detail' pk=case.pk %}" class="text-decoration-none small">
+                {{ case.student.first_name }} {{ case.student.last_name }}
+              </a>
+              <span class="text-danger small">Due {{ case.next_review_date|date:"d M" }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Case Type Breakdown -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 small">Open Cases by Type</h6>
+      </div>
+      <div class="card-body py-2">
+        {% for item in type_breakdown %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between small mb-1">
+            <span>{{ item.case_type|capfirst|cut:"_" }}</span>
+            <span class="fw-semibold">{{ item.count }}</span>
+          </div>
+          <div class="progress" style="height:5px;">
+            {% with max=type_breakdown.0.count %}
+            <div class="progress-bar bg-primary" style="width:{% widthratio item.count max 100 %}%"></div>
+            {% endwith %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-0">No open cases.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0 small">Recent Sessions</h6>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for s in recent_sessions %}
+          <li class="list-group-item px-3 py-2 small">
+            <div class="fw-semibold">{{ s.welfare_case.student.first_name }} {{ s.welfare_case.student.last_name }}</div>
+            <div class="text-muted">{{ s.get_session_type_display }} · {{ s.session_date|date:"d M" }}</div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted small py-2">No sessions recorded yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

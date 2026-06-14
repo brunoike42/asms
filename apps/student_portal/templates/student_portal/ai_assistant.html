@@ -1,0 +1,74 @@
+{% extends "student_portal/base.html" %}
+
+{% block content %}
+
+<div class="portal-card overflow-hidden">
+  <div style="background:linear-gradient(135deg,#0F2D4A 0%,#1B4F72 50%,#2ECC71 100%);padding:2.5rem 2rem;text-align:center;color:#fff;">
+    <i class="bi bi-robot" style="font-size:2.5rem;"></i>
+    <h5 class="fw-bold mt-3 mb-1">AI Study Assistant</h5>
+    <div style="font-size:.85rem;opacity:.85;">Coming in Phase 7 — Intelligence</div>
+  </div>
+
+  <div class="p-4">
+    <p class="text-muted mb-4" style="font-size:.85rem;">
+      Your AI Study Companion will use your continuous assessment history and the school syllabus to
+      generate personalised revision materials — helping you focus your study time where it matters most.
+    </p>
+
+    <h6 class="fw-bold mb-3" style="font-size:.85rem;">What This Module Will Offer</h6>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="d-flex gap-3 p-3 rounded" style="background:#F8FAFC;">
+          <i class="bi bi-patch-question text-primary fs-4 flex-shrink-0"></i>
+          <div>
+            <div class="fw-semibold" style="font-size:.84rem;">Revision Quizzes</div>
+            <div class="text-muted" style="font-size:.76rem;">
+              Auto-generated based on the current syllabus and your identified weak areas from CA scores.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-3 p-3 rounded" style="background:#F8FAFC;">
+          <i class="bi bi-lightbulb text-warning fs-4 flex-shrink-0"></i>
+          <div>
+            <div class="fw-semibold" style="font-size:.84rem;">Concept Explanations</div>
+            <div class="text-muted" style="font-size:.76rem;">
+              Triggered automatically when you've had repeated low scores on a specific topic.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-3 p-3 rounded" style="background:#F8FAFC;">
+          <i class="bi bi-calendar2-week text-success fs-4 flex-shrink-0"></i>
+          <div>
+            <div class="fw-semibold" style="font-size:.84rem;">Study Planner</div>
+            <div class="text-muted" style="font-size:.76rem;">
+              Give an exam date — get a day-by-day revision schedule tailored to your subjects.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-3 p-3 rounded" style="background:#F8FAFC;">
+          <i class="bi bi-book text-info fs-4 flex-shrink-0"></i>
+          <div>
+            <div class="fw-semibold" style="font-size:.84rem;">Resource Recommendations</div>
+            <div class="text-muted" style="font-size:.76rem;">
+              LMS resources and readings matched directly to your curriculum gaps.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-light mt-4 py-2" style="font-size:.78rem;border:1px solid #E5E9F0;">
+      <i class="bi bi-info-circle me-1"></i>
+      v1 of this module uses rule-based logic and curated content. Full LLM-powered AI is introduced
+      once sufficient data volume is reached across your school.
+    </div>
+  </div>
+</div>
+
+{% endblock %}

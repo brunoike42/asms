@@ -1,0 +1,178 @@
+{% extends "base/base.html" %}
+{% block title %}Pay Invoice | ASMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">Pay School Fees Online</h4>
+  <a href="{% url 'finance:invoice_detail' pk=invoice.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to Invoice
+  </a>
+</div>
+
+{% if sandbox %}
+<div class="alert alert-warning border-0 mb-4 py-2 small">
+  <i class="bi bi-cone-striped me-2"></i>
+  <strong>Sandbox / Test Mode.</strong> No real money will be charged.
+  Use test credentials from your PesaPal developer dashboard.
+</div>
+{% endif %}
+
+<div class="row justify-content-center g-4">
+
+  <!-- Left: Invoice Summary -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Invoice Summary</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 small mb-3">
+          <div class="col-5 text-muted fw-semibold">Student</div>
+          <div class="col-7">{{ invoice.student.first_name }} {{ invoice.student.last_name }}</div>
+          <div class="col-5 text-muted fw-semibold">Invoice #</div>
+          <div class="col-7">{{ invoice.pk }}</div>
+          {% if invoice.term %}
+          <div class="col-5 text-muted fw-semibold">Term</div>
+          <div class="col-7">{{ invoice.term }}</div>
+          {% endif %}
+          <div class="col-5 text-muted fw-semibold">Total Amount</div>
+          <div class="col-7">UGX {{ invoice.total_amount|floatformat:0 }}</div>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Amount to Pay</span>
+          <span class="fs-4 fw-bold text-primary">UGX {{ outstanding|floatformat:0 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body py-3">
+        <h6 class="fw-semibold mb-3">Accepted Payment Methods</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge bg-warning text-dark px-3 py-2">
+            <i class="bi bi-phone me-1"></i> MTN Mobile Money
+          </span>
+          <span class="badge bg-danger px-3 py-2">
+            <i class="bi bi-phone me-1"></i> Airtel Money
+          </span>
+          <span class="badge bg-primary px-3 py-2">
+            <i class="bi bi-credit-card me-1"></i> Visa / Mastercard
+          </span>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+          For mobile money, you will receive a <strong>USSD prompt</strong> on your phone
+          asking you to confirm the payment with your Mobile Money PIN.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Payment Form -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <h6 class="fw-semibold mb-0">Enter Payment Details</h6>
+      </div>
+      <div class="card-body">
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'danger' }} border-0 alert-dismissible py-2 small">
+          {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" id="paymentForm">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Parent / Guardian Name <span class="text-danger">*</span>
+            </label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="text" name="first_name" class="form-control"
+                       placeholder="First name"
+                       value="{{ guardian.first_name|default:'' }}">
+              </div>
+              <div class="col-6">
+                <input type="text" name="last_name" class="form-control"
+                       placeholder="Last name"
+                       value="{{ guardian.last_name|default:'' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Mobile Money / Phone Number
+              <span class="text-muted fw-normal">(for MTN/Airtel USSD push)</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light fw-semibold small">+256</span>
+              <input type="tel" name="phone" id="phoneInput"
+                     class="form-control" placeholder="772 000 000"
+                     value="{{ guardian.phone_number|default:guardian.phone|default:'' }}"
+                     maxlength="15">
+            </div>
+            <div class="form-text">
+              Enter your MTN or Airtel number. You'll receive a USSD prompt to confirm.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Email Address
+              <span class="text-muted fw-normal">(receipt will be emailed here)</span>
+            </label>
+            <input type="email" name="email" class="form-control"
+                   placeholder="parent@email.com"
+                   value="{{ guardian.email|default:'' }}">
+          </div>
+
+          <input type="hidden" name="currency" value="UGX">
+
+          <!-- Payment summary box -->
+          <div class="p-3 bg-light rounded mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="small text-muted">You are paying</div>
+                <div class="fw-bold fs-5">UGX {{ outstanding|floatformat:0 }}</div>
+                <div class="small text-muted">for {{ invoice.student.first_name }} {{ invoice.student.last_name }}</div>
+              </div>
+              <i class="bi bi-shield-lock-fill text-success fs-2"></i>
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg" id="payBtn">
+              <i class="bi bi-lock-fill me-2"></i>
+              Proceed to PesaPal — Pay UGX {{ outstanding|floatformat:0 }}
+            </button>
+          </div>
+          <div class="text-center mt-2">
+            <small class="text-muted">
+              <i class="bi bi-shield-check me-1"></i>
+              Secured by PesaPal. Your payment details are never stored by ASMS.
+            </small>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('paymentForm').addEventListener('submit', function() {
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting to PesaPal…';
+});
+</script>
+{% endblock %}

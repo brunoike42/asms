@@ -1,0 +1,136 @@
+{% extends "parent/base.html" %}
+{% block title %}Behaviour — {{ student.first_name }} | Parent Portal{% endblock %}
+
+{% block content %}
+
+<!-- Merit / Demerit Summary (Class Charts-inspired achievement wall) -->
+<div class="pp-card" style="background:linear-gradient(135deg,#0e9f6e,#065f46);color:#fff;border:none;">
+  <div style="font-size:12px;opacity:.8;margin-bottom:2px;">{{ student.first_name }}'s Behaviour Record</div>
+  <div style="display:flex;gap:24px;margin-top:8px;">
+    <div>
+      <div style="font-size:30px;font-weight:800;line-height:1;">{{ total_merits }}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px;"><i class="bi bi-award-fill me-1"></i>Merit Points</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);"></div>
+    <div>
+      <div style="font-size:30px;font-weight:800;line-height:1;">{{ incidents|length }}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Incidents</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);"></div>
+    <div>
+      <div style="font-size:30px;font-weight:800;line-height:1;">{{ unack_count }}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px;"><i class="bi bi-bell-fill me-1"></i>Need Ack.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Unacknowledged incidents (ClassDojo-inspired immediate alert) -->
+{% for incident in incidents %}
+{% if not incident.parent_acknowledged %}
+<div class="pp-alert urgent">
+  <i class="bi bi-exclamation-triangle-fill" style="font-size:20px;flex-shrink:0;"></i>
+  <div style="flex:1;">
+    <div style="font-weight:700;font-size:13px;">
+      {{ incident.category.name }} — {{ incident.incident_date|date:"d M Y" }}
+    </div>
+    <div style="font-size:12px;margin-top:2px;">{{ incident.description|truncatechars:100 }}</div>
+    <div style="margin-top:8px;">
+      <button onclick="openAck({{ incident.pk }}, '{{ incident.category.name }}')"
+              style="background:#991b1b;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">
+        Acknowledge <i class="bi bi-check-all ms-1"></i>
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Incidents List -->
+{% if incidents %}
+<div class="pp-section-label">Discipline Incidents</div>
+<div class="pp-card">
+  {% for incident in incidents %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                background:{% if incident.severity == 'critical' %}#fee2e2{% elif incident.severity == 'serious' %}#fef3c7{% else %}#f3f4f6{% endif %};">
+      <i class="bi bi-shield-exclamation" style="font-size:16px;color:{% if incident.severity == 'critical' %}#e02424{% elif incident.severity == 'serious' %}#e3a008{% else %}#6b7280{% endif %};"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ incident.category.name }}</div>
+      <div class="item-sub">{{ incident.incident_date|date:"d M Y" }} · {{ incident.get_severity_display }}</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      {% if incident.parent_acknowledged %}
+      <span class="pp-badge green" style="font-size:10px;"><i class="bi bi-check-all"></i> Ack'd</span>
+      {% else %}
+      <span class="pp-badge red" style="font-size:10px;">New</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Merits — Achievement Wall (Seesaw-inspired positive display) -->
+{% if merits %}
+<div class="pp-section-label">🏆 Achievements & Merits</div>
+<div class="pp-card">
+  {% for merit in merits %}
+  <div class="pp-list-item">
+    <div style="width:36px;height:36px;background:#fef3c7;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-award-fill" style="color:#e3a008;font-size:18px;"></i>
+    </div>
+    <div class="item-main" style="margin-left:10px;">
+      <div class="item-title">{{ merit.title }}</div>
+      <div class="item-sub">{{ merit.get_merit_type_display }} · {{ merit.award_date|date:"d M Y" }}</div>
+    </div>
+    <div style="background:#fef3c7;color:#92400e;font-weight:800;font-size:13px;border-radius:6px;padding:4px 8px;flex-shrink:0;">
+      +{{ merit.merit_points }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Acknowledgement Modal -->
+<div id="ackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:380px;">
+    <h6 style="font-weight:700;margin-bottom:8px;">Acknowledge Incident</h6>
+    <p id="ackDesc" style="font-size:13px;color:var(--pp-muted);margin-bottom:16px;"></p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="acknowledge">
+      <input type="hidden" name="incident_pk" id="ackIncidentPk">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Your message to the school (optional)</label>
+        <textarea name="note" class="form-control form-control-sm" rows="3"
+                  placeholder="I have spoken to my child about this…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" onclick="closeAck()"
+                style="flex:1;background:var(--pp-bg);border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          Cancel
+        </button>
+        <button type="submit"
+                style="flex:1;background:#1a56db;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          Acknowledge
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openAck(pk, name) {
+  document.getElementById('ackIncidentPk').value = pk;
+  document.getElementById('ackDesc').textContent = 'Incident: ' + name;
+  document.getElementById('ackModal').style.display = 'flex';
+}
+function closeAck() {
+  document.getElementById('ackModal').style.display = 'none';
+}
+</script>
+{% endblock %}
