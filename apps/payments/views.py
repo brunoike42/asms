@@ -254,6 +254,26 @@ def _process_ipn(ipn_log, order_tracking_id, merchant_reference):
         ipn_log.save()
         return
 
+    # Phase 5C — platform subscription payments live in a separate table
+    # (apps.platform_billing.PlatformPesaPalTransaction) and never touch a
+    # student or a FeeInvoice. Checked first; if it's not a match, falls
+    # straight through to the original Finance-side lookup below, unchanged.
+    from apps.platform_billing.models import PlatformPesaPalTransaction
+    platform_txn = (
+        PlatformPesaPalTransaction.objects.filter(order_tracking_id=order_tracking_id).first()
+        or PlatformPesaPalTransaction.objects.filter(merchant_reference=merchant_reference).first()
+    )
+    if platform_txn:
+        if platform_txn.status != PlatformPesaPalTransaction.StatusChoices.COMPLETED:
+            client = PesaPalClient()
+            status_data = client.get_transaction_status(order_tracking_id)
+            from apps.platform_billing.payment_views import apply_platform_status_update
+            apply_platform_status_update(platform_txn, status_data)
+        ipn_log.processed = True
+        ipn_log.processed_at = timezone.now()
+        ipn_log.save(update_fields=['processed', 'processed_at'])
+        return
+
     try:
         txn = PesaPalTransaction.objects.get(
             order_tracking_id=order_tracking_id

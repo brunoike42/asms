@@ -8,7 +8,7 @@
 <!-- ── Page header ──────────────────────────────────────────────────────── -->
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Good day, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.get_username }}{% endif %} 👋</h4>
+    <h4 class="fw-bold mb-1">Good day, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.get_username }}{% endif %}</h4>
     {% if term and academic_year %}
     <p class="text-muted mb-0">
       <i class="bi bi-calendar3 me-1"></i>
@@ -268,7 +268,7 @@
   <!-- Right column: Quick Actions + Activity Feed -->
   <div class="col-lg-5">
 
-    <!-- Quick Actions — EMIS Action Center style -->
+  <!-- Quick Actions — EMIS Action Center style -->
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-header bg-transparent border-0 py-3">
         <h6 class="fw-semibold mb-0">
@@ -292,6 +292,11 @@
           <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-warning text-start">
             <i class="bi bi-receipt-cutoff me-2"></i>View Invoices
           </a>
+          {% if can_manage_emis %}
+          <a href="{% url 'emis:dashboard' %}" class="btn btn-outline-dark text-start">
+            <i class="bi bi-file-earmark-bar-graph me-2"></i>EMIS Reporting
+          </a>
+          {% endif %}
         </div>
       </div>
     </div>

@@ -1,0 +1,2451 @@
+=== APP DIRECTORIES (apps/) ===
+academics
+accounts
+admissions
+assets
+assignments
+attendance
+canteen
+communication
+core
+counselling
+discipline
+emis
+exams
+finance
+health
+library
+lms
+notifications
+parent_portal
+payments
+staff_hr
+students
+student_portal
+transport
+visitor
+__pycache__
+{core,accounts,students,academics,admissions,attendance,finance,communication}
+
+=== STUDENT MODEL FILE(S) ===
+
+========================================
+Student model
+PATH: E:\DJANGO\ASMS\asms\apps\discipline\models.py
+========================================
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+import random
+import string
+
+from apps.core.models import TenantModel
+
+
+def generate_incident_ref():
+    year = timezone.now().year
+    suffix = ''.join(random.choices(string.digits, k=5))
+    return f'DIS-{year}-{suffix}'
+
+
+class DisciplineCategory(TenantModel):
+    """Pre-defined and tenant-customisable categories for incident classification."""
+
+    SEVERITY_CHOICES = [
+        ('minor', 'Minor'),
+        ('moderate', 'Moderate'),
+        ('serious', 'Serious'),
+        ('critical', 'Critical'),
+    ]
+
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, blank=True)
+    description = models.TextField(blank=True)
+    default_severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='minor')
+    requires_principal_approval = models.BooleanField(
+        default=False,
+        help_text='Whether incidents in this category automatically require principal sign-off'
+    )
+    triggers_counselling = models.BooleanField(
+        default=False,
+        help_text='Whether a single incident in this category opens a counselling flag'
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Discipline Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class DisciplineIncident(TenantModel):
+    """Core record for any student behaviour incident."""
+
+    STATUS_CHOICES = [
+        ('pending_review', 'Pending Review'),
+        ('under_investigation', 'Under Investigation'),
+        ('awaiting_parent_response', 'Awaiting Parent Response'),
+        ('awaiting_principal_approval', 'Awaiting Principal Approval'),
+        ('consequence_applied', 'Consequence Applied'),
+        ('appealed', 'Under Appeal'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('minor', 'Minor'),
+        ('moderate', 'Moderate'),
+        ('serious', 'Serious'),
+        ('critical', 'Critical'),
+    ]
+
+    LOCATION_CHOICES = [
+        ('classroom', 'Classroom'),
+        ('playground', 'Playground / Sports Field'),
+        ('corridor', 'Corridor / Walkway'),
+        ('canteen', 'Canteen / Dining Hall'),
+        ('library', 'Library'),
+        ('toilets', 'Toilets / Bathrooms'),
+        ('school_gate', 'School Gate / Entrance'),
+        ('dormitory', 'Dormitory / Boarding'),
+        ('laboratory', 'Laboratory'),
+        ('bus', 'School Bus / Transport'),
+        ('off_campus', 'Off Campus'),
+        ('online', 'Online / Social Media'),
+        ('other', 'Other'),
+    ]
+
+    NOTIFICATION_METHOD_CHOICES = [
+        ('sms', 'SMS'),
+        ('email', 'Email'),
+        ('phone_call', 'Phone Call'),
+        ('in_person', 'In Person'),
+        ('letter', 'Written Letter'),
+        ('portal', 'Parent Portal'),
+    ]
+
+    reference_number = models.CharField(max_length=30, unique=True, editable=False, db_index=True)
+    academic_year = models.ForeignKey(
+        'core.AcademicYear', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='discipline_incidents'
+    )
+    term = models.ForeignKey(
+        'core.Term', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='discipline_incidents'
+    )
+
+    student = models.ForeignKey(
+        'students.Student', on_delete=models.PROTECT, related_name='discipline_incidents'
+    )
+    category = models.ForeignKey(
+        DisciplineCategory, on_delete=models.PROTECT, related_name='incidents'
+    )
+
+    title = models.CharField(max_length=250)
+    description = models.TextField()
+    incident_date = models.DateField()
+    incident_time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=30, choices=LOCATION_CHOICES, default='classroom')
+    location_detail = models.CharField(max_length=100, blank=True)
+
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='minor')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_review')
+
+    co_accused_students = models.ManyToManyField(
+        'students.Student', blank=True, related_name='co_accused_incidents'
+    )
+
+    reported_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='reported_incidents'
+    )
+    report_datetime = models.DateTimeField(auto_now_add=True)
+
+    investigated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='investigated_incidents'
+    )
+    investigation_notes = models.TextField(blank=True)
+    investigation_completed_at = models.DateTimeField(null=True, blank=True)
+
+    requires_principal_approval = models.BooleanField(default=False)
+    principal_reviewed = models.BooleanField(default=False)
+    principal_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='principal_reviewed_incidents'
+    )
+    principal_reviewed_at = models.DateTimeField(null=True, blank=True)
+    principal_notes = models.TextField(blank=True)
+
+    parent_notified = models.BooleanField(default=False)
+    parent_notified_at = models.DateTimeField(null=True, blank=True)
+    parent_notified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='parent_notifications_sent'
+    )
+    parent_notification_method = models.CharField(
+        max_length=20, choices=NOTIFICATION_METHOD_CHOICES, blank=True
+    )
+    parent_notification_note = models.TextField(blank=True)
+    parent_acknowledged = models.BooleanField(default=False)
+    parent_acknowledged_at = models.DateTimeField(null=True, blank=True)
+    parent_acknowledgement_note = models.TextField(blank=True)
+
+    is_appealed = models.BooleanField(default=False)
+    appeal_lodged_at = models.DateTimeField(null=True, blank=True)
+    appeal_lodged_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lodged_appeals'
+    )
+    appeal_reason = models.TextField(blank=True)
+    appeal_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='reviewed_appeals'
+    )
+    appeal_reviewed_at = models.DateTimeField(null=True, blank=True)
+    appeal_outcome = models.TextField(blank=True)
+    appeal_upheld = models.BooleanField(null=True, blank=True)
+
+    counselling_flag_raised = models.BooleanField(default=False)
+    counselling_case = models.ForeignKey(
+        'counselling.WelfareCase', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='linked_incidents'
+    )
+
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='resolved_incidents'
+    )
+    resolution_summary = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-incident_date', '-report_datetime']
+        indexes = [
+            models.Index(fields=['student']),
+            models.Index(fields=['status']),
+            models.Index(fields=['severity']),
+            models.Index(fields=['incident_date']),
+        ]
+
+    def __str__(self):
+        return f'{self.reference_number} â€” {self.student} ({self.category})'
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            for _ in range(10):
+                ref = generate_incident_ref()
+                if not DisciplineIncident.objects.filter(reference_number=ref).exists():
+                    self.reference_number = ref
+                    break
+        super().save(*args, **kwargs)
+
+    @property
+    def is_open(self):
+        return self.status not in ('resolved', 'closed')
+
+    @property
+    def days_open(self):
+        if self.resolved_at:
+            return (self.resolved_at.date() - self.incident_date).days
+        return (timezone.now().date() - self.incident_date).days
+
+    def get_severity_badge_class(self):
+        return {
+            'minor': 'bg-info',
+            'moderate': 'bg-warning',
+            'serious': 'bg-orange',
+            'critical': 'bg-danger',
+        }.get(self.severity, 'bg-secondary')
+
+    def get_status_badge_class(self):
+        return {
+            'pending_review': 'bg-warning text-dark',
+            'under_investigation': 'bg-primary',
+            'awaiting_parent_response': 'bg-info text-dark',
+            'awaiting_principal_approval': 'bg-warning text-dark',
+            'consequence_applied': 'bg-secondary',
+            'appealed': 'bg-secondary',
+            'resolved': 'bg-success',
+            'closed': 'bg-dark',
+        }.get(self.status, 'bg-secondary')
+
+
+class DisciplineConsequence(models.Model):
+    """Formal consequence applied to a student following an incident."""
+
+    CONSEQUENCE_TYPE_CHOICES = [
+        ('verbal_warning', 'Verbal Warning'),
+        ('written_warning', 'Written Warning'),
+        ('detention', 'Detention'),
+        ('community_service', 'Community Service'),
+        ('suspension_internal', 'Internal Suspension (in school)'),
+        ('suspension_external', 'External Suspension (sent home)'),
+        ('expulsion', 'Expulsion'),
+        ('parent_meeting', 'Parent Meeting Required'),
+        ('counselling_referral', 'Counselling Referral'),
+        ('demerit_points', 'Demerit Points'),
+        ('privilege_withdrawal', 'Withdrawal of Privileges'),
+        ('restitution', 'Restitution / Compensation'),
+        ('behaviour_contract', 'Behaviour Contract'),
+        ('restorative_circle', 'Restorative Circle / Mediation'),
+        ('extra_duties', 'Extra School Duties'),
+    ]
+
+    APPROVAL_STATUS_CHOICES = [
+        ('pending_approval', 'Pending Principal Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected by Principal'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('waived_on_appeal', 'Waived on Appeal'),
+    ]
+
+    incident = models.ForeignKey(
+        DisciplineIncident, on_delete=models.CASCADE, related_name='consequences'
+    )
+    consequence_type = models.CharField(max_length=50, choices=CONSEQUENCE_TYPE_CHOICES)
+    description = models.TextField()
+    rationale = models.TextField(blank=True)
+
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    duration_days = models.PositiveIntegerField(null=True, blank=True)
+    schedule_notes = models.TextField(blank=True)
+
+    demerit_points = models.PositiveIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(100)]
+    )
+    restitution_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    restitution_description = models.TextField(blank=True)
+
+    requires_approval = models.BooleanField(default=False)
+    approval_status = models.CharField(
+        max_length=25, choices=APPROVAL_STATUS_CHOICES, default='pending_approval'
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='approved_consequences'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approval_notes = models.TextField(blank=True)
+
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='assigned_consequences'
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='completed_consequences'
+    )
+    completion_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f'{self.get_consequence_type_display()} â€” {self.incident.reference_number}'
+
+    @property
+    def is_active(self):
+        return self.approval_status in ('approved', 'in_progress')
+
+
+class IncidentWitness(models.Model):
+    """Any person who witnessed the incident."""
+
+    WITNESS_TYPE_CHOICES = [
+        ('student', 'Student'),
+        ('teaching_staff', 'Teaching Staff'),
+        ('support_staff', 'Support Staff'),
+        ('parent', 'Parent / Guardian'),
+        ('external', 'External Party'),
+    ]
+
+    incident = models.ForeignKey(
+        DisciplineIncident, on_delete=models.CASCADE, related_name='witnesses'
+    )
+    witness_type = models.CharField(max_length=20, choices=WITNESS_TYPE_CHOICES)
+    witness_student = models.ForeignKey(
+        'students.Student', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='witness_records'
+    )
+    witness_staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='witness_records'
+    )
+    witness_name = models.CharField(max_length=100, blank=True)
+    witness_contact = models.CharField(max_length=50, blank=True)
+    statement = models.TextField(blank=True)
+    statement_recorded_at = models.DateTimeField(null=True, blank=True)
+    statement_recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='recorded_witness_statements'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        name = (
+            str(self.witness_student) if self.witness_student
+            else str(self.witness_staff) if self.witness_staff
+            else self.witness_name
+        )
+        return f'Witness: {name} â€” {self.incident.reference_number}'
+
+
+class IncidentEvidence(models.Model):
+    """Supporting evidence or attachments for a discipline incident."""
+
+    EVIDENCE_TYPE_CHOICES = [
+        ('photo', 'Photograph'),
+        ('video', 'Video Recording'),
+        ('document', 'Document / Written Note'),
+        ('cctv_still', 'CCTV Still'),
+        ('cctv_clip', 'CCTV Clip'),
+        ('written_statement', 'Written Statement'),
+        ('medical_report', 'Medical / Nurse Report'),
+        ('damaged_property', 'Damaged Property Record'),
+        ('social_media', 'Social Media Screenshot'),
+        ('other', 'Other Evidence'),
+    ]
+
+    incident = models.ForeignKey(
+        DisciplineIncident, on_delete=models.CASCADE, related_name='evidence'
+    )
+    evidence_type = models.CharField(max_length=30, choices=EVIDENCE_TYPE_CHOICES)
+    title = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    file = models.FileField(upload_to='discipline/evidence/%Y/%m/', null=True, blank=True)
+    file_url = models.URLField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='uploaded_evidence'
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    is_confidential = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.get_evidence_type_display()}: {self.title}'
+
+
+class MeritRecord(TenantModel):
+    """Positive recognition and merit commendations for students."""
+
+    MERIT_TYPE_CHOICES = [
+        ('academic', 'Academic Excellence'),
+        ('good_behaviour', 'Good Behaviour'),
+        ('leadership', 'Leadership'),
+        ('community_service', 'Community Service'),
+        ('sports', 'Sports Achievement'),
+        ('arts_culture', 'Arts & Culture'),
+        ('significant_improvement', 'Significant Improvement'),
+        ('helping_peers', 'Helping Others / Peer Support'),
+        ('environmental', 'Environmental Care'),
+        ('school_representation', 'Represented School'),
+        ('other', 'Other'),
+    ]
+
+    student = models.ForeignKey(
+        'students.Student', on_delete=models.PROTECT, related_name='merit_records'
+    )
+    merit_type = models.CharField(max_length=30, choices=MERIT_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    merit_points = models.PositiveIntegerField(
+        default=1, validators=[MinValueValidator(1), MaxValueValidator(50)]
+    )
+    awarded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='awarded_merits'
+    )
+    award_date = models.DateField()
+    academic_year = models.ForeignKey(
+        'core.AcademicYear', on_delete=models.PROTECT, related_name='merit_records'
+    )
+    term = models.ForeignKey(
+        'core.Term', on_delete=models.PROTECT, related_name='merit_records'
+    )
+    parent_notified = models.BooleanField(default=False)
+    parent_notified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-award_date']
+
+    def __str__(self):
+        return f'Merit: {self.title} â€” {self.student}'
+
+
+class StudentBehaviourSummary(TenantModel):
+    """
+    Pre-computed aggregate behaviour record per student per term.
+    Rebuilt by signals after each incident or merit change.
+    """
+
+    student = models.ForeignKey(
+        'students.Student', on_delete=models.CASCADE, related_name='behaviour_summaries'
+    )
+    term = models.ForeignKey('core.Term', on_delete=models.CASCADE)
+
+    total_incidents = models.PositiveIntegerField(default=0)
+    minor_incidents = models.PositiveIntegerField(default=0)
+    moderate_incidents = models.PositiveIntegerField(default=0)
+    serious_incidents = models.PositiveIntegerField(default=0)
+    critical_incidents = models.PositiveIntegerField(default=0)
+    total_demerit_points = models.PositiveIntegerField(default=0)
+    total_merit_points = models.PositiveIntegerField(default=0)
+    net_behaviour_score = models.IntegerField(default=0)
+    suspensions_served = models.PositiveIntegerField(default=0)
+    suspension_days = models.PositiveIntegerField(default=0)
+
+    counselling_flag_raised = models.BooleanField(default=False)
+    counselling_flag_raised_at = models.DateTimeField(null=True, blank=True)
+
+    last_computed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['student', 'term']
+
+    def __str__(self):
+        return f'{self.student} â€” {self.term} â€” {self.total_incidents} incidents'
+
+    @property
+    def behaviour_risk_contribution(self):
+        """Returns 0â€“20 risk score contribution per spec section 3.3."""
+        if self.total_incidents >= 3:
+            return 20
+        return round((self.total_incidents / 3) * 20)
+
+========================================
+Student model
+PATH: E:\DJANGO\ASMS\asms\apps\health\models.py
+========================================
+"""
+ASMS Health Module
+Persistent student medical record, nurse visit log, medication dispensing,
+and vaccination tracking.
+Benchmarked from: Infinite Campus Health (most comprehensive K-12 health record
+system in North America) and PowerSchool Health — both use a two-layer architecture:
+a persistent StudentHealthRecord (allergies, chronic conditions, emergency contacts,
+doctor details) separate from episodic NurseVisit records. We replicate that pattern
+exactly here.
+Note: ConsentForm and ConsentResponse already exist in apps.parent_portal and are
+not duplicated here. The parent portal health section references those directly.
+"""
+from django.db import models
+from django.utils import timezone
+from apps.core.models import TenantModel, TenantManager
+# ══════════════════════════════════════════════════════
+# PERSISTENT MEDICAL PROFILE
+# ══════════════════════════════════════════════════════
+class StudentHealthRecord(TenantModel):
+    """
+    One persistent record per student — auto-created on Student creation (signals.py).
+    Visible to: Nurse, Counsellor, Principal. NOT visible to general teaching staff
+    (access control enforced at the view layer).
+    Cross-module link: allergies field is referenced by apps.canteen.MenuItem.contains_allergens
+    to alert canteen staff before serving a flagged student.
+    """
+    class BloodTypeChoices(models.TextChoices):
+        A_POS   = "A+",      "A+"
+        A_NEG   = "A-",      "A-"
+        B_POS   = "B+",      "B+"
+        B_NEG   = "B-",      "B-"
+        AB_POS  = "AB+",     "AB+"
+        AB_NEG  = "AB-",     "AB-"
+        O_POS   = "O+",      "O+"
+        O_NEG   = "O-",      "O-"
+        UNKNOWN = "unknown",  "Unknown"
+    student = models.OneToOneField(
+        "students.Student", on_delete=models.CASCADE,
+        related_name="health_record"
+    )
+    # ── Medical ──────────────────────────────────────
+    blood_type = models.CharField(
+        max_length=10, choices=BloodTypeChoices.choices,
+        default=BloodTypeChoices.UNKNOWN
+    )
+    allergies = models.TextField(
+        blank=True,
+        help_text="Known allergies — cross-checked against canteen MenuItem.contains_allergens"
+    )
+    chronic_conditions = models.TextField(
+        blank=True,
+        help_text="e.g. asthma, diabetes, epilepsy, sickle cell — informs teacher and nurse response"
+    )
+    physical_disabilities = models.TextField(blank=True)
+    is_on_regular_medication = models.BooleanField(default=False)
+    regular_medication_details = models.TextField(
+        blank=True,
+        help_text="Name, dosage, and schedule of ongoing daily medications"
+    )
+    special_dietary_requirements = models.TextField(
+        blank=True,
+        help_text="Medical dietary needs — surfaced on canteen weekly menu for flagged students"
+    )
+    # ── Emergency Contacts ───────────────────────────
+    # Separate from Guardian — may be a different trusted adult (aunt, neighbour, etc.)
+    emergency_contact_1_name         = models.CharField(max_length=150, blank=True)
+    emergency_contact_1_phone        = models.CharField(max_length=20, blank=True)
+    emergency_contact_1_relationship = models.CharField(max_length=50, blank=True)
+    emergency_contact_2_name         = models.CharField(max_length=150, blank=True)
+    emergency_contact_2_phone        = models.CharField(max_length=20, blank=True)
+    emergency_contact_2_relationship = models.CharField(max_length=50, blank=True)
+    # ── Medical Provider ─────────────────────────────
+    doctor_name               = models.CharField(max_length=150, blank=True)
+    doctor_phone              = models.CharField(max_length=20, blank=True)
+    hospital_preference       = models.CharField(
+        max_length=200, blank=True,
+        help_text="Preferred hospital or clinic in case of emergency"
+    )
+    medical_insurance_provider = models.CharField(max_length=150, blank=True)
+    medical_insurance_number   = models.CharField(max_length=100, blank=True)
+    notes           = models.TextField(blank=True)
+    last_updated_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="health_records_updated"
+    )
+    objects = TenantManager()
+    class Meta:
+        db_table     = "health_student_health_record"
+        verbose_name = "Student Health Record"
+    def __str__(self):
+        return f"Health Record — {self.student}"
+    @property
+    def has_critical_alerts(self):
+        """True if the student has any condition needing immediate awareness."""
+        return bool(self.allergies or self.chronic_conditions or self.physical_disabilities)
+    @property
+    def vaccinations_due(self):
+        """Returns any vaccination records with a next_due_date in the past or today."""
+        today = timezone.now().date()
+        return self.student.vaccination_records.filter(
+            next_due_date__lte=today
+        )
+# ══════════════════════════════════════════════════════
+# NURSE VISITS (EPISODIC)
+# ══════════════════════════════════════════════════════
+class NurseVisit(TenantModel):
+    """
+    One record per nurse room episode — complaint → assessment → action → follow-up.
+    Mirrors the Infinite Campus Health visit record structure.
+    Medication dispensed during the visit is recorded in MedicationDispensing (inline).
+    """
+    class VisitTypeChoices(models.TextChoices):
+        ILLNESS       = "illness",       "Illness"
+        INJURY        = "injury",        "Injury"
+        ROUTINE_CHECK = "routine_check", "Routine Check"
+        EMERGENCY     = "emergency",     "Emergency"
+        FOLLOW_UP     = "follow_up",     "Follow-Up Visit"
+    class ActionChoices(models.TextChoices):
+        RETURNED_TO_CLASS    = "returned_to_class",    "Returned to Class"
+        SENT_HOME            = "sent_home",             "Sent Home"
+        REFERRED_HOSPITAL    = "referred_hospital",     "Referred to Hospital"
+        OBSERVATION          = "observation",           "Kept Under Observation"
+        REFERRED_COUNSELLOR  = "referred_counsellor",  "Referred to Counsellor"
+        OTHER                = "other",                 "Other"
+    student              = models.ForeignKey(
+        "students.Student", on_delete=models.CASCADE,
+        related_name="nurse_visits"
+    )
+    visit_datetime       = models.DateTimeField(default=timezone.now)
+    visit_type           = models.CharField(
+        max_length=15, choices=VisitTypeChoices.choices,
+        default=VisitTypeChoices.ILLNESS
+    )
+    complaint            = models.TextField(help_text="Student-reported reason for visit")
+    temperature_celsius  = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True,
+        help_text="Body temperature in °C — flag if >37.5"
+    )
+    weight_kg            = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    blood_pressure       = models.CharField(
+        max_length=20, blank=True,
+        help_text="e.g. 120/80 mmHg"
+    )
+    symptoms             = models.TextField(blank=True, help_text="Nurse-observed symptoms")
+    assessment           = models.TextField(blank=True, help_text="Nurse clinical assessment / diagnosis")
+    action_taken         = models.CharField(
+        max_length=22, choices=ActionChoices.choices,
+        default=ActionChoices.RETURNED_TO_CLASS
+    )
+    parent_notified      = models.BooleanField(default=False)
+    parent_notified_time = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Auto-set when parent_notified is first ticked"
+    )
+    attended_by          = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="nurse_visits_attended",
+        help_text="Nurse or staff member who attended the student"
+    )
+    follow_up_required   = models.BooleanField(default=False)
+    follow_up_date       = models.DateField(null=True, blank=True)
+    notes                = models.TextField(blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table     = "health_nurse_visit"
+        ordering     = ["-visit_datetime"]
+        verbose_name = "Nurse Visit"
+    def __str__(self):
+        return (f"{self.student} — {self.get_visit_type_display()} "
+                f"({self.visit_datetime:%Y-%m-%d %H:%M})")
+    def save(self, *args, **kwargs):
+        # Auto-stamp the parent notification time on first tick
+        if self.parent_notified and not self.parent_notified_time:
+            self.parent_notified_time = timezone.now()
+        super().save(*args, **kwargs)
+# ══════════════════════════════════════════════════════
+# MEDICATION DISPENSING
+# ══════════════════════════════════════════════════════
+class MedicationDispensing(TenantModel):
+    """
+    Medications dispensed during a NurseVisit — kept as a separate child record
+    so multiple medications per visit are logged individually.
+    Mirrors the Infinite Campus medication dispensing log pattern.
+    """
+    nurse_visit        = models.ForeignKey(
+        NurseVisit, on_delete=models.CASCADE,
+        related_name="medications_dispensed"
+    )
+    medication_name    = models.CharField(max_length=150)
+    dosage             = models.CharField(max_length=100, help_text="e.g. 500 mg, 2 tablets")
+    quantity_dispensed = models.CharField(max_length=50, help_text="e.g. 2 tablets, 5 ml")
+    time_dispensed     = models.DateTimeField(default=timezone.now)
+    dispensed_by       = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="medications_dispensed_by"
+    )
+    from_school_stock  = models.BooleanField(
+        default=True,
+        help_text="True = dispensed from school medical store; False = from student-provided supply"
+    )
+    notes              = models.CharField(max_length=255, blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table     = "health_medication_dispensing"
+        ordering     = ["time_dispensed"]
+        verbose_name = "Medication Dispensing Record"
+    def __str__(self):
+        return (f"{self.medication_name} {self.dosage} → "
+                f"{self.nurse_visit.student} ({self.time_dispensed:%Y-%m-%d %H:%M})")
+# ══════════════════════════════════════════════════════
+# VACCINATION RECORDS
+# ══════════════════════════════════════════════════════
+class VaccinationRecord(TenantModel):
+    """
+    Immunisation history per student — supports multi-dose vaccines.
+    administered_by is free-text (external clinic, government campaign)
+    rather than a FK to accounts.User because vaccinations are typically
+    given by outside health workers, not school staff.
+    """
+    student          = models.ForeignKey(
+        "students.Student", on_delete=models.CASCADE,
+        related_name="vaccination_records"
+    )
+    vaccine_name     = models.CharField(
+        max_length=150,
+        help_text="e.g. COVID-19, BCG, MMR, Polio, HPV, Hepatitis B"
+    )
+    vaccination_date  = models.DateField()
+    dose_number       = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="1 = first dose, 2 = second dose, 3 = booster, etc."
+    )
+    administered_by   = models.CharField(
+        max_length=200, blank=True,
+        help_text="Clinic name, health worker, or government campaign — not a system user"
+    )
+    batch_number      = models.CharField(max_length=100, blank=True)
+    next_due_date     = models.DateField(
+        null=True, blank=True,
+        help_text="Date next dose or booster is due — surfaces as alert on health dashboard"
+    )
+    recorded_by       = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="vaccination_records_entered",
+        help_text="School staff who entered this record into the system"
+    )
+    notes             = models.TextField(blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table     = "health_vaccination_record"
+        ordering     = ["vaccine_name", "dose_number"]
+        verbose_name = "Vaccination Record"
+    def __str__(self):
+        return (f"{self.vaccine_name} dose {self.dose_number} — "
+                f"{self.student} ({self.vaccination_date})")
+
+
+========================================
+Student model
+PATH: E:\DJANGO\ASMS\asms\apps\students\models.py
+========================================
+"""
+ASMS Student Management Module
+The Student model is the heart of the system.
+All other modules reference it.
+"""
+
+from django.db import models
+from django.utils import timezone
+from apps.core.models import TenantModel
+
+
+class ClassLevel(TenantModel):
+    """
+    Represents a year group: e.g. Primary 1, Senior 1, Baby Class.
+    """
+    name         = models.CharField(max_length=50, verbose_name='Class Level Name')
+    short_name   = models.CharField(max_length=10, blank=True, verbose_name='Short Name e.g. P1')
+    order        = models.PositiveSmallIntegerField(default=0, help_text='Sort order')
+    category     = models.CharField(max_length=20, choices=[
+        ('nursery',   'Nursery / Pre-Primary'),
+        ('primary',   'Primary'),
+        ('secondary', 'Secondary / High School'),
+        ('college',   'College / University'),
+    ], default='primary')
+
+    class Meta:
+        db_table        = 'students_class_level'
+        ordering        = ['order', 'name']
+        unique_together = [('tenant', 'name')]
+        verbose_name    = 'Class Level'
+
+    def __str__(self):
+        return self.name
+
+
+class ClassRoom(TenantModel):
+    """
+    A specific class section: e.g. Senior 2 East, Primary 3 Blue.
+    This is what students are enrolled in and teachers are assigned to.
+    """
+    level        = models.ForeignKey(ClassLevel, on_delete=models.PROTECT,
+                                     related_name='classrooms')
+    stream       = models.CharField(max_length=20, blank=True,
+                                    help_text='e.g. East, Blue, A, North')
+    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.PROTECT,
+                                      related_name='classrooms')
+    class_teacher = models.ForeignKey('accounts.User', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='class_teacher_of',
+                                      limit_choices_to={'role': 'teacher'})
+    capacity     = models.PositiveSmallIntegerField(default=45)
+
+    class Meta:
+        db_table        = 'students_classroom'
+        ordering        = ['level__order', 'stream']
+        unique_together = [('tenant', 'level', 'stream', 'academic_year')]
+        verbose_name    = 'Classroom'
+
+    def __str__(self):
+        stream = f' {self.stream}' if self.stream else ''
+        return f'{self.level.name}{stream}'
+
+    def get_full_name(self):
+        return str(self)
+
+    def student_count(self):
+        return self.enrollments.filter(is_active=True).count()
+
+
+class Student(TenantModel):
+    """
+    The central student record. Every other module references this.
+    Includes all fields required by EMIS/government reporting.
+    """
+
+    class GenderChoices(models.TextChoices):
+        MALE   = 'M', 'Male'
+        FEMALE = 'F', 'Female'
+        OTHER  = 'O', 'Other / Prefer not to say'
+
+    class StatusChoices(models.TextChoices):
+        ACTIVE    = 'active',    'Active / Enrolled'
+        INACTIVE  = 'inactive',  'Inactive'
+        GRADUATED = 'graduated', 'Graduated'
+        WITHDRAWN = 'withdrawn', 'Withdrawn'
+        EXPELLED  = 'expelled',  'Expelled'
+        DECEASED  = 'deceased',  'Deceased'
+        DEFERRED  = 'deferred',  'Deferred'
+
+    class ReligionChoices(models.TextChoices):
+        CHRISTIAN = 'christian', 'Christian'
+        MUSLIM    = 'muslim',    'Muslim'
+        OTHER     = 'other',     'Other'
+        NONE      = 'none',      'None / Not stated'
+
+    # ── Identity ─────────────────────────────────────────────────
+    student_id   = models.CharField(max_length=20, verbose_name='Student ID',
+                                    help_text='Auto-generated by school format')
+    first_name   = models.CharField(max_length=100)
+    middle_name  = models.CharField(max_length=100, blank=True)
+    last_name    = models.CharField(max_length=100)
+    preferred_name = models.CharField(max_length=100, blank=True,
+                                      help_text='Name used daily if different')
+
+    # ── EMIS / National IDs ───────────────────────────────────────
+    nsin         = models.CharField(max_length=50, blank=True,
+                                    verbose_name='National Student Identification Number (NSIN)')
+    birth_cert_number = models.CharField(max_length=50, blank=True)
+
+    # ── Demographics (required for EMIS census) ───────────────────
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender        = models.CharField(max_length=1, choices=GenderChoices.choices,
+                                     default=GenderChoices.MALE)
+    nationality   = models.CharField(max_length=50, default='Ugandan')
+    religion      = models.CharField(max_length=20, choices=ReligionChoices.choices,
+                                     blank=True)
+    home_district = models.CharField(max_length=100, blank=True)
+    home_village  = models.CharField(max_length=100, blank=True)
+
+    # ── EMIS Special Flags ────────────────────────────────────────
+    has_disability       = models.BooleanField(default=False)
+    disability_type      = models.CharField(max_length=100, blank=True)
+    is_orphan            = models.BooleanField(default=False)
+    orphan_type          = models.CharField(max_length=20, blank=True, choices=[
+        ('both',    'Double Orphan (both parents)'),
+        ('father',  'Paternal Orphan'),
+        ('mother',  'Maternal Orphan'),
+    ])
+    is_refugee           = models.BooleanField(default=False)
+    receives_bursary     = models.BooleanField(default=False)
+
+    # ── Medical ───────────────────────────────────────────────────
+    blood_group  = models.CharField(max_length=5, blank=True,
+                                    choices=[('A+','A+'),('A-','A-'),('B+','B+'),('B-','B-'),
+                                             ('AB+','AB+'),('AB-','AB-'),('O+','O+'),('O-','O-')])
+    allergies    = models.TextField(blank=True)
+    medical_notes = models.TextField(blank=True,
+                                     help_text='Any chronic conditions or medication requirements')
+
+    # ── Contact ───────────────────────────────────────────────────
+    student_phone = models.CharField(max_length=20, blank=True,
+                                     help_text='Student\'s own phone (secondary only)')
+    student_email = models.EmailField(blank=True)
+
+    # ── Photo ─────────────────────────────────────────────────────
+    photo        = models.ImageField(upload_to='students/photos/', null=True, blank=True)
+
+    # ── Status ────────────────────────────────────────────────────
+    status       = models.CharField(max_length=15, choices=StatusChoices.choices,
+                                    default=StatusChoices.ACTIVE)
+    profile_verified = models.BooleanField(default=False, help_text="Admin has verified student biodata")
+    admission_date = models.DateField(default=timezone.now)
+    exit_date    = models.DateField(null=True, blank=True)
+    exit_reason  = models.TextField(blank=True)
+
+    # ── Linked User Account ───────────────────────────────────────
+    user         = models.OneToOneField(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='student_profile',
+        help_text='Portal login account for this student'
+    )
+
+    class Meta:
+        db_table            = 'students_student'
+        ordering            = ['last_name', 'first_name']
+        unique_together     = [('tenant', 'student_id')]
+        verbose_name        = 'Student'
+        verbose_name_plural = 'Students'
+
+    def __str__(self):
+        return f'{self.get_full_name()} ({self.student_id})'
+
+    def get_full_name(self):
+        parts = [self.first_name, self.middle_name, self.last_name]
+        return ' '.join(p for p in parts if p).strip()
+
+    def get_display_name(self):
+        return self.preferred_name or self.first_name
+
+    def age(self):
+        if self.date_of_birth:
+            today = timezone.now().date()
+            dob = self.date_of_birth
+            return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        return None
+
+    @property
+    def current_class(self):
+        enrollment = self.enrollments.filter(is_active=True).select_related('classroom').first()
+        return enrollment.classroom if enrollment else None
+
+
+class Enrollment(TenantModel):
+    """
+    Links a Student to a ClassRoom for a specific AcademicYear.
+    A student has one active enrollment at a time.
+    Previous enrollments are kept for history.
+    """
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE,
+                                     related_name='enrollments')
+    classroom    = models.ForeignKey(ClassRoom, on_delete=models.PROTECT,
+                                     related_name='enrollments')
+    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.PROTECT,
+                                      related_name='enrollments')
+    enrolled_date = models.DateField(default=timezone.now)
+    is_active    = models.BooleanField(default=True)
+    is_repeating = models.BooleanField(default=False,
+                                       help_text='True if student is repeating this class level')
+    notes        = models.TextField(blank=True)
+
+    class Meta:
+        db_table        = 'students_enrollment'
+        ordering        = ['-academic_year__start_date']
+        unique_together = [('student', 'academic_year')]
+
+    def __str__(self):
+        return f'{self.student} → {self.classroom} ({self.academic_year.name})'
+
+
+class Guardian(TenantModel):
+    """
+    Parent or guardian of a student.
+    One guardian can be linked to multiple students (family).
+    """
+
+    class RelationshipChoices(models.TextChoices):
+        FATHER      = 'father',      'Father'
+        MOTHER      = 'mother',      'Mother'
+        GRANDFATHER = 'grandfather', 'Grandfather'
+        GRANDMOTHER = 'grandmother', 'Grandmother'
+        UNCLE       = 'uncle',       'Uncle'
+        AUNT        = 'aunt',        'Aunt'
+        SIBLING     = 'sibling',     'Older Sibling'
+        GUARDIAN    = 'guardian',    'Legal Guardian'
+        OTHER       = 'other',       'Other'
+
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE,
+                                     related_name='guardians')
+    first_name   = models.CharField(max_length=100)
+    last_name    = models.CharField(max_length=100)
+    relationship = models.CharField(max_length=20, choices=RelationshipChoices.choices)
+    phone_primary   = models.CharField(max_length=20)
+    phone_secondary = models.CharField(max_length=20, blank=True)
+    email           = models.EmailField(blank=True)
+    occupation      = models.CharField(max_length=100, blank=True)
+    national_id     = models.CharField(max_length=50, blank=True)
+    is_primary      = models.BooleanField(default=False,
+                                          help_text='Primary contact for this student')
+    is_fee_payer    = models.BooleanField(default=False,
+                                          help_text='Responsible for fee payments')
+    receives_sms    = models.BooleanField(default=True)
+    receives_reports = models.BooleanField(default=True)
+
+    # ── Linked User Account ───────────────────────────────────────
+    user         = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='guardian_of',
+        help_text='Portal login account for this parent'
+    )
+
+    class Meta:
+        db_table = 'students_guardian'
+        ordering = ['-is_primary', 'last_name']
+
+    def __str__(self):
+        return f'{self.first_name} {self.last_name} ({self.get_relationship_display()} of {self.student})'
+
+    def get_full_name(self):
+        return f'{self.first_name} {self.last_name}'
+
+
+
+========================================
+Student model
+PATH: E:\DJANGO\ASMS\asms\apps\student_portal\models.py
+========================================
+"""
+ASMS â€” Student Portal Models
+Phase 3 â€” new models that support the enhanced portal.
+
+Builds on Phase 1 & 2 data (Student, Term, FeeInvoice, ExamResult, etc.).
+All models carry tenant_id and use TenantManager for automatic row-level isolation.
+
+Additions benchmarked from Makerere University AIMS portal:
+  - TermEnrollment          (semester self-enrollment, Makerere Step IV)
+  - CourseUnitRegistration  (subject/unit selection per term, Makerere Step VI)
+  - ExamPermit              (auto-generated permit when clearance conditions met)
+  - ExamAppeal              (formal result re-mark request, Makerere appeals)
+  - ProgramChangeRequest    (stream/programme change, Makerere Step VIII)
+  - LeaveOfAbsenceRequest   (deferment / dead year, Makerere option)
+  - AcademicClearanceItem   (graduation clearance checklist)
+  - StudentClearance        (per-student clearance summary)
+  - AcademicCalendarEvent   (structured key dates, Makerere academic calendar)
+"""
+from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+# ---------------------------------------------------------------------------
+# Shared base manager (mirrors existing TenantManager pattern from Phase 1/2)
+# ---------------------------------------------------------------------------
+class TenantManager(models.Manager):
+    """Filters every QuerySet to the active tenant stored in thread-local."""
+    def get_queryset(self):
+        from apps.core.models import get_current_tenant
+        qs = super().get_queryset()
+        tenant = get_current_tenant()
+        if tenant:
+            return qs.filter(tenant_id=tenant.id)
+        return qs
+
+
+class AllObjectsManager(models.Manager):
+    """Bypass tenant filter â€” for admin / cross-tenant tasks only."""
+    pass
+
+
+# ---------------------------------------------------------------------------
+# 1. Term Enrollment
+#    Student confirms enrollment each term/semester.
+#    Source inspiration: Makerere AIMS Step IV (Semester Enrollment)
+# ---------------------------------------------------------------------------
+class TermEnrollment(models.Model):
+    """Tracks whether a student has formally enrolled for a given term."""
+
+    class Status(models.TextChoices):
+        NEW          = 'new',         _('New Student')
+        CONTINUING   = 'continuing',  _('Continuing Student')
+        RETAKE       = 'retake',      _('Completed with Retakes')
+        DEFERRAL     = 'deferral',    _('Deferred / Dead Year')
+        COMPLETED    = 'completed',   _('Programme Completed')
+
+    tenant        = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student       = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='portal_term_enrollments')
+    term          = models.ForeignKey('core.Term', on_delete=models.CASCADE, related_name='portal_term_enrollments')
+    status        = models.CharField(max_length=20, choices=Status.choices, default=Status.CONTINUING)
+    study_year    = models.PositiveSmallIntegerField(help_text='Year of study (1, 2, 3â€¦)')
+    enrolled_at   = models.DateTimeField(auto_now_add=True)
+    confirmed_at  = models.DateTimeField(null=True, blank=True)
+    is_confirmed  = models.BooleanField(default=False)
+    notes         = models.TextField(blank=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = ('tenant', 'student', 'term')
+        ordering = ['-term__start_date']
+        verbose_name = 'Term Enrollment'
+
+    def confirm(self):
+        self.is_confirmed = True
+        self.confirmed_at = timezone.now()
+        self.save(update_fields=['is_confirmed', 'confirmed_at'])
+
+    def __str__(self):
+        return f"{self.student} â€” {self.term} ({self.get_status_display()})"
+
+
+# ---------------------------------------------------------------------------
+# 2. Course Unit / Subject Registration
+#    For tertiary: students select specific course units per semester.
+#    For secondary: elective/option subject selection.
+#    Source inspiration: Makerere AIMS Step VI (Course Unit Selection)
+# ---------------------------------------------------------------------------
+class CourseUnitRegistration(models.Model):
+    """A student's registration for a specific subject/course unit in a term."""
+
+    class PaperType(models.TextChoices):
+        NORMAL         = 'normal',        _('Normal Paper')
+        RETAKE         = 'retake',        _('Retake')
+        SUPPLEMENTARY  = 'supplementary', _('Supplementary')
+        MISSED         = 'missed',        _('Missed Paper')
+        ELECTIVE       = 'elective',      _('Elective Subject')
+
+    tenant      = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    enrollment  = models.ForeignKey(TermEnrollment, on_delete=models.CASCADE, related_name='course_registrations')
+    subject     = models.ForeignKey('academics.Subject', on_delete=models.CASCADE, related_name='course_registrations')
+    paper_type  = models.CharField(max_length=20, choices=PaperType.choices, default=PaperType.NORMAL)
+    registered_at = models.DateTimeField(auto_now_add=True)
+    is_active   = models.BooleanField(default=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = ('tenant', 'enrollment', 'subject')
+        ordering = ['subject__name']
+        verbose_name = 'Course Unit Registration'
+
+    def __str__(self):
+        return f"{self.enrollment.student} â€” {self.subject.name} ({self.get_paper_type_display()})"
+
+
+# ---------------------------------------------------------------------------
+# 3. Exam Permit
+#    Auto-generated when student meets fee & enrollment clearance conditions.
+#    Source inspiration: Makerere semester registration after fee payment.
+# ---------------------------------------------------------------------------
+class ExamPermit(models.Model):
+    """Exam sitting permit â€” generated when registration conditions are met."""
+
+    class Status(models.TextChoices):
+        PENDING   = 'pending',   _('Pending')
+        ISSUED    = 'issued',    _('Issued')
+        BLOCKED   = 'blocked',   _('Blocked â€” Clearance Incomplete')
+        REVOKED   = 'revoked',   _('Revoked')
+
+    tenant        = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    enrollment    = models.OneToOneField(TermEnrollment, on_delete=models.CASCADE, related_name='exam_permit')
+    permit_number = models.CharField(max_length=30, unique=True)
+    status        = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    issued_at     = models.DateTimeField(null=True, blank=True)
+    blocked_reason = models.TextField(blank=True, help_text='Reason if blocked (e.g. unpaid fees)')
+    pdf_path      = models.CharField(max_length=500, blank=True, help_text='Cloudinary PDF path')
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['-issued_at']
+        verbose_name = 'Exam Permit'
+
+    def issue(self, pdf_path=''):
+        self.status    = self.Status.ISSUED
+        self.issued_at = timezone.now()
+        self.pdf_path  = pdf_path
+        self.save(update_fields=['status', 'issued_at', 'pdf_path'])
+
+    def __str__(self):
+        return f"Permit {self.permit_number} â€” {self.enrollment}"
+
+
+# ---------------------------------------------------------------------------
+# 4. Exam Appeal
+#    Student submits formal re-mark / result query for a specific subject.
+#    Source inspiration: Makerere Senate Examinations Committee appeal process.
+# ---------------------------------------------------------------------------
+class ExamAppeal(models.Model):
+    """Formal appeal lodged by a student against a published exam result."""
+
+    class AppealType(models.TextChoices):
+        REMARK      = 'remark',      _('Re-mark Request')
+        CLERICAL    = 'clerical',    _('Clerical Error')
+        MISSING     = 'missing',     _('Missing Result')
+        QUERY       = 'query',       _('General Query')
+
+    class Status(models.TextChoices):
+        SUBMITTED   = 'submitted',   _('Submitted')
+        ACKNOWLEDGED = 'acknowledged', _('Acknowledged')
+        UNDER_REVIEW = 'under_review', _('Under Review')
+        RESOLVED    = 'resolved',    _('Resolved')
+        REJECTED    = 'rejected',    _('Rejected')
+
+    tenant          = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student         = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='exam_appeals')
+    term            = models.ForeignKey('core.Term', on_delete=models.CASCADE)
+    subject         = models.ForeignKey('academics.Subject', on_delete=models.CASCADE)
+    appeal_type     = models.CharField(max_length=15, choices=AppealType.choices)
+    status          = models.CharField(max_length=15, choices=Status.choices, default=Status.SUBMITTED)
+    original_marks  = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    statement       = models.TextField(help_text="Student's written grounds for the appeal")
+    admin_response  = models.TextField(blank=True)
+    revised_marks   = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    submitted_at    = models.DateTimeField(auto_now_add=True)
+    resolved_at     = models.DateTimeField(null=True, blank=True)
+    resolved_by     = models.ForeignKey('staff_hr.StaffProfile', on_delete=models.SET_NULL, null=True, blank=True)
+    reference_number = models.CharField(max_length=30, unique=True, blank=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = 'Exam Appeal'
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            import uuid
+            self.reference_number = f"APP-{timezone.now().year}-{uuid.uuid4().hex[:6].upper()}"
+        super().save(*args, **kwargs)
+
+    def resolve(self, admin_response, revised_marks, resolved_by):
+        self.admin_response = admin_response
+        self.revised_marks  = revised_marks
+        self.resolved_by    = resolved_by
+        self.status         = self.Status.RESOLVED
+        self.resolved_at    = timezone.now()
+        self.save(update_fields=['admin_response', 'revised_marks', 'resolved_by', 'status', 'resolved_at'])
+
+    def __str__(self):
+        return f"Appeal {self.reference_number} â€” {self.student} ({self.subject})"
+
+
+# ---------------------------------------------------------------------------
+# 5. Programme / Stream Change Request
+#    Tertiary: full programme change. Secondary: stream change (sci/arts).
+#    Source inspiration: Makerere "Change of Programme" portal action.
+# ---------------------------------------------------------------------------
+class ProgramChangeRequest(models.Model):
+    """Student application to change their programme or class stream."""
+
+    class Status(models.TextChoices):
+        PENDING   = 'pending',   _('Pending Review')
+        APPROVED  = 'approved',  _('Approved')
+        REJECTED  = 'rejected',  _('Rejected')
+
+    tenant            = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student           = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='program_changes')
+    current_class     = models.ForeignKey('students.ClassRoom', on_delete=models.PROTECT, related_name='change_from')
+    requested_class   = models.ForeignKey('students.ClassRoom', on_delete=models.PROTECT, related_name='change_to')
+    reason            = models.TextField(help_text="Student's stated reason for the change")
+    supporting_document = models.CharField(max_length=500, blank=True, help_text='Cloudinary file path')
+    status            = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    admin_comment     = models.TextField(blank=True)
+    submitted_at      = models.DateTimeField(auto_now_add=True)
+    reviewed_at       = models.DateTimeField(null=True, blank=True)
+    reviewed_by       = models.ForeignKey('staff_hr.StaffProfile', on_delete=models.SET_NULL, null=True, blank=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = 'Programme Change Request'
+
+    def __str__(self):
+        return f"{self.student}: {self.current_class} â†’ {self.requested_class} ({self.get_status_display()})"
+
+
+# ---------------------------------------------------------------------------
+# 6. Leave of Absence / Deferment Request
+#    Source inspiration: Makerere "Dead Year" / Deferment process.
+# ---------------------------------------------------------------------------
+class LeaveOfAbsenceRequest(models.Model):
+    """Student application for temporary suspension of studies (dead year)."""
+
+    class LeaveType(models.TextChoices):
+        MEDICAL      = 'medical',      _('Medical Leave')
+        FINANCIAL    = 'financial',    _('Financial Hardship')
+        PERSONAL     = 'personal',     _('Personal Reasons')
+        BEREAVEMENT  = 'bereavement',  _('Bereavement')
+        OFFICIAL     = 'official',     _('Official / Scholarship')
+        OTHER        = 'other',        _('Other')
+
+    class Status(models.TextChoices):
+        PENDING   = 'pending',   _('Pending')
+        APPROVED  = 'approved',  _('Approved')
+        REJECTED  = 'rejected',  _('Rejected')
+        REINSTATED = 'reinstated', _('Reinstated')
+
+    tenant            = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student           = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type        = models.CharField(max_length=15, choices=LeaveType.choices)
+    from_term         = models.ForeignKey('core.Term', on_delete=models.PROTECT, related_name='leave_from')
+    expected_return_term = models.ForeignKey('core.Term', on_delete=models.PROTECT, related_name='leave_return', null=True, blank=True)
+    reason            = models.TextField()
+    supporting_document = models.CharField(max_length=500, blank=True)
+    status            = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    admin_comment     = models.TextField(blank=True)
+    submitted_at      = models.DateTimeField(auto_now_add=True)
+    reviewed_at       = models.DateTimeField(null=True, blank=True)
+    reviewed_by       = models.ForeignKey('staff_hr.StaffProfile', on_delete=models.SET_NULL, null=True, blank=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = 'Leave of Absence Request'
+
+    def __str__(self):
+        return f"{self.student} â€” Leave from {self.from_term} ({self.get_status_display()})"
+
+
+# ---------------------------------------------------------------------------
+# 7. Academic Clearance
+#    Graduation clearance checklist (library, finance, departmental, etc.)
+#    Source inspiration: Makerere registration clearance requirements.
+# ---------------------------------------------------------------------------
+class AcademicClearanceItem(models.Model):
+    """A clearance requirement that must be satisfied (e.g. library, finance)."""
+
+    class Department(models.TextChoices):
+        LIBRARY    = 'library',    _('Library')
+        FINANCE    = 'finance',    _('Finance / Accounts')
+        ACADEMICS  = 'academics',  _('Academic Registrar')
+        SPORTS     = 'sports',     _('Sports / PE')
+        HEALTH     = 'health',     _('Health / Nurse')
+        HOSTEL     = 'hostel',     _('Hostel / Boarding')
+        IT         = 'it',         _('ICT Department')
+        CUSTOM     = 'custom',     _('Other Department')
+
+    tenant      = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    name        = models.CharField(max_length=100)
+    department  = models.CharField(max_length=15, choices=Department.choices)
+    description = models.TextField(blank=True)
+    is_active   = models.BooleanField(default=True)
+    order       = models.PositiveSmallIntegerField(default=0)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_department_display()})"
+
+
+class StudentClearance(models.Model):
+    """Per-student clearance status for a specific academic year."""
+
+    class Status(models.TextChoices):
+        IN_PROGRESS = 'in_progress', _('In Progress')
+        CLEARED     = 'cleared',     _('Cleared')
+        BLOCKED     = 'blocked',     _('Blocked')
+
+    tenant          = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student         = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='clearances')
+    academic_year   = models.ForeignKey('core.AcademicYear', on_delete=models.CASCADE)
+    overall_status  = models.CharField(max_length=15, choices=Status.choices, default=Status.IN_PROGRESS)
+    requested_at    = models.DateTimeField(auto_now_add=True)
+    cleared_at      = models.DateTimeField(null=True, blank=True)
+    notes           = models.TextField(blank=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = ('tenant', 'student', 'academic_year')
+        ordering = ['-academic_year__start_date']
+
+    def __str__(self):
+        return f"Clearance â€” {self.student} ({self.academic_year})"
+
+
+class StudentClearanceItemStatus(models.Model):
+    """Whether a student has been cleared for a specific clearance item."""
+
+    class Status(models.TextChoices):
+        PENDING  = 'pending',   _('Pending')
+        CLEARED  = 'cleared',   _('Cleared')
+        BLOCKED  = 'blocked',   _('Blocked')
+        WAIVED   = 'waived',    _('Waived')
+
+    clearance   = models.ForeignKey(StudentClearance, on_delete=models.CASCADE, related_name='item_statuses')
+    item        = models.ForeignKey(AcademicClearanceItem, on_delete=models.CASCADE)
+    status      = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    cleared_by  = models.ForeignKey('staff_hr.StaffProfile', on_delete=models.SET_NULL, null=True, blank=True)
+    cleared_at  = models.DateTimeField(null=True, blank=True)
+    remarks     = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('clearance', 'item')
+        ordering = ['item__order']
+
+
+# ---------------------------------------------------------------------------
+# 8. Academic Calendar Event
+#    Structured key dates visible to students in the portal calendar.
+#    Source inspiration: Makerere AIMS "View Academic Calendar" feature.
+# ---------------------------------------------------------------------------
+class AcademicCalendarEvent(models.Model):
+    """A named date or date range on the school's academic calendar."""
+
+    class EventType(models.TextChoices):
+        TERM_START      = 'term_start',      _('Term / Semester Start')
+        TERM_END        = 'term_end',        _('Term / Semester End')
+        EXAM_PERIOD     = 'exam_period',     _('Examination Period')
+        REGISTRATION    = 'registration',    _('Registration Window')
+        FEE_DEADLINE    = 'fee_deadline',    _('Fee Payment Deadline')
+        HOLIDAY         = 'holiday',         _('Public Holiday / Break')
+        SUBMISSION      = 'submission',      _('Assignment / Project Deadline')
+        GRADUATION      = 'graduation',      _('Graduation / Prize Day')
+        SPORTS          = 'sports',          _('Sports Day / Competition')
+        OPEN_DAY        = 'open_day',        _('Open Day / Visiting Day')
+        ANNOUNCEMENT    = 'announcement',    _('General School Event')
+
+    class Audience(models.TextChoices):
+        ALL         = 'all',        _('All Students')
+        PRIMARY     = 'primary',    _('Primary Only')
+        SECONDARY   = 'secondary',  _('Secondary Only')
+        TERTIARY    = 'tertiary',   _('Tertiary Only')
+        CLASS       = 'class',      _('Specific Class/Year')
+
+    tenant      = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.CASCADE, null=True, blank=True)
+    term        = models.ForeignKey('core.Term', on_delete=models.CASCADE, null=True, blank=True)
+    title       = models.CharField(max_length=200)
+    event_type  = models.CharField(max_length=20, choices=EventType.choices)
+    description = models.TextField(blank=True)
+    start_date  = models.DateField()
+    end_date    = models.DateField(null=True, blank=True, help_text='Leave blank for single-day events')
+    audience    = models.CharField(max_length=15, choices=Audience.choices, default=Audience.ALL)
+    is_published = models.BooleanField(default=True)
+    created_by  = models.ForeignKey('staff_hr.StaffProfile', on_delete=models.SET_NULL, null=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['start_date']
+        verbose_name = 'Academic Calendar Event'
+
+    @property
+    def is_single_day(self):
+        return self.end_date is None or self.end_date == self.start_date
+
+    @property
+    def duration_days(self):
+        if self.end_date:
+            return (self.end_date - self.start_date).days + 1
+        return 1
+
+    def __str__(self):
+        return f"{self.title} ({self.start_date})"
+
+
+# ---------------------------------------------------------------------------
+# 9. Portal Notification
+#    Persistent in-portal notifications for a student (in-app bell icon feed).
+#    Complements the existing Communication SMS/email system from Phase 1.
+# ---------------------------------------------------------------------------
+class PortalNotification(models.Model):
+    """A notification item displayed in the student's in-portal bell feed."""
+
+    class Category(models.TextChoices):
+        ACADEMIC    = 'academic',    _('Academic')
+        FINANCE     = 'finance',     _('Finance')
+        ATTENDANCE  = 'attendance',  _('Attendance')
+        DISCIPLINE  = 'discipline',  _('Discipline')
+        WELFARE     = 'welfare',     _('Welfare')
+        DOCUMENT    = 'document',    _('Document Ready')
+        SYSTEM      = 'system',      _('System')
+        GENERAL     = 'general',     _('General')
+
+    tenant      = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
+    student     = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='portal_notifications')
+    category    = models.CharField(max_length=15, choices=Category.choices, default=Category.GENERAL)
+    title       = models.CharField(max_length=200)
+    body        = models.TextField()
+    action_url  = models.CharField(max_length=300, blank=True, help_text='Portal URL to navigate to')
+    is_read     = models.BooleanField(default=False)
+    read_at     = models.DateTimeField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    objects     = TenantManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def mark_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+
+    def __str__(self):
+        return f"[{self.category}] {self.title} â†’ {self.student}"
+
+
+
+========================================
+Student model
+PATH: E:\DJANGO\ASMS\asms\apps\transport\models.py
+========================================
+"""
+Transport & Fleet Intelligence â€” data models.
+
+ASSUMPTIONS (adjust these three imports to match your actual Phase 1-3 app labels;
+nothing else in this file needs to change):
+
+    core.models.TenantAwareModel  -> abstract base with `tenant` FK + tenant-scoped manager
+    students.models.Student       -> the existing Student entity (Appendix C)
+    staff.models.Staff            -> the existing Staff entity (Appendix C)
+
+If your project does not yet have a TenantAwareModel, the minimal version is:
+
+    class TenantManager(models.Manager):
+        def get_queryset(self):
+            from core.middleware import get_current_tenant
+            qs = super().get_queryset()
+            tenant = get_current_tenant()
+            return qs.filter(tenant=tenant) if tenant else qs
+
+    class TenantModel(models.Model):
+        tenant = models.ForeignKey("core.Tenant", on_delete=models.CASCADE)
+        objects = TenantManager()
+        class Meta:
+            abstract = True
+"""
+from django.conf import settings
+from django.db import models
+
+from apps.core.models import TenantModel  # noqa: F401  (see assumptions above)
+
+
+class Vehicle(TenantModel):
+    class FuelType(models.TextChoices):
+        DIESEL = "DIESEL", "Diesel"
+        PETROL = "PETROL", "Petrol"
+        ELECTRIC = "ELECTRIC", "Electric"
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        MAINTENANCE = "MAINTENANCE", "In Maintenance"
+        RETIRED = "RETIRED", "Retired"
+
+    registration_number = models.CharField(max_length=32)
+    make = models.CharField(max_length=64, blank=True)
+    model = models.CharField(max_length=64, blank=True)
+    capacity = models.PositiveIntegerField(help_text="Number of student seats")
+    fuel_type = models.CharField(max_length=16, choices=FuelType.choices, default=FuelType.DIESEL)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+
+    # Compliance / document-expiry fields â€” benchmarked against BusCMMS's compliance automation
+    insurance_expiry = models.DateField(null=True, blank=True)
+    road_license_expiry = models.DateField(null=True, blank=True)
+    inspection_expiry = models.DateField(null=True, blank=True)
+
+    # Optional dedicated GPS hardware ID (Zonar/Transfinder style). Not required â€” the driver's
+    # phone via the offline-capable driver app is the default, Africa-first data source.
+    gps_device_id = models.CharField(max_length=64, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("tenant", "registration_number")
+        indexes = [models.Index(fields=["tenant", "status"])]
+
+    def __str__(self):
+        return f"{self.registration_number} ({self.get_status_display()})"
+
+
+class Driver(TenantModel):
+    staff = models.OneToOneField(
+        "staff_hr.StaffProfile", on_delete=models.SET_NULL, null=True, blank=True, related_name="driver_profile"
+    )
+    full_name = models.CharField(max_length=128, help_text="Used if driver is not also a Staff user")
+    phone = models.CharField(max_length=32)
+    license_number = models.CharField(max_length=64)
+    license_expiry = models.DateField(null=True, blank=True)
+    assigned_vehicle = models.ForeignKey(
+        Vehicle, on_delete=models.SET_NULL, null=True, blank=True, related_name="drivers"
+    )
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.full_name
+
+
+class Route(TenantModel):
+    class Shift(models.TextChoices):
+        AM = "AM", "Morning Pickup"
+        PM = "PM", "Afternoon Drop-off"
+        BOTH = "BOTH", "Both"
+
+    name = models.CharField(max_length=128)
+    code = models.CharField(max_length=32)
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="routes")
+    driver = models.ForeignKey(Driver, on_delete=models.PROTECT, related_name="routes")
+    shift = models.CharField(max_length=8, choices=Shift.choices, default=Shift.BOTH)
+    # Planned path as an ordered list of {"lat": .., "lng": ..} â€” used for deviation detection,
+    # the same "planned vs actual" comparison Transfinder's RouteTracer/GPS Connect is built on.
+    planned_path = models.JSONField(default=list, blank=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("tenant", "code")
+
+    def __str__(self):
+        return f"{self.code} â€” {self.name}"
+
+
+class Stop(TenantModel):
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="stops")
+    sequence = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=128)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    scheduled_time = models.TimeField()
+    radius_meters = models.PositiveIntegerField(default=150, help_text="Geofence radius for arrival detection")
+
+    class Meta:
+        ordering = ["route", "sequence"]
+        unique_together = ("route", "sequence")
+
+    def __str__(self):
+        return f"{self.route.code} Â· Stop {self.sequence}: {self.name}"
+
+
+class StudentTransportAssignment(TenantModel):
+    student = models.ForeignKey("students.Student", on_delete=models.CASCADE, related_name="transport_assignments")
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="student_assignments")
+    pickup_stop = models.ForeignKey(Stop, on_delete=models.SET_NULL, null=True, related_name="pickups")
+    dropoff_stop = models.ForeignKey(Stop, on_delete=models.SET_NULL, null=True, related_name="dropoffs")
+    active = models.BooleanField(default=True, db_column="is_active")
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "transport_student_assignment"
+        indexes = [models.Index(fields=["tenant", "active"])]
+
+    def __str__(self):
+        return f"{self.student} on {self.route.code}"
+
+
+class TripLog(TenantModel):
+    class Status(models.TextChoices):
+        SCHEDULED = "SCHEDULED", "Scheduled"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="trips")
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="trips")
+    driver = models.ForeignKey(Driver, on_delete=models.PROTECT, related_name="trips")
+    date = models.DateField()
+    shift = models.CharField(max_length=8, choices=Route.Shift.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.SCHEDULED)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["tenant", "date", "status"])]
+
+    def __str__(self):
+        return f"{self.route.code} Â· {self.date} {self.shift}"
+
+
+class VehicleLocationPing(TenantModel):
+    class Source(models.TextChoices):
+        DRIVER_APP = "DRIVER_APP", "Driver Phone App"
+        DEVICE = "DEVICE", "Dedicated GPS Hardware"
+
+    trip = models.ForeignKey(TripLog, on_delete=models.CASCADE, related_name="pings")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    speed_kmh = models.FloatField(default=0)
+    heading = models.FloatField(null=True, blank=True)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.DRIVER_APP)
+    # recorded_at = when the GPS fix actually happened on the device (may be in the past if queued offline)
+    recorded_at = models.DateTimeField()
+    # synced_at = when the ping actually reached the server â€” the gap between these two reveals
+    # how long a driver was offline, useful for African-infra connectivity monitoring
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["trip", "recorded_at"])]
+        ordering = ["recorded_at"]
+
+
+class BoardingEvent(TenantModel):
+    class EventType(models.TextChoices):
+        BOARD = "BOARD", "Boarded"
+        ALIGHT = "ALIGHT", "Alighted"
+
+    class Method(models.TextChoices):
+        RFID = "RFID", "RFID Card"
+        QR = "QR", "QR Code"
+        MANUAL = "MANUAL", "Manual Entry"
+
+    trip = models.ForeignKey(TripLog, on_delete=models.CASCADE, related_name="boarding_events")
+    student = models.ForeignKey("students.Student", on_delete=models.CASCADE, related_name="boarding_events")
+    stop = models.ForeignKey(Stop, on_delete=models.SET_NULL, null=True, blank=True)
+    event_type = models.CharField(max_length=8, choices=EventType.choices)
+    method = models.CharField(max_length=8, choices=Method.choices, default=Method.MANUAL)
+    recorded_at = models.DateTimeField()
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["trip", "student"])]
+        ordering = ["recorded_at"]
+
+
+class RouteDeviationAlert(TenantModel):
+    class AlertType(models.TextChoices):
+        OFF_ROUTE = "OFF_ROUTE", "Off Planned Route"
+        LATE = "LATE", "Running Late"
+        SPEED = "SPEED", "Speed Violation"
+        UNSCHEDULED_STOP = "UNSCHEDULED_STOP", "Unscheduled Stop"
+
+    trip = models.ForeignKey(TripLog, on_delete=models.CASCADE, related_name="alerts")
+    alert_type = models.CharField(max_length=20, choices=AlertType.choices)
+    details = models.TextField(blank=True)
+    distance_meters = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["tenant", "resolved"])]
+        ordering = ["-created_at"]
+
+
+class MaintenanceRecord(TenantModel):
+    class RecordType(models.TextChoices):
+        INSPECTION = "INSPECTION", "Inspection"
+        SERVICE = "SERVICE", "Routine Service"
+        REPAIR = "REPAIR", "Repair"
+
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="maintenance_records")
+    record_type = models.CharField(max_length=16, choices=RecordType.choices)
+    description = models.TextField()
+    cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    performed_at = models.DateField()
+    next_due_at = models.DateField(null=True, blank=True)
+    performed_by = models.CharField(max_length=128, blank=True)
+
+    class Meta:
+        ordering = ["-performed_at"]
+
+
+=== STAFF MODEL FILE(S) ===
+
+========================================
+Staff model
+PATH: E:\DJANGO\ASMS\asms\apps\staff_hr\models.py
+========================================
+from django.db import models
+from apps.core.models import TenantModel, TenantManager
+from apps.core.models import Tenant, TenantManager
+from apps.academics.models import Department
+from django.conf import settings
+
+class StaffProfile(models.Model):
+    EMPLOYMENT_CHOICES = [
+        ('permanent', 'Permanent'), ('contract', 'Contract'), ('probation', 'Probation'),
+        ('volunteer', 'Volunteer'), ('retired', 'Retired'),
+    ]
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='staff_profile')
+    staff_no = models.CharField(max_length=20, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    designation = models.CharField(max_length=100, blank=True)
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_CHOICES, default='permanent')
+    date_joined = models.DateField(null=True, blank=True)
+    national_id = models.CharField(max_length=30, blank=True)
+    basic_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    bank_account = models.CharField(max_length=30, blank=True)
+    next_of_kin_name = models.CharField(max_length=200, blank=True)
+    next_of_kin_phone = models.CharField(max_length=20, blank=True)
+    qualifications = models.TextField(blank=True)
+    specialisation = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'staff_profiles'
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} ({self.designation or self.user.role})"
+
+class LeaveType(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    days_allowed = models.IntegerField(default=21)
+    is_paid = models.BooleanField(default=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'leave_types'
+
+    def __str__(self):
+        return self.name
+
+class LeaveRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('approved', 'Approved'),
+        ('rejected', 'Rejected'), ('cancelled', 'Cancelled'),
+    ]
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'leave_requests'
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f"{self.staff} â€” {self.leave_type} ({self.start_date} to {self.end_date})"
+
+    @property
+    def days(self):
+        return (self.end_date - self.start_date).days + 1
+
+class CPDRecord(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='cpd_records')
+    title = models.CharField(max_length=200)
+    institution = models.CharField(max_length=200, blank=True)
+    cpd_type = models.CharField(max_length=100, choices=[
+        ('workshop', 'Workshop'), ('seminar', 'Seminar'), ('course', 'Course'),
+        ('conference', 'Conference'), ('online', 'Online Training'),
+    ], default='workshop')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    hours = models.DecimalField(max_digits=6, decimal_places=1, default=0)
+    certificate = models.FileField(upload_to='cpd_certificates/', blank=True, null=True)
+    notes = models.TextField(blank=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'cpd_records'
+        ordering = ['-start_date']
+
+    def __str__(self):
+        return f"{self.staff} â€” {self.title}"
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# STAFF APPRAISALS â€” Phase 4 addition
+# Benchmarked from: Infinite Campus Staff Evaluations and Frontline Performance
+# (formerly PD&E) â€” both use a scored-area appraisal with SMART objectives as
+# child records reviewed at the next cycle, which is the pattern we replicate here.
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+class StaffAppraisal(TenantModel):
+    """
+    Formal performance appraisal per staff member per appraisal period.
+    Scored across five areas (1-5). SMART objectives are child records
+    (AppraisalObjective) reviewed at the next appraisal cycle.
+    """
+    class StatusChoices(models.TextChoices):
+        DRAFT        = "draft",        "Draft"
+        SUBMITTED    = "submitted",    "Submitted to HR"
+        ACKNOWLEDGED = "acknowledged", "Acknowledged by Staff"
+    staff_member     = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE,
+        related_name="appraisals_received"
+    )
+    appraiser        = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        related_name="appraisals_conducted"
+    )
+    academic_year    = models.ForeignKey(
+        "core.AcademicYear", on_delete=models.PROTECT,
+        related_name="staff_appraisals"
+    )
+    appraisal_period = models.CharField(
+        max_length=50,
+        help_text="e.g. 'Annual 2024-25', 'Mid-Year Term 2 2025'"
+    )
+    appraisal_date   = models.DateField()
+    # Scored areas â€” 1 (Unsatisfactory) to 5 (Excellent)
+    teaching_quality  = models.PositiveSmallIntegerField(null=True, blank=True)
+    punctuality       = models.PositiveSmallIntegerField(null=True, blank=True)
+    student_relations = models.PositiveSmallIntegerField(null=True, blank=True)
+    professional_dev  = models.PositiveSmallIntegerField(null=True, blank=True)
+    teamwork          = models.PositiveSmallIntegerField(null=True, blank=True)
+    strengths             = models.TextField(blank=True)
+    areas_for_improvement = models.TextField(blank=True)
+    appraiser_comments    = models.TextField(blank=True)
+    staff_response        = models.TextField(
+        blank=True,
+        help_text="Staff member can respond before the record is formally acknowledged"
+    )
+    status            = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.DRAFT
+    )
+    acknowledged_date = models.DateField(null=True, blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table        = "staff_appraisal"
+        ordering        = ["-appraisal_date"]
+        unique_together = [("tenant", "staff_member", "academic_year", "appraisal_period")]
+        verbose_name    = "Staff Appraisal"
+    def __str__(self):
+        return f"{self.staff_member} â€” {self.appraisal_period}"
+    @property
+    def average_score(self):
+        scores = [s for s in [
+            self.teaching_quality, self.punctuality,
+            self.student_relations, self.professional_dev, self.teamwork
+        ] if s is not None]
+        return round(sum(scores) / len(scores), 2) if scores else None
+class AppraisalObjective(TenantModel):
+    """SMART objectives set during an appraisal â€” reviewed at the next cycle."""
+    class StatusChoices(models.TextChoices):
+        PENDING      = "pending",      "Pending"
+        IN_PROGRESS  = "in_progress",  "In Progress"
+        ACHIEVED     = "achieved",     "Achieved"
+        NOT_ACHIEVED = "not_achieved", "Not Achieved"
+    appraisal    = models.ForeignKey(
+        StaffAppraisal, on_delete=models.CASCADE,
+        related_name="objectives"
+    )
+    objective    = models.TextField()
+    target_date  = models.DateField()
+    status       = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+    evidence     = models.TextField(blank=True, help_text="Evidence provided by staff member")
+    review_notes = models.TextField(blank=True, help_text="Reviewer notes at next appraisal cycle")
+    objects = TenantManager()
+    class Meta:
+        db_table     = "staff_appraisal_objective"
+        ordering     = ["target_date"]
+        verbose_name = "Appraisal Objective"
+    def __str__(self):
+        truncated = self.objective[:60]
+        return f"{truncated}... ({self.get_status_display()})"
+class TrainingPlan(TenantModel):
+    """
+    Annual professional development plan for a staff member.
+    Approved by HR/principal before items are actioned.
+    completion_rate is computed from child TrainingPlanItem records.
+    """
+    class StatusChoices(models.TextChoices):
+        DRAFT       = "draft",       "Draft"
+        SUBMITTED   = "submitted",   "Submitted for Approval"
+        APPROVED    = "approved",    "Approved"
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED   = "completed",   "Completed"
+    staff_member  = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE,
+        related_name="training_plans"
+    )
+    academic_year = models.ForeignKey(
+        "core.AcademicYear", on_delete=models.PROTECT,
+        related_name="training_plans"
+    )
+    status        = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.DRAFT
+    )
+    created_by    = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        related_name="training_plans_created"
+    )
+    approved_by   = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="training_plans_approved"
+    )
+    approved_date = models.DateField(null=True, blank=True)
+    notes         = models.TextField(blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table        = "staff_training_plan"
+        ordering        = ["-academic_year__start_date"]
+        unique_together = [("tenant", "staff_member", "academic_year")]
+        verbose_name    = "Training Plan"
+    def __str__(self):
+        return f"{self.staff_member} â€” Training Plan {self.academic_year}"
+    @property
+    def completion_rate(self):
+        total = self.items.count()
+        if not total:
+            return 0
+        done = self.items.filter(status=TrainingPlanItem.StatusChoices.COMPLETED).count()
+        return round((done / total) * 100)
+class TrainingPlanItem(TenantModel):
+    """Individual training activity within a plan."""
+    class TrainingTypeChoices(models.TextChoices):
+        INTERNAL_WORKSHOP = "internal_workshop", "Internal Workshop"
+        EXTERNAL_COURSE   = "external_course",   "External Course"
+        ONLINE_LEARNING   = "online_learning",   "Online Learning"
+        CONFERENCE        = "conference",         "Conference / Seminar"
+        MENTORING         = "mentoring",          "Peer Mentoring"
+        PEER_OBSERVATION  = "peer_observation",   "Peer Observation"
+        OTHER             = "other",              "Other"
+    class StatusChoices(models.TextChoices):
+        PLANNED   = "planned",   "Planned"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+    training_plan  = models.ForeignKey(
+        TrainingPlan, on_delete=models.CASCADE,
+        related_name="items"
+    )
+    training_title = models.CharField(max_length=255)
+    training_type  = models.CharField(
+        max_length=20, choices=TrainingTypeChoices.choices,
+        default=TrainingTypeChoices.EXTERNAL_COURSE
+    )
+    provider       = models.CharField(
+        max_length=200, blank=True,
+        help_text="Training provider, institution, or platform name"
+    )
+    planned_date   = models.DateField()
+    actual_date    = models.DateField(null=True, blank=True)
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    cost_ugx       = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Estimated or actual cost in UGX"
+    )
+    status         = models.CharField(
+        max_length=10, choices=StatusChoices.choices,
+        default=StatusChoices.PLANNED
+    )
+    outcome        = models.TextField(
+        blank=True,
+        help_text="What was learned / achieved â€” filled in after completion"
+    )
+    objects = TenantManager()
+    class Meta:
+        db_table     = "staff_training_plan_item"
+        ordering     = ["planned_date"]
+        verbose_name = "Training Plan Item"
+    def __str__(self):
+        return f"{self.training_title} ({self.get_status_display()})"
+
+
+=== VISITOR VIEWS.PY (shows the role decorator/mixin in use) ===
+
+========================================
+Visitor views
+PATH: E:\DJANGO\ASMS\asms\apps\visitor\views.py
+========================================
+"""
+Visitor Management module views.
+"""
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.http import JsonResponse
+
+from .models import Visitor, ExpectedVisitor, VisitorLog, VisitorWatchlistEntry
+from .forms import (
+    VisitorCheckInForm, KnownVisitorCheckInForm,
+    ExpectedVisitorForm, VisitorWatchlistEntryForm,
+)
+
+
+def get_tenant(request):
+    return getattr(request, 'tenant', None)
+
+
+def require_visitor_access(view_func):
+    """Decorator: only front-desk-capable roles may access visitor management."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        if not request.user.can_access_visitor_module():
+            messages.error(request, 'You do not have access to Visitor Management.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Dashboard
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+def dashboard(request):
+    tenant = get_tenant(request)
+    onsite_visitors = VisitorLog.objects.filter(
+        tenant=tenant,
+        status__in=[VisitorLog.StatusChoices.CHECKED_IN, VisitorLog.StatusChoices.OVERSTAY],
+    ).select_related('visitor', 'host', 'student').order_by('-check_in_time')
+
+    today = timezone.now().date()
+    expected_today = ExpectedVisitor.objects.filter(
+        tenant=tenant, expected_date=today, status=ExpectedVisitor.StatusChoices.PENDING
+    ).order_by('expected_time_from')
+
+    stats = {
+        'onsite_count': onsite_visitors.count(),
+        'expected_today_count': expected_today.count(),
+        'overstay_count': onsite_visitors.filter(status=VisitorLog.StatusChoices.OVERSTAY).count(),
+    }
+
+    context = {
+        'onsite_visitors': onsite_visitors[:10],
+        'expected_today': expected_today[:10],
+        'stats': stats,
+    }
+    return render(request, 'visitor/dashboard.html', context)
+
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Check-in flow
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+def checkin(request):
+    tenant = get_tenant(request)
+    expected = None
+    expected_pk = request.GET.get('expected')
+    if expected_pk:
+        expected = get_object_or_404(ExpectedVisitor, pk=expected_pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = VisitorCheckInForm(request.POST, request.FILES, tenant=tenant)
+        if form.is_valid():
+            cd = form.cleaned_data
+            # Dedup by id_number, per Visitor's own docstring â€” not by phone,
+            # which is only used for the fast-path lookup below.
+            if cd['id_number']:
+                visitor, _ = Visitor.objects.get_or_create(
+                    tenant=tenant, id_number=cd['id_number'],
+                    defaults={
+                        'full_name': cd['full_name'], 'id_type': cd['id_type'],
+                        'phone': cd['phone'], 'photo': cd.get('photo'),
+                    },
+                )
+            else:
+                visitor = Visitor.objects.create(
+                    tenant=tenant, full_name=cd['full_name'], id_type=cd['id_type'],
+                    id_number=cd['id_number'], phone=cd['phone'], photo=cd.get('photo'),
+                )
+
+            log = VisitorLog.objects.create(
+                tenant=tenant, visitor=visitor, purpose=cd['purpose'],
+                host=cd['host'], student=cd['student'],
+                items_carried=cd['items_carried'],
+                vehicle_registration=cd['vehicle_registration'],
+                notes=cd['notes'], signed_in_by=request.user,
+                expected_visitor=expected,
+            )
+            messages.success(request, f'{visitor.full_name} checked in â€” badge {log.badge_number}.')
+            return redirect('visitor:badge_print', pk=log.pk)
+    else:
+        initial = {}
+        if expected:
+            initial = {
+                'full_name': expected.visitor_name, 'phone': expected.visitor_phone,
+                'id_number': expected.visitor_id_number, 'student': expected.student_id,
+            }
+        form = VisitorCheckInForm(tenant=tenant, initial=initial)
+
+    return render(request, 'visitor/checkin.html', {'form': form, 'expected': expected})
+
+
+@login_required
+def checkin_known(request, visitor_pk):
+    tenant = get_tenant(request)
+    visitor = get_object_or_404(Visitor, pk=visitor_pk, tenant=tenant)
+
+    if request.method == 'POST':
+        form = KnownVisitorCheckInForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            log = form.save(commit=False)
+            log.tenant = tenant
+            log.visitor = visitor
+            log.signed_in_by = request.user
+            log.save()
+            messages.success(request, f'{visitor.full_name} checked in â€” badge {log.badge_number}.')
+            return redirect('visitor:badge_print', pk=log.pk)
+    else:
+        form = KnownVisitorCheckInForm(tenant=tenant)
+
+    return render(request, 'visitor/checkin.html', {'form': form, 'known_visitor': visitor})
+
+
+@login_required
+def visitor_lookup(request):
+    """AJAX endpoint â€” looks up an existing Visitor by phone number."""
+    tenant = get_tenant(request)
+    phone = request.GET.get('phone', '').strip()
+    if not phone:
+        return JsonResponse({'found': False})
+
+    visitor = Visitor.objects.filter(tenant=tenant, phone=phone).first()
+    if not visitor:
+        return JsonResponse({'found': False})
+
+    return JsonResponse({
+        'found': True,
+        'visitor_id': visitor.pk,
+        'full_name': visitor.full_name,
+        'is_flagged': visitor.is_flagged,
+        'visit_count': visitor.visit_count,
+    })
+
+
+@login_required
+def checkout(request, pk):
+    tenant = get_tenant(request)
+    log = get_object_or_404(VisitorLog, pk=pk, tenant=tenant)
+    if request.method == 'POST':
+        log.check_out_time = timezone.now()
+        log.save()  # save() auto-advances status to CHECKED_OUT
+        messages.success(request, f'{log.visitor.full_name} checked out.')
+    return redirect('visitor:onsite_list')
+
+
+@login_required
+def badge_print(request, pk):
+    tenant = get_tenant(request)
+    log = get_object_or_404(VisitorLog, pk=pk, tenant=tenant)
+    return render(request, 'visitor/badge.html', {'log': log, 'badge': log.badge_data()})
+
+
+@login_required
+def onsite_list(request):
+    tenant = get_tenant(request)
+    logs = VisitorLog.objects.filter(
+        tenant=tenant,
+        status__in=[VisitorLog.StatusChoices.CHECKED_IN, VisitorLog.StatusChoices.OVERSTAY],
+    ).select_related('visitor', 'host', 'student').order_by('-check_in_time')
+    return render(request, 'visitor/onsite_list.html', {'logs': logs})
+
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Pre-registration (expected visitors)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+def expected_today(request):
+    tenant = get_tenant(request)
+    today = timezone.now().date()
+    expected = ExpectedVisitor.objects.filter(tenant=tenant, expected_date=today).order_by('expected_time_from')
+    return render(request, 'visitor/expected_today.html', {'expected': expected})
+
+
+@login_required
+def expected_create(request):
+    tenant = get_tenant(request)
+    if request.method == 'POST':
+        form = ExpectedVisitorForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            exp = form.save(commit=False)
+            exp.tenant = tenant
+            exp.registered_by = request.user
+            exp.save()
+            messages.success(request, f'{exp.visitor_name} pre-registered for {exp.expected_date}.')
+            return redirect('visitor:expected_today')
+    else:
+        form = ExpectedVisitorForm(tenant=tenant)
+    return render(request, 'visitor/expected_form.html', {'form': form})
+
+
+@login_required
+def expected_cancel(request, pk):
+    tenant = get_tenant(request)
+    exp = get_object_or_404(ExpectedVisitor, pk=pk, tenant=tenant)
+    if request.method == 'POST':
+        exp.status = ExpectedVisitor.StatusChoices.CANCELLED
+        exp.save()
+        messages.success(request, f'Pre-registration for {exp.visitor_name} cancelled.')
+    return redirect('visitor:expected_today')
+
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Emergency muster
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+def muster_report(request):
+    tenant = get_tenant(request)
+    logs = VisitorLog.muster_list(tenant)
+    return render(request, 'visitor/muster_report.html', {'logs': logs})
+
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Watchlist
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+def watchlist_list(request):
+    tenant = get_tenant(request)
+    entries = VisitorWatchlistEntry.objects.filter(tenant=tenant).order_by('-is_active', 'full_name')
+    return render(request, 'visitor/watchlist_list.html', {'entries': entries})
+
+
+@login_required
+def watchlist_create(request):
+    tenant = get_tenant(request)
+    if request.method == 'POST':
+        form = VisitorWatchlistEntryForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            entry = form.save(commit=False)
+            entry.tenant = tenant
+            entry.added_by = request.user
+            entry.save()
+            messages.success(request, f'{entry.full_name} added to watchlist.')
+            return redirect('visitor:watchlist_list')
+    else:
+        form = VisitorWatchlistEntryForm(tenant=tenant)
+    return render(request, 'visitor/watchlist_form.html', {'form': form})
+
+
+@login_required
+def watchlist_deactivate(request, pk):
+    tenant = get_tenant(request)
+    entry = get_object_or_404(VisitorWatchlistEntry, pk=pk, tenant=tenant)
+    if request.method == 'POST':
+        entry.is_active = False
+        entry.save()
+        messages.success(request, f'{entry.full_name} removed from watchlist.')
+    return redirect('visitor:watchlist_list')
+
+=== CANDIDATE ROLE/PERMISSION DEFINITION FILES ===
+
+========================================
+Candidate file
+PATH: E:\DJANGO\ASMS\asms\apps\core\mixins.py
+========================================
+"""
+View mixins for tenant-scoped QuerySets.
+Every view that touches the database should use TenantQuerySetMixin.
+"""
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+
+
+class TenantQuerySetMixin:
+    """
+    Automatically scopes get_queryset() to the current request.tenant.
+    Use on any class-based view that renders a model list or detail.
+    """
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant is None:
+            return qs.none()
+        return qs.filter(tenant=tenant)
+
+
+class TenantRequiredMixin(LoginRequiredMixin, TenantQuerySetMixin):
+    """
+    Combined mixin: user must be logged in AND a valid tenant must be resolved.
+    Use this as the base for all ASMS views.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(request, 'tenant', None):
+            raise PermissionDenied('No school context found.')
+        return super().dispatch(request, *args, **kwargs)
+
+
+def require_roles(*roles):
+    """
+    Decorator for function-based views.
+    Usage: @require_roles('principal', 'school_admin')
+    """
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                from django.shortcuts import redirect
+                return redirect('accounts:login')
+            if request.user.role not in roles and not request.user.is_superuser:
+                raise PermissionDenied('You do not have permission to access this page.')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+

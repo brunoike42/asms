@@ -1,4 +1,4 @@
-"""
+﻿"""
 ASMS — Student Portal Signals
 Phase 3
 
@@ -16,13 +16,13 @@ from django.utils import timezone
 # 1. Auto-create TermEnrollment for active students when a Term starts
 #    Triggered when: Term.is_active is set True (or by Celery Beat daily check)
 # ─────────────────────────────────────────────────────────────────────────────
-@receiver(post_save, sender='academics.Term')
+@receiver(post_save, sender='core.Term')
 def create_enrollments_for_new_term(sender, instance, created, **kwargs):
     """When a term is saved as current, create draft enrollments for all active students."""
     if not instance.is_current:
         return
 
-    from students.models import Student
+    from apps.students.models import Student
     from .models import TermEnrollment
 
     students = Student.objects.filter(
@@ -50,7 +50,7 @@ def issue_exam_permit_on_confirmation(sender, instance, **kwargs):
     if not instance.is_confirmed:
         return
 
-    from finance.models import FeeInvoice, Payment
+    from apps.finance.models import FeeInvoice, Payment
     from django.db.models import Sum
     from .models import ExamPermit
     import uuid
@@ -96,7 +96,7 @@ def issue_exam_permit_on_confirmation(sender, instance, **kwargs):
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Portal notification when exam results are published (Phase 2 — ExamResult)
 # ─────────────────────────────────────────────────────────────────────────────
-@receiver(post_save, sender='exams.ReportCard')
+@receiver(post_save, sender='exams.TermReport')
 def notify_student_results_published(sender, instance, created, **kwargs):
     """Push a portal notification when a report card is generated for a student."""
     if not created:

@@ -1,0 +1,159 @@
+<!--
+  Driver App — reference implementation of the offline-first pattern described in
+  Section 6.3 of the base spec (the same queue-in-IndexedDB / sync-on-reconnect pattern
+  used for offline attendance marking). None of the benchmarked systems (Transfinder,
+  Zonar, Samsara) assume the driver device itself may be offline for stretches — this
+  is deliberately ASMS's point of difference.
+
+  This is a minimal reference page, not a full production PWA shell. It shows the pattern:
+  location pings and boarding scans are always written to IndexedDB first, then a sync
+  loop flushes the queue to /api/v1/transport/location-pings/bulk/ and
+  /api/v1/transport/boarding-events/bulk/ whenever the network is available.
+-->
+<div id="transport-driver-app" style="font-family: sans-serif; max-width: 480px; margin: auto;">
+  <h2>Today's Trip</h2>
+  <p id="status-line">Status: <span id="net-status">checking…</span> · Queued: <span id="queue-count">0</span></p>
+
+  <button id="scan-board">Scan Student — Board</button>
+  <button id="scan-alight">Scan Student — Alight</button>
+
+  <ul id="event-log" style="font-size: 0.85em; color: #555;"></ul>
+</div>
+
+
+<script>
+  window.ASMS_TRIP_ID = "{{ trip_id }}";
+  window.ASMS_TOKEN = "{{ request.session.access_token }}";  // or wherever the driver's JWT lives
+</script>
+
+<script>
+(function () {
+  const DB_NAME = "asms_transport_offline";
+  const STORE_PINGS = "pending_pings";
+  const STORE_EVENTS = "pending_events";
+  const TRIP_ID = window.ASMS_TRIP_ID;      // injected by the server template context
+  const API_BASE = "/api/v1/transport/";
+
+  let db;
+  const openReq = indexedDB.open(DB_NAME, 1);
+  openReq.onupgradeneeded = (e) => {
+    const _db = e.target.result;
+    if (!_db.objectStoreNames.contains(STORE_PINGS)) {
+      _db.createObjectStore(STORE_PINGS, { autoIncrement: true });
+    }
+    if (!_db.objectStoreNames.contains(STORE_EVENTS)) {
+      _db.createObjectStore(STORE_EVENTS, { autoIncrement: true });
+    }
+  };
+  openReq.onsuccess = (e) => { db = e.target.result; startLocationLoop(); startSyncLoop(); };
+
+  function queue(storeName, record) {
+    const tx = db.transaction(storeName, "readwrite");
+    tx.objectStore(storeName).add(record);
+    refreshQueueCount();
+  }
+
+  function refreshQueueCount() {
+    let total = 0;
+    [STORE_PINGS, STORE_EVENTS].forEach((store) => {
+      const tx = db.transaction(store, "readonly");
+      tx.objectStore(store).count().onsuccess = (e) => {
+        total += e.target.result;
+        document.getElementById("queue-count").textContent = total;
+      };
+    });
+  }
+
+  // --- Location: capture every ~20s regardless of connectivity ---
+  function startLocationLoop() {
+    setInterval(() => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((pos) => {
+        queue(STORE_PINGS, {
+          trip: TRIP_ID,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          speed_kmh: (pos.coords.speed || 0) * 3.6,
+          heading: pos.coords.heading,
+          source: "DRIVER_APP",
+          recorded_at: new Date().toISOString(),
+        });
+      });
+    }, 20000);
+  }
+
+  // --- Boarding scans: buttons below just log a manual event for this reference page ---
+  function logEvent(eventType) {
+    const studentId = prompt("Student ID (stand-in for RFID/QR scan):");
+    if (!studentId) return;
+    queue(STORE_EVENTS, {
+      trip: TRIP_ID,
+      student: studentId,
+      event_type: eventType,
+      method: "MANUAL",
+      recorded_at: new Date().toISOString(),
+    });
+    const li = document.createElement("li");
+    li.textContent = `${eventType} — student ${studentId} (queued)`;
+    document.getElementById("event-log").prepend(li);
+  }
+  document.getElementById("scan-board").onclick = () => logEvent("BOARD");
+  document.getElementById("scan-alight").onclick = () => logEvent("ALIGHT");
+
+  // --- Sync loop: flush queues whenever online ---
+  function startSyncLoop() {
+    setInterval(flush, 15000);
+    window.addEventListener("online", flush);
+    updateNetStatus();
+    window.addEventListener("online", updateNetStatus);
+    window.addEventListener("offline", updateNetStatus);
+  }
+
+  function updateNetStatus() {
+    document.getElementById("net-status").textContent = navigator.onLine ? "online" : "offline (queuing)";
+  }
+
+  async function flush() {
+    if (!navigator.onLine) return;
+    await flushStore(STORE_PINGS, API_BASE + "location-pings/bulk/");
+    await flushStore(STORE_EVENTS, API_BASE + "boarding-events/bulk/");
+    refreshQueueCount();
+  }
+
+  async function flushStore(storeName, endpoint) {
+    const records = await getAll(storeName);
+    if (!records.length) return;
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + window.ASMS_TOKEN },
+        body: JSON.stringify(records.map((r) => r.value)),
+      });
+      if (res.ok) await clearStore(storeName);
+    } catch (err) {
+      // Still offline or request failed — leave the queue intact, try again next loop.
+    }
+  }
+
+  function getAll(storeName) {
+    return new Promise((resolve) => {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).openCursor();
+      const out = [];
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { out.push({ key: cursor.key, value: cursor.value }); cursor.continue(); }
+        else resolve(out);
+      };
+    });
+  }
+
+  function clearStore(storeName) {
+    return new Promise((resolve) => {
+      const tx = db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).clear();
+      tx.oncomplete = () => resolve();
+    });
+  }
+})();
+</script>

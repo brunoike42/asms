@@ -1,0 +1,126 @@
+{% extends "base/base.html" %}
+{% block title %}Visitor Management{% endblock %}
+{% block page_title %}Visitor Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div></div>
+  <div class="nav-section-label">Front Desk</div>
+    <a href="{% url 'visitor:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'visitor' %} active{% endif %}">
+      <i class="bi bi-door-open"></i> Visitor Management
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e6fffa;color:#0A7B8C;"><i class="bi bi-person-check-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.on_site_now }}</div>
+        <div class="stat-label">On-Site Now</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fefcbf;color:#744210;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.overstay }}</div>
+        <div class="stat-label">Overstay Alerts</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e9ecff;color:#1B3A6B;"><i class="bi bi-calendar-event-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.expected_today }}</div>
+        <div class="stat-label">Expected Today</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fed7d7;color:#9b2c2c;"><i class="bi bi-eye-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.watchlist_active }}</div>
+        <div class="stat-label">Active Watchlist</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-person-check-fill me-1"></i> Currently On-Site</h6>
+        <a href="{% url 'visitor:onsite_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="asms-card-body p-0">
+        <table class="table asms-table mb-0">
+          <thead><tr><th>Visitor</th><th>Purpose</th><th>Host</th><th>Since</th><th></th></tr></thead>
+          <tbody>
+       {% for log in on_site %}
+<tr{% if log.is_overstay %} class="table-warning"{% endif %}>
+  <td>
+    {{ log.visitor.full_name }}
+    {% if log.visitor.is_flagged %} <i class="bi bi-flag-fill text-danger" title="Flagged"></i>{% endif %}
+    {% if log.is_overstay %} <span class="badge bg-warning text-dark" title="Checked in {{ log.check_in_time|timesince }} ago">Overstay</span>{% endif %}
+  </td>
+  <td>{{ log.get_purpose_display }}</td>
+  <td>{{ log.host|default:"—" }}</td>
+  <td>{{ log.check_in_time|time:"H:i" }}</td>
+  <td>
+    <form method="post" action="{% url 'visitor:checkout' log.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">Check Out</button>
+    </form>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="5" class="text-center text-muted py-4">No one is currently on-site.</td></tr>
+{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="asms-card">
+      <div class="asms-card-header">
+        <h6><i class="bi bi-calendar-event-fill me-1"></i> Expected Today</h6>
+        <a href="{% url 'visitor:expected_today' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="asms-card-body p-0">
+        <table class="table asms-table mb-0">
+          <thead><tr><th>Visitor</th><th>Time</th><th></th></tr></thead>
+          <tbody>
+            {% for exp in expected_today %}
+            <tr>
+              <td>{{ exp.visitor_name }}{% if exp.student %}<br><small class="text-muted">Visiting {{ exp.student }}</small>{% endif %}</td>
+              <td>{{ exp.expected_time_from|time:"H:i"|default:"—" }}</td>
+              <td><a href="{% url 'visitor:checkin' %}?expected={{ exp.pk }}" class="btn btn-sm btn-primary">Arrived</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-4">No visitors expected today.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <a href="{% url 'visitor:muster_report' %}" class="btn btn-outline-secondary btn-sm flex-fill">
+        <i class="bi bi-clipboard2-check"></i> Muster List
+      </a>
+      {% if request.user.role == 'principal' or request.user.role == 'school_admin' or request.user.is_staff %}
+      <a href="{% url 'visitor:watchlist_list' %}" class="btn btn-outline-secondary btn-sm flex-fill">
+        <i class="bi bi-eye-fill"></i> Watchlist
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

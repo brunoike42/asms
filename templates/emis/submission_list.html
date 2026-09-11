@@ -1,0 +1,22 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h2>EMIS Submission History</h2>
+<table class="table">
+  <thead><tr><th>Year</th><th>Template</th><th>Generated</th><th>Status</th><th>Issues</th></tr></thead>
+  <tbody>
+    {% for s in submissions %}
+    <tr>
+      <td>{{ s.academic_year }}</td>
+      <td>{{ s.get_country_template_display }}</td>
+      <td>{{ s.generated_at|date:"Y-m-d H:i" }}</td>
+      <td>{{ s.get_status_display }}</td>
+      <td>{{ s.compliance_issue_count }}</td>
+      <td><a href="{% url 'emis:submission_detail' s.pk %}">View</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No submissions yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<a href="{% url 'emis:dashboard' %}">Back to EMIS dashboard</a>
+{% endblock %}

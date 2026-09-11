@@ -1,0 +1,12 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h2>Compliance check — {{ template }}</h2>
+{% if is_clean %}
+  <p class="text-success">No issues found.</p>
+{% else %}
+  <ul class="text-warning">
+    {% for issue in issues %}<li>{{ issue }}</li>{% endfor %}
+  </ul>
+{% endif %}
+<a href="{% url 'emis:dashboard' %}">Back to EMIS dashboard</a>
+{% endblock %}

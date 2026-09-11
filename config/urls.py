@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
+from apps.attendance.biometric_api import BiometricScanView
 
 urlpatterns = [
     path('admin/',         admin.site.urls),
@@ -24,5 +25,19 @@ urlpatterns = [
     path('payments/', include('apps.payments.urls', namespace='payments')),
      path('parent/',       include('apps.parent_portal.urls', namespace='parent')), 
     path('portal/', include('apps.student_portal.urls', namespace='student_portal')),
+    path('visitor/', include('apps.visitor.urls', namespace='visitor')),
+    path('api/v1/transport/', include('apps.transport.urls', namespace='transport')),
+    path('api/biometric/v1/scan/', BiometricScanView.as_view(), name='biometric_scan'),
+    path('emis/', include('apps.emis.urls', namespace='emis')),
+    path("webhooks/sms/", include("apps.notifications.urls")),
+     path("api/v1/networks/", include("apps.networks.urls")),
+    path("api/v1/curriculum/", include("apps.curriculum.urls")),
+
+    path('register/', include('apps.platform_billing.urls', namespace='platform_billing')),
+    path('platform-admin/', include('apps.platform_billing.admin_urls', namespace='platform_admin')),
+    
+
     path('',               lambda r: redirect('core:dashboard'), name='home'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+

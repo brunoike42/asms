@@ -6,7 +6,7 @@ Sets request.tenant on every request — used by all views and managers.
 
 from django.conf import settings
 from django.http import Http404
-from apps.core.models import Tenant
+from apps.core.models import Tenant, set_current_tenant, clear_current_tenant
 
 
 class TenantMiddleware:
@@ -25,7 +25,11 @@ class TenantMiddleware:
 
     def __call__(self, request):
         request.tenant = self._resolve_tenant(request)
-        response = self.get_response(request)
+        token = set_current_tenant(request.tenant)
+        try:
+            response = self.get_response(request)
+        finally:
+            clear_current_tenant(token)
         return response
 
     def _resolve_tenant(self, request):

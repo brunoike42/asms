@@ -1,142 +1,195 @@
-{% extends "parent/base.html" %}
-{% block title %}Messages | Parent Portal{% endblock %}
+﻿{% extends 'parent/base.html' %}
+{% block title %}Messages{% endblock %}
 {% block content %}
-<p class="pp-stitle">
-  <i class="bi bi-chat-dots-fill" style="color:#185FA5;margin-right:6px"></i>
-  Messages
-</p>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-
-  <!-- ── Inbox ── -->
-  <div>
-    <div class="pp-card">
-      <p class="pp-stitle" style="font-size:13px">Inbox</p>
-      {% if received %}
-        {% for msg in received %}
-        <div style="display:flex;gap:9px;padding:9px 0;border-bottom:0.5px solid var(--pp-border)">
-          <div style="width:30px;height:30px;border-radius:50%;background:#E6F0FB;
-                      display:flex;align-items:center;justify-content:center;
-                      font-size:10px;font-weight:500;color:#0C447C;flex-shrink:0">
-            {{ msg.sender.first_name|first }}{{ msg.sender.last_name|first }}
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <p style="font-size:12px;font-weight:500;margin:0">
-                {{ msg.sender.get_full_name }}
-                {% if msg.student %}
-                <span style="font-size:10px;color:var(--pp-muted)">re: {{ msg.student.first_name }}</span>
-                {% endif %}
-              </p>
-              <span style="font-size:10px;color:var(--pp-muted)">{{ msg.created_at|date:"d M" }}</span>
-            </div>
-            <p style="font-size:12px;font-weight:500;color:var(--pp-text);margin:2px 0 1px">{{ msg.subject }}</p>
-            <p style="font-size:11px;color:var(--pp-muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              {{ msg.body|truncatechars:80 }}
-            </p>
-          </div>
-          {% if not msg.is_read %}
-          <span style="width:7px;height:7px;background:#185FA5;border-radius:50%;flex-shrink:0;margin-top:6px"></span>
-          {% endif %}
-        </div>
-        {% endfor %}
-      {% else %}
-        <p style="font-size:12px;color:var(--pp-muted);text-align:center;padding:20px 0;margin:0">
-          No messages yet.
-        </p>
-      {% endif %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <div style="width:34px;height:34px;border-radius:8px;background:#E6F0FB;
+                display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="bi bi-chat-dots-fill" style="color:var(--pp-accent);font-size:15px"></i>
     </div>
-
-    <!-- ── Sent ── -->
-    {% if sent %}
-    <div class="pp-card">
-      <p class="pp-stitle" style="font-size:13px">Sent</p>
-      {% for msg in sent %}
-      <div style="padding:8px 0;border-bottom:0.5px solid var(--pp-border)">
-        <div style="display:flex;justify-content:space-between">
-          <p style="font-size:12px;font-weight:500;margin:0">To: {{ msg.recipient.get_full_name }}</p>
-          <span style="font-size:10px;color:var(--pp-muted)">{{ msg.created_at|date:"d M" }}</span>
-        </div>
-        <p style="font-size:11px;color:var(--pp-muted);margin:2px 0 0">{{ msg.subject }}</p>
-      </div>
-      {% endfor %}
+    <div>
+      <div class="pp-stitle" style="margin:0">Messages</div>
+      <div style="font-size:11px;color:var(--pp-muted)">Parent &ndash; teacher communication</div>
     </div>
-    {% endif %}
   </div>
-
-  <!-- ── Compose ── -->
-  <div>
-    <div class="pp-card">
-      <p class="pp-stitle" style="font-size:13px">
-        <i class="bi bi-pencil-fill" style="margin-right:5px"></i>Compose Message
-      </p>
-      <form method="post" action="{% url 'parent:send_message' %}">
-        {% csrf_token %}
-
-        <div style="margin-bottom:10px">
-          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">To (Teacher / School)</label>
-          <select name="recipient_id" required
-                  style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
-                         border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
-            <option value="">— Select teacher —</option>
+  {% if teachers %}
+  <button id="ppComposeBtn" onclick="ppToggleCompose()" class="pp-act-btn"
+          style="background:var(--pp-accent);color:#fff;border-color:var(--pp-accent);flex-shrink:0">
+    <i class="bi bi-pencil-fill"></i> Compose
+  </button>
+  {% endif %}
+</div>
+{# ── Compose form ── #}
+{% if teachers %}
+<div id="ppCompose" style="display:none;margin-bottom:12px">
+  <div class="pp-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:12px;font-weight:500">
+        <i class="bi bi-envelope-plus-fill" style="margin-right:5px;color:var(--pp-accent)"></i>New Message
+      </span>
+      <button onclick="ppToggleCompose()"
+              style="background:none;border:none;color:var(--pp-muted);cursor:pointer;font-size:16px;padding:0;line-height:1">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <form action="{% url 'parent:send_message' %}" method="post">
+      {% csrf_token %}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:500;color:var(--pp-muted);margin-bottom:3px">To (Teacher)</label>
+          <select name="recipient" required
+                  style="width:100%;padding:6px 8px;border:0.5px solid var(--pp-border);border-radius:6px;
+                         font-size:12px;font-family:'Inter',sans-serif;background:#fff;color:var(--pp-text);box-sizing:border-box">
+            <option value="">Select teacher&hellip;</option>
             {% for t in teachers %}
-            <option value="{{ t.pk }}">{{ t.get_full_name }}{% if t.role %} · {{ t.get_role_display }}{% endif %}</option>
+            <option value="{{ t.pk }}">{{ t }}</option>
             {% endfor %}
           </select>
         </div>
-
-        <div style="margin-bottom:10px">
-          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Regarding (child)</label>
-          <select name="student_pk"
-                  style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
-                         border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
-            <option value="">— General (no specific child) —</option>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:500;color:var(--pp-muted);margin-bottom:3px">Regarding</label>
+          <select name="student"
+                  style="width:100%;padding:6px 8px;border:0.5px solid var(--pp-border);border-radius:6px;
+                         font-size:12px;font-family:'Inter',sans-serif;background:#fff;color:var(--pp-text);box-sizing:border-box">
             {% for s in students %}
             <option value="{{ s.pk }}">{{ s.first_name }} {{ s.last_name }}</option>
             {% endfor %}
           </select>
         </div>
-
-        <div style="margin-bottom:10px">
-          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Subject</label>
-          <input type="text" name="subject" required
-                 placeholder="e.g. Absence on Monday 10 June"
-                 style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
-                        border-radius:7px;font-family:'Inter',sans-serif;font-size:12px">
-        </div>
-
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--pp-muted);display:block;margin-bottom:4px">Message</label>
-          <textarea name="body" required rows="5"
-                    placeholder="Write your message here…"
-                    style="width:100%;padding:7px 10px;border:0.5px solid var(--pp-border);
-                           border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;
-                           resize:vertical"></textarea>
-        </div>
-
-        <button type="submit"
-                style="background:#185FA5;color:#fff;border:none;padding:8px 18px;
-                       border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;
-                       font-family:'Inter',sans-serif;width:100%">
-          <i class="bi bi-send-fill" style="margin-right:5px"></i>Send Message
-        </button>
-      </form>
+      </div>
+      <input type="text" name="subject" placeholder="Subject&hellip;" required
+             style="width:100%;padding:6px 8px;border:0.5px solid var(--pp-border);border-radius:6px;
+                    font-size:12px;font-family:'Inter',sans-serif;color:var(--pp-text);
+                    margin-bottom:8px;box-sizing:border-box">
+      <textarea name="body" rows="3" placeholder="Your message&hellip;" required
+                style="width:100%;padding:6px 8px;border:0.5px solid var(--pp-border);border-radius:6px;
+                       font-size:12px;font-family:'Inter',sans-serif;color:var(--pp-text);
+                       resize:vertical;box-sizing:border-box"></textarea>
+      <button type="submit" class="pp-act-btn"
+              style="background:var(--pp-accent);color:#fff;border-color:var(--pp-accent);margin-top:8px">
+        <i class="bi bi-send-fill"></i> Send
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{# ── Tab switcher ── #}
+<div style="display:flex;gap:6px;margin-bottom:10px">
+  <button onclick="ppTab('inbox')" id="ppt-inbox" class="pp-act-btn"
+          style="background:var(--pp-accent);color:#fff;border-color:var(--pp-accent)">
+    <i class="bi bi-inbox-fill"></i> Inbox
+    {% if unread_messages %}
+    <span style="background:#E24B4A;color:#fff;font-size:9px;font-weight:600;
+                 padding:1px 5px;border-radius:10px;margin-left:3px">{{ unread_messages }}</span>
+    {% endif %}
+  </button>
+  <button onclick="ppTab('sent')" id="ppt-sent" class="pp-act-btn">
+    <i class="bi bi-send-fill"></i> Sent
+  </button>
+</div>
+{# ── Inbox ── #}
+<div id="pp-inbox">
+{% if received %}
+<div class="pp-card" style="padding:0;overflow:hidden">
+  {% for msg in received %}
+  <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+              border-bottom:0.5px solid var(--pp-border);
+              {% if not msg.is_read %}background:#F0F6FF;{% endif %}">
+    <div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;
+                display:flex;align-items:center;justify-content:center;
+                background:{% if not msg.is_read %}var(--pp-accent){% else %}#E2E8EF{% endif %}">
+      <i class="bi bi-person-fill"
+         style="font-size:13px;color:{% if not msg.is_read %}#fff{% else %}var(--pp-muted){% endif %}"></i>
     </div>
-
-    <!-- Book a meeting block -->
-    <div class="pp-card">
-      <p class="pp-stitle" style="font-size:13px">
-        <i class="bi bi-calendar-event-fill" style="margin-right:5px"></i>Book a Meeting
-      </p>
-      {% if students %}
-      {% with s=students.0 %}
-      <a href="{% url 'parent:book_meeting' student_pk=s.pk %}" class="pp-act-btn" style="width:100%;justify-content:center">
-        <i class="bi bi-calendar-plus-fill"></i> Request parent-teacher meeting
-      </a>
-      {% endwith %}
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:12px;font-weight:{% if not msg.is_read %}600{% else %}400{% endif %};
+                     color:var(--pp-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ msg.sender.get_full_name|default:msg.sender.username }}
+        </span>
+        <span style="font-size:10px;color:var(--pp-muted);flex-shrink:0">
+          {{ msg.created_at|date:"d M" }}
+        </span>
+      </div>
+      <div style="font-size:11px;font-weight:500;color:var(--pp-text);margin:2px 0">
+        {{ msg.subject }}
+      </div>
+      <div style="font-size:11px;color:var(--pp-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ msg.body|truncatechars:90 }}
+      </div>
+      {% if msg.student %}
+      <div style="font-size:10px;color:var(--pp-accent);margin-top:3px">
+        Re: {{ msg.student.first_name }} {{ msg.student.last_name }}
+      </div>
       {% endif %}
     </div>
   </div>
-
+  {% endfor %}
 </div>
+{% else %}
+<div class="pp-alert info">
+  <i class="bi bi-inbox"></i>
+  <span>No messages yet.{% if teachers %} Use Compose to contact a teacher.{% endif %}</span>
+</div>
+{% endif %}
+</div>
+{# ── Sent ── #}
+<div id="pp-sent" style="display:none">
+{% if sent %}
+<div class="pp-card" style="padding:0;overflow:hidden">
+  {% for msg in sent %}
+  <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+              border-bottom:0.5px solid var(--pp-border)">
+    <div style="width:32px;height:32px;border-radius:50%;background:#E2E8EF;flex-shrink:0;
+                display:flex;align-items:center;justify-content:center">
+      <i class="bi bi-send-fill" style="font-size:11px;color:var(--pp-muted)"></i>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:11px;color:var(--pp-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          To: {{ msg.recipient.get_full_name|default:msg.recipient.username }}
+        </span>
+        <span style="font-size:10px;color:var(--pp-muted);flex-shrink:0">
+          {{ msg.created_at|date:"d M" }}
+        </span>
+      </div>
+      <div style="font-size:11px;font-weight:500;color:var(--pp-text);margin:2px 0">
+        {{ msg.subject }}
+      </div>
+      <div style="font-size:11px;color:var(--pp-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ msg.body|truncatechars:90 }}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="pp-alert info">
+  <i class="bi bi-send"></i>
+  <span>No sent messages yet.</span>
+</div>
+{% endif %}
+</div>
+{% block extra_js %}
+<script>
+function ppToggleCompose() {
+  var f = document.getElementById('ppCompose');
+  if (!f) return;
+  f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none';
+}
+function ppTab(name) {
+  ['inbox', 'sent'].forEach(function(t) {
+    var panel = document.getElementById('pp-' + t);
+    var btn   = document.getElementById('ppt-' + t);
+    var active = t === name;
+    if (panel) panel.style.display = active ? 'block' : 'none';
+    if (btn) {
+      btn.style.background   = active ? 'var(--pp-accent)' : '';
+      btn.style.color        = active ? '#fff' : '';
+      btn.style.borderColor  = active ? 'var(--pp-accent)' : '';
+    }
+  });
+}
+</script>
+{% endblock %}
 {% endblock %}

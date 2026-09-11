@@ -25,6 +25,21 @@
     </a>
   </div>
 
+<div id="bus-map">
+<script>
+  const studentId = {{ student.id }};  // however your template already has this in context
+  fetch(`/api/v1/transport/students/${studentId}/status/`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  .then(r => r.json())
+  .then(res => renderBusOnMap(res.data));
+
+  const ws = new WebSocket(`wss://${location.host}/ws/transport/route/${routeId}/`);
+  ws.onmessage = (e) => updateBusMarker(JSON.parse(e.data));
+</script>
+</div>
+
+
   <!-- Quick Stats -->
   <div class="stat-row mb-3">
     <div class="stat-pill {% if stats.attendance_pct and stats.attendance_pct < 70 %}red{% elif stats.attendance_pct and stats.attendance_pct < 85 %}amber{% else %}green{% endif %}">
@@ -178,3 +193,5 @@
 {% endif %}
 
 {% endblock %}
+
+

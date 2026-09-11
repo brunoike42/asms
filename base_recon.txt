@@ -1,0 +1,12 @@
+﻿
+FullName                                                                                 
+--------                                                                                 
+E:\DJANGO\ASMS\asms\apps\parent_portal\templates\parent\base.html                        
+E:\DJANGO\ASMS\asms\apps\student_portal\templates\student_portal\base.html               
+E:\DJANGO\ASMS\asms\templates\base\base.html                                             
+E:\DJANGO\ASMS\asms\templates\parent\base.html                                           
+E:\DJANGO\ASMS\asms\venv\Lib\site-packages\django\contrib\admin\templates\admin\base.html
+E:\DJANGO\ASMS\asms\venv\Lib\site-packages\rest_framework\templates\rest_framework\bas...
+E:\DJANGO\ASMS\asms\venv\Lib\site-packages\rest_framework\templates\rest_framework\fil...
+
+

@@ -1,0 +1,39 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h2>EMIS Reporting</h2>
+
+<p>EMIS reporting country: <strong>{{ tenant.get_emis_country_display|default:"Not set" }}</strong></p>
+{% if not tenant.emis_country %}
+  <p class="text-danger">
+    No EMIS reporting country set for this school — set Tenant.emis_country
+    (Django admin) before running a compliance check or export.
+  </p>
+{% endif %}
+
+{% if current_year %}
+  <p>Current academic year: <strong>{{ current_year.name }}</strong></p>
+{% else %}
+  <p class="text-warning">No current academic year set — set one before generating an export.</p>
+{% endif %}
+
+{% if tenant.emis_country %}
+<h4>Compliance snapshot</h4>
+{% if compliance_issues %}
+  <ul class="text-warning">
+    {% for issue in compliance_issues %}<li>{{ issue }}</li>{% endfor %}
+  </ul>
+{% else %}
+  <p class="text-success">No compliance issues detected.</p>
+{% endif %}
+
+<h4>Generate export</h4>
+<form method="post" action="{% url 'emis:generate_export' %}">
+  {% csrf_token %}
+  {{ export_form.as_p }}
+  <button type="submit" class="btn btn-primary">Download CSV ({{ tenant.get_emis_country_display }})</button>
+</form>
+{% endif %}
+
+<p><a href="{% url 'emis:submission_list' %}">Submission history</a> ·
+   <a href="{% url 'emis:infrastructure_edit' %}">Infrastructure record</a></p>
+{% endblock %}

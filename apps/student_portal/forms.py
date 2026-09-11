@@ -1,4 +1,4 @@
-"""
+﻿"""
 ASMS — Student Portal Forms
 Phase 3
 """
@@ -51,15 +51,15 @@ class ExamAppealForm(forms.ModelForm):
     def __init__(self, student, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Limit subjects to those the student is enrolled in
-        from academics.models import Subject
-        from exams.models import ExamResult
+        from apps.academics.models import Subject
+        from apps.exams.models import ExamResult
         self.student = student
         result_subject_ids = ExamResult.objects.filter(
             student=student
         ).values_list('subject_id', flat=True).distinct()
         self.fields['subject'].queryset = Subject.objects.filter(id__in=result_subject_ids)
         # Limit to recent terms (last 4)
-        from academics.models import Term
+        from apps.academics.models import Term
         self.fields['term'].queryset = Term.objects.order_by('-start_date')[:4]
 
 
@@ -80,11 +80,11 @@ class ProgramChangeRequestForm(forms.ModelForm):
 
     def __init__(self, student, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from academics.models import Class
+        from apps.students.models import ClassRoom
         # Exclude student's current class
-        self.fields['requested_class'].queryset = Class.objects.exclude(
-            id=student.current_class_id
-        ).order_by('level', 'name')
+        self.fields['requested_class'].queryset = ClassRoom.objects.exclude(
+            id=student.current_class.id if student.current_class else None
+        ).order_by('level', 'stream')
 
 
 class LeaveOfAbsenceRequestForm(forms.ModelForm):
@@ -110,7 +110,7 @@ class LeaveOfAbsenceRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from academics.models import Term
+        from apps.academics.models import Term
         upcoming = Term.objects.filter(
             start_date__gte=__import__('django.utils.timezone', fromlist=['now']).now().date()
         ).order_by('start_date')

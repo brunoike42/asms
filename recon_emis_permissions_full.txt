@@ -1,0 +1,55 @@
+﻿
+===== apps/emis/permissions.py (FULL) =====
+"""
+EMIS access control.
+
+EMIS census data (national IDs, disability, orphan/refugee status) is
+deliberately narrower than general school-admin access:
+  - school_admin / principal, via User.is_school_admin (existing property)
+  - network_admin
+are allowed. platform_admin is explicitly excluded â€” EMIS data belongs to
+the school and its network, not the platform operator. This checks
+user.is_platform_admin (not just role == 'platform_admin') because that
+property already covers is_superuser=True accounts too â€” a superuser whose
+role field happens to be something else is still a platform admin by the
+codebase's own definition, and still gets excluded here.
+
+Does NOT redefine a MANAGEMENT_ROLES tuple like discipline/views.py and
+counselling/views.py do (both contain 'super_admin' and 'vice_principal',
+neither of which exists in accounts.User.RoleChoices).
+"""
+from django.contrib.auth.views import redirect_to_login
+from django.contrib import messages
+from django.shortcuts import redirect
+
+EMIS_NETWORK_ROLES = ("network_admin",)
+
+
+def get_tenant(request):
+    return getattr(request, "tenant", None)
+
+
+def can_manage_emis(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_platform_admin:
+        return False
+    return user.is_school_admin or user.role in EMIS_NETWORK_ROLES
+
+
+# apps/emis/permissions.py â€” add this import, replace require_emis_access with this
+from django.urls import NoReverseMatch
+
+def require_emis_access(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not can_manage_emis(request.user):
+            messages.error(request, "EMIS reporting is restricted to school and network administrators.")
+            try:
+                return redirect("core:dashboard")
+            except NoReverseMatch:
+                return redirect("/")
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper

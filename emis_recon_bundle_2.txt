@@ -1,0 +1,1259 @@
+
+===== apps/ folder listing =====
+academics
+accounts
+admissions
+assets
+assignments
+attendance
+canteen
+communication
+core
+counselling
+discipline
+emis
+exams
+finance
+health
+library
+lms
+notifications
+parent_portal
+payments
+staff_hr
+students
+student_portal
+transport
+visitor
+__pycache__
+{core,accounts,students,academics,admissions,attendance,finance,communication}
+
+===== INSTALLED_APPS =====
+-- E:\DJANGO\ASMS\asms\settings.py --
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = 'asms-dev-secret-key-change-in-production-2025'
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+      'django.contrib.humanize',                    # for {{ value|intcomma }} â€” add if missing
+    'apps.student_portal.apps.StudentPortalConfig',
+    # ASMS Apps
+    'core',
+    'students',
+    'admissions',
+    'attendance',
+    'finance',
+    'communication',
+    'academics',
+    'exams',
+    'staff_hr',
+    'library',
+    'lms',
+    'assignments',
+    'accounts',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.TenantMiddleware',
+]
+
+ROOT_URLCONF = 'asms.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'core.context_processors.tenant_context',
+                'apps.parent_portal.context_processors.parent_students',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'asms.wsgi.application'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+#AUTH_USER_MODEL = 'core.User'
+# settings.py
+AUTH_USER_MODEL = 'accounts.User'   # â† the one true User model
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}},
+]
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Africa/Kampala'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# SMS (Africa's Talking)
+AT_USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
+AT_API_KEY = os.environ.get('AT_API_KEY', 'test')
+AT_SENDER_ID = os.environ.get('AT_SENDER_ID', 'ASMS')
+
+# File upload limits
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400
+
+
+"transport-daily-document-expiry-check": {
+    "task": "transport.tasks.daily_document_expiry_check",
+    "schedule": crontab(hour=6, minute=0),
+},
+-- E:\DJANGO\ASMS\asms\config\settings.py --
+"""
+ASMS v3.0 â€” Advanced School Management System
+Django Settings
+"""
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+from django.conf import settings
+settings.ALLOWED_HOSTS.append('testserver')
+
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = os.getenv('SECRET_KEY', 'dev-insecure-key-change-in-production')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# â”€â”€ Application Definition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+DJANGO_APPS = [
+    'daphne',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.humanize',
+    'django_extensions',
+    'channels',
+]
+
+THIRD_PARTY_APPS = [
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'rest_framework',
+    'rest_framework_simplejwt',
+]
+
+LOCAL_APPS = [
+    'apps.core',
+    'apps.accounts',
+    'apps.students',
+    'apps.academics',
+    'apps.admissions',
+    'apps.attendance',
+    'apps.finance',
+    'apps.communication',
+    'apps.exams',
+    'apps.staff_hr',
+    'apps.library',
+    'apps.lms',
+    'apps.assignments',
+    'apps.discipline',
+    'apps.counselling',
+    'apps.payments',
+    'apps.canteen',
+    'apps.transport',
+    'apps.assets',
+    'apps.visitor',
+    'apps.health',
+    'apps.emis',
+    'apps.parent_portal',
+    'apps.student_portal',
+    'apps.notifications',
+    
+    
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.TenantMiddleware',       # â† Multi-tenancy
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'config.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'apps.core.context_processors.role_context',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'apps.core.context_processors.tenant_context',  # â† Tenant in all templates
+                'apps.parent_portal.context_processors.parent_context',  # â† Parent Portal context
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'config.wsgi.application'
+
+# â”€â”€ Database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# SQLite for development â€” switch to PostgreSQL in production via DATABASE_URL
+database_url = os.getenv('DATABASE_URL', '')
+if database_url and database_url.startswith('postgresql'):
+    import re
+    match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', database_url)
+    if match:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': match.group(5),
+                'USER': match.group(1),
+                'PASSWORD': match.group(2),
+                'HOST': match.group(3),
+                'PORT': match.group(4),
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+AUTH_USER_MODEL = 'accounts.User'
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# â”€â”€ Internationalisation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Africa/Kampala'
+USE_I18N = True
+USE_TZ = True
+
+# â”€â”€ Static & Media â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# â”€â”€ Crispy Forms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+# â”€â”€ REST Framework â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 25,
+}
+
+# â”€â”€ Email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Dev
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'ASMS <noreply@asms.app>')
+
+# â”€â”€ SMS â€” Africa's Talking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+AFRICASTALKING_API_KEY = os.getenv('AFRICASTALKING_API_KEY', '')
+AFRICASTALKING_USERNAME = os.getenv('AFRICASTALKING_USERNAME', 'sandbox')
+AFRICASTALKING_SENDER_ID = os.getenv('AFRICASTALKING_SENDER_ID', 'ASMS')
+
+NOTIFICATIONS_PROVIDERS = [
+    {
+        "type": "africastalking",
+        "username": AFRICASTALKING_USERNAME,
+        "api_key": AFRICASTALKING_API_KEY,
+        "sender_id": AFRICASTALKING_SENDER_ID,
+    },
+]
+
+_twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
+if _twilio_sid:
+    NOTIFICATIONS_PROVIDERS.append({
+        "type": "twilio",
+        "account_sid": _twilio_sid,
+        "auth_token": os.getenv("TWILIO_AUTH_TOKEN", ""),
+        "from_number": os.getenv("TWILIO_FROM_NUMBER", ""),
+    })
+
+NOTIFICATIONS_CACHE_ALIAS = "default"
+NOTIFICATIONS_CIRCUIT_BREAKER = {"failure_threshold": 5, "recovery_timeout_seconds": 30, "half_open_max_calls": 1}
+NOTIFICATIONS_RATE_LIMIT = {"rate_per_second": 5, "capacity": 20}
+NOTIFICATIONS_IDEMPOTENCY = {"enabled": True, "ttl_seconds": 3600}
+NOTIFICATIONS_DEFAULT_REGION = "UG"
+
+# â”€â”€ Payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+PESAPAL_CONSUMER_KEY    = os.getenv('PESAPAL_CONSUMER_KEY', '')
+PESAPAL_CONSUMER_SECRET = os.getenv('PESAPAL_CONSUMER_SECRET', '')
+PESAPAL_IPN_ID          = os.getenv('PESAPAL_IPN_ID', '')
+PESAPAL_SANDBOX         = os.getenv('PESAPAL_SANDBOX', 'True') == 'True'
+
+# â”€â”€ Platform â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+PLATFORM_DOMAIN = os.getenv('PLATFORM_DOMAIN', 'asms.app')
+PLATFORM_ADMIN_EMAIL = os.getenv('PLATFORM_ADMIN_EMAIL', 'admin@asms.app')
+
+# â”€â”€ Cache / Celery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ Celery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+from celery.schedules import crontab
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "flag-visitor-overstays": {
+        "task": "apps.visitor.tasks.flag_overstay_visitors",
+        "schedule": crontab(minute="*/15"),
+    },
+}
+
+# Read by apps/visitor/tasks.py â€” hours before a visitor is flagged as overstaying
+VISITOR_OVERSTAY_THRESHOLD_HOURS = 4
+
+ASGI_APPLICATION = 'config.asgi.application'
+
+
+
+===== FILE: apps\accounts\models.py =====
+"""
+ASMS Custom User Model
+Supports all 12 roles defined in the ASMS v3.0 specification.
+One User belongs to one Tenant (school).
+Platform Super Admin has is_superuser=True and no tenant.
+"""
+
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
+from django.utils import timezone
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('Email is required')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', User.RoleChoices.PLATFORM_ADMIN)
+        return self.create_user(email, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    """
+    Single user model for all 12 roles in ASMS.
+    Role determines what the user can see and do.
+    """
+
+    class RoleChoices(models.TextChoices):
+        # Platform level
+        PLATFORM_ADMIN  = 'platform_admin',  'Platform Super Admin'
+        NETWORK_ADMIN   = 'network_admin',   'Network Admin'
+        # School system roles
+        SCHOOL_ADMIN    = 'school_admin',    'School Super Admin'
+        PRINCIPAL       = 'principal',       'Principal'
+        TEACHER         = 'teacher',         'Teacher'
+        ACCOUNTANT      = 'accountant',      'Accountant'
+        COUNSELLOR      = 'counsellor',      'Counsellor'
+        LIBRARIAN       = 'librarian',       'Librarian'
+        RECEPTIONIST    = 'receptionist',    'Receptionist'
+        NURSE           = 'nurse',           'Nurse'
+        # App-facing roles (portal users)
+        PARENT          = 'parent',          'Parent / Guardian'
+        STUDENT         = 'student',         'Student'
+
+    # â”€â”€ Core Fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    email        = models.EmailField(unique=True)
+    first_name   = models.CharField(max_length=100)
+    last_name    = models.CharField(max_length=100)
+    role         = models.CharField(max_length=20, choices=RoleChoices.choices,
+                                    default=RoleChoices.TEACHER)
+
+    # â”€â”€ Tenant Link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    tenant       = models.ForeignKey(
+        'core.Tenant', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='users',
+        help_text='Null for Platform Super Admin only'
+    )
+
+    # â”€â”€ Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    phone        = models.CharField(max_length=20, blank=True)
+    photo        = models.ImageField(upload_to='users/photos/', null=True, blank=True)
+    date_joined  = models.DateTimeField(default=timezone.now)
+    last_login   = models.DateTimeField(null=True, blank=True)
+
+    # â”€â”€ Flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    is_active    = models.BooleanField(default=True)
+    is_staff     = models.BooleanField(default=False)
+    must_change_password = models.BooleanField(default=True,
+                           help_text='Force password change on first login')
+
+    # â”€â”€ Notification Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    notify_sms    = models.BooleanField(default=True)
+    notify_email  = models.BooleanField(default=True)
+    notify_push   = models.BooleanField(default=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD  = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+
+    class Meta:
+        db_table            = 'accounts_user'
+        verbose_name        = 'User'
+        verbose_name_plural = 'Users'
+        ordering            = ['last_name', 'first_name']
+
+    def __str__(self):
+        return f'{self.get_full_name()} ({self.get_role_display()})'
+
+    def get_full_name(self):
+        return f'{self.first_name} {self.last_name}'.strip()
+
+    def get_short_name(self):
+        return self.first_name
+
+    # â”€â”€ Role Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    @property
+    def is_platform_admin(self):
+        return self.role == self.RoleChoices.PLATFORM_ADMIN or self.is_superuser
+
+    @property
+    def is_school_admin(self):
+        return self.role in (
+            self.RoleChoices.SCHOOL_ADMIN,
+            self.RoleChoices.PRINCIPAL,
+        )
+
+    @property
+    def is_staff_member(self):
+        """True for all school staff (not parents/students)."""
+        return self.role not in (
+            self.RoleChoices.PARENT,
+            self.RoleChoices.STUDENT,
+            self.RoleChoices.PLATFORM_ADMIN,
+            self.RoleChoices.NETWORK_ADMIN,
+        )
+
+    @property
+    def is_portal_user(self):
+        """True for parent and student portal users."""
+        return self.role in (self.RoleChoices.PARENT, self.RoleChoices.STUDENT)
+
+    def can_access_finance(self):
+        return self.role in (
+            self.RoleChoices.SCHOOL_ADMIN,
+            self.RoleChoices.PRINCIPAL,
+            self.RoleChoices.ACCOUNTANT,
+        )
+
+    def can_manage_students(self):
+        return self.role in (
+            self.RoleChoices.SCHOOL_ADMIN,
+            self.RoleChoices.PRINCIPAL,
+            self.RoleChoices.TEACHER,
+            self.RoleChoices.RECEPTIONIST,
+        )
+
+    def get_dashboard_url(self):
+        """Returns the correct dashboard URL based on role."""
+        role_urls = {
+            self.RoleChoices.PLATFORM_ADMIN: '/dashboard/',
+            self.RoleChoices.SCHOOL_ADMIN:   '/dashboard/',
+            self.RoleChoices.PRINCIPAL:       '/dashboard/',
+            self.RoleChoices.TEACHER:        '/dashboard/teacher/',
+            self.RoleChoices.ACCOUNTANT:     '/dashboard/finance/',
+            self.RoleChoices.COUNSELLOR:     '/dashboard/welfare/',
+            self.RoleChoices.LIBRARIAN:      '/dashboard/library/',
+            self.RoleChoices.PARENT:         '/parent/',
+            self.RoleChoices.STUDENT:        '/portal/',
+        }
+        return role_urls.get(self.role, '/dashboard/')
+
+
+===== Repo-wide search: role choices =====
+E:\DJANGO\ASMS\asms\apps\accounts\models.py:36:class RoleChoices(models.TextChoices):
+E:\DJANGO\ASMS\asms\apps\accounts\models.py:57:role         = models.CharField(max_length=20, choices=RoleChoices.choices,
+E:\DJANGO\ASMS\asms\apps\accounts\models.py:108:return self.role == self.RoleChoices.PLATFORM_ADMIN or self.is_superuser
+E:\DJANGO\ASMS\asms\apps\staff_hr\views.py:56:role_choices = [
+E:\DJANGO\ASMS\asms\apps\staff_hr\views.py:63:"departments": departments, "roles": role_choices,
+E:\DJANGO\ASMS\asms\apps\visitor\tasks.py:68:# for receptionist in User.objects.filter(tenant=log.tenant, role=User.RoleChoices.RECEPTIONIST):
+
+===== FILE: apps\students\models.py =====
+"""
+ASMS Student Management Module
+The Student model is the heart of the system.
+All other modules reference it.
+"""
+
+from django.db import models
+from django.utils import timezone
+from apps.core.models import TenantModel
+
+
+class ClassLevel(TenantModel):
+    """
+    Represents a year group: e.g. Primary 1, Senior 1, Baby Class.
+    """
+    name         = models.CharField(max_length=50, verbose_name='Class Level Name')
+    short_name   = models.CharField(max_length=10, blank=True, verbose_name='Short Name e.g. P1')
+    order        = models.PositiveSmallIntegerField(default=0, help_text='Sort order')
+    category     = models.CharField(max_length=20, choices=[
+        ('nursery',   'Nursery / Pre-Primary'),
+        ('primary',   'Primary'),
+        ('secondary', 'Secondary / High School'),
+        ('college',   'College / University'),
+    ], default='primary')
+
+    class Meta:
+        db_table        = 'students_class_level'
+        ordering        = ['order', 'name']
+        unique_together = [('tenant', 'name')]
+        verbose_name    = 'Class Level'
+
+    def __str__(self):
+        return self.name
+
+
+class ClassRoom(TenantModel):
+    """
+    A specific class section: e.g. Senior 2 East, Primary 3 Blue.
+    This is what students are enrolled in and teachers are assigned to.
+    """
+    level        = models.ForeignKey(ClassLevel, on_delete=models.PROTECT,
+                                     related_name='classrooms')
+    stream       = models.CharField(max_length=20, blank=True,
+                                    help_text='e.g. East, Blue, A, North')
+    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.PROTECT,
+                                      related_name='classrooms')
+    class_teacher = models.ForeignKey('accounts.User', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='class_teacher_of',
+                                      limit_choices_to={'role': 'teacher'})
+    capacity     = models.PositiveSmallIntegerField(default=45)
+
+    class Meta:
+        db_table        = 'students_classroom'
+        ordering        = ['level__order', 'stream']
+        unique_together = [('tenant', 'level', 'stream', 'academic_year')]
+        verbose_name    = 'Classroom'
+
+    def __str__(self):
+        stream = f' {self.stream}' if self.stream else ''
+        return f'{self.level.name}{stream}'
+
+    def get_full_name(self):
+        return str(self)
+
+    def student_count(self):
+        return self.enrollments.filter(is_active=True).count()
+
+
+class Student(TenantModel):
+    """
+    The central student record. Every other module references this.
+    Includes all fields required by EMIS/government reporting.
+    """
+
+    class GenderChoices(models.TextChoices):
+        MALE   = 'M', 'Male'
+        FEMALE = 'F', 'Female'
+        OTHER  = 'O', 'Other / Prefer not to say'
+
+    class StatusChoices(models.TextChoices):
+        ACTIVE    = 'active',    'Active / Enrolled'
+        INACTIVE  = 'inactive',  'Inactive'
+        GRADUATED = 'graduated', 'Graduated'
+        WITHDRAWN = 'withdrawn', 'Withdrawn'
+        EXPELLED  = 'expelled',  'Expelled'
+        DECEASED  = 'deceased',  'Deceased'
+        DEFERRED  = 'deferred',  'Deferred'
+
+    class ReligionChoices(models.TextChoices):
+        CHRISTIAN = 'christian', 'Christian'
+        MUSLIM    = 'muslim',    'Muslim'
+        OTHER     = 'other',     'Other'
+        NONE      = 'none',      'None / Not stated'
+
+    # ── Identity ─────────────────────────────────────────────────
+    student_id   = models.CharField(max_length=20, verbose_name='Student ID',
+                                    help_text='Auto-generated by school format')
+    first_name   = models.CharField(max_length=100)
+    middle_name  = models.CharField(max_length=100, blank=True)
+    last_name    = models.CharField(max_length=100)
+    preferred_name = models.CharField(max_length=100, blank=True,
+                                      help_text='Name used daily if different')
+
+    # ── EMIS / National IDs ───────────────────────────────────────
+    nsin         = models.CharField(max_length=50, blank=True,
+                                    verbose_name='National Student Identification Number (NSIN)')
+    birth_cert_number = models.CharField(max_length=50, blank=True)
+
+    # ── Demographics (required for EMIS census) ───────────────────
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender        = models.CharField(max_length=1, choices=GenderChoices.choices,
+                                     default=GenderChoices.MALE)
+    nationality   = models.CharField(max_length=50, default='Ugandan')
+    religion      = models.CharField(max_length=20, choices=ReligionChoices.choices,
+                                     blank=True)
+    home_district = models.CharField(max_length=100, blank=True)
+    home_village  = models.CharField(max_length=100, blank=True)
+
+    # ── EMIS Special Flags ────────────────────────────────────────
+    has_disability       = models.BooleanField(default=False)
+    disability_type      = models.CharField(max_length=100, blank=True)
+    is_orphan            = models.BooleanField(default=False)
+    orphan_type          = models.CharField(max_length=20, blank=True, choices=[
+        ('both',    'Double Orphan (both parents)'),
+        ('father',  'Paternal Orphan'),
+        ('mother',  'Maternal Orphan'),
+    ])
+    is_refugee           = models.BooleanField(default=False)
+    receives_bursary     = models.BooleanField(default=False)
+
+    # ── Medical ───────────────────────────────────────────────────
+    blood_group  = models.CharField(max_length=5, blank=True,
+                                    choices=[('A+','A+'),('A-','A-'),('B+','B+'),('B-','B-'),
+                                             ('AB+','AB+'),('AB-','AB-'),('O+','O+'),('O-','O-')])
+    allergies    = models.TextField(blank=True)
+    medical_notes = models.TextField(blank=True,
+                                     help_text='Any chronic conditions or medication requirements')
+
+    # ── Contact ───────────────────────────────────────────────────
+    student_phone = models.CharField(max_length=20, blank=True,
+                                     help_text='Student\'s own phone (secondary only)')
+    student_email = models.EmailField(blank=True)
+
+    # ── Photo ─────────────────────────────────────────────────────
+    photo        = models.ImageField(upload_to='students/photos/', null=True, blank=True)
+
+    # ── Status ────────────────────────────────────────────────────
+    status       = models.CharField(max_length=15, choices=StatusChoices.choices,
+                                    default=StatusChoices.ACTIVE)
+    profile_verified = models.BooleanField(default=False, help_text="Admin has verified student biodata")
+    admission_date = models.DateField(default=timezone.now)
+    exit_date    = models.DateField(null=True, blank=True)
+    exit_reason  = models.TextField(blank=True)
+
+    # ── Linked User Account ───────────────────────────────────────
+    user         = models.OneToOneField(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='student_profile',
+        help_text='Portal login account for this student'
+    )
+
+    class Meta:
+        db_table            = 'students_student'
+        ordering            = ['last_name', 'first_name']
+        unique_together     = [('tenant', 'student_id')]
+        verbose_name        = 'Student'
+        verbose_name_plural = 'Students'
+
+    def __str__(self):
+        return f'{self.get_full_name()} ({self.student_id})'
+
+    def get_full_name(self):
+        parts = [self.first_name, self.middle_name, self.last_name]
+        return ' '.join(p for p in parts if p).strip()
+
+    def get_display_name(self):
+        return self.preferred_name or self.first_name
+
+    def age(self):
+        if self.date_of_birth:
+            today = timezone.now().date()
+            dob = self.date_of_birth
+            return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        return None
+
+    @property
+    def current_class(self):
+        enrollment = self.enrollments.filter(is_active=True).select_related('classroom').first()
+        return enrollment.classroom if enrollment else None
+
+
+class Enrollment(TenantModel):
+    """
+    Links a Student to a ClassRoom for a specific AcademicYear.
+    A student has one active enrollment at a time.
+    Previous enrollments are kept for history.
+    """
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE,
+                                     related_name='enrollments')
+    classroom    = models.ForeignKey(ClassRoom, on_delete=models.PROTECT,
+                                     related_name='enrollments')
+    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.PROTECT,
+                                      related_name='enrollments')
+    enrolled_date = models.DateField(default=timezone.now)
+    is_active    = models.BooleanField(default=True)
+    is_repeating = models.BooleanField(default=False,
+                                       help_text='True if student is repeating this class level')
+    notes        = models.TextField(blank=True)
+
+    class Meta:
+        db_table        = 'students_enrollment'
+        ordering        = ['-academic_year__start_date']
+        unique_together = [('student', 'academic_year')]
+
+    def __str__(self):
+        return f'{self.student} → {self.classroom} ({self.academic_year.name})'
+
+
+class Guardian(TenantModel):
+    """
+    Parent or guardian of a student.
+    One guardian can be linked to multiple students (family).
+    """
+
+    class RelationshipChoices(models.TextChoices):
+        FATHER      = 'father',      'Father'
+        MOTHER      = 'mother',      'Mother'
+        GRANDFATHER = 'grandfather', 'Grandfather'
+        GRANDMOTHER = 'grandmother', 'Grandmother'
+        UNCLE       = 'uncle',       'Uncle'
+        AUNT        = 'aunt',        'Aunt'
+        SIBLING     = 'sibling',     'Older Sibling'
+        GUARDIAN    = 'guardian',    'Legal Guardian'
+        OTHER       = 'other',       'Other'
+
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE,
+                                     related_name='guardians')
+    first_name   = models.CharField(max_length=100)
+    last_name    = models.CharField(max_length=100)
+    relationship = models.CharField(max_length=20, choices=RelationshipChoices.choices)
+    phone_primary   = models.CharField(max_length=20)
+    phone_secondary = models.CharField(max_length=20, blank=True)
+    email           = models.EmailField(blank=True)
+    occupation      = models.CharField(max_length=100, blank=True)
+    national_id     = models.CharField(max_length=50, blank=True)
+    is_primary      = models.BooleanField(default=False,
+                                          help_text='Primary contact for this student')
+    is_fee_payer    = models.BooleanField(default=False,
+                                          help_text='Responsible for fee payments')
+    receives_sms    = models.BooleanField(default=True)
+    receives_reports = models.BooleanField(default=True)
+
+    # ── Linked User Account ───────────────────────────────────────
+    user         = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='guardian_of',
+        help_text='Portal login account for this parent'
+    )
+
+    class Meta:
+        db_table = 'students_guardian'
+        ordering = ['-is_primary', 'last_name']
+
+    def __str__(self):
+        return f'{self.first_name} {self.last_name} ({self.get_relationship_display()} of {self.student})'
+
+    def get_full_name(self):
+        return f'{self.first_name} {self.last_name}'
+
+
+
+===== FILE: apps\staff_hr\models.py =====
+from django.db import models
+from apps.core.models import TenantModel, TenantManager
+from apps.core.models import Tenant, TenantManager
+from apps.academics.models import Department
+from django.conf import settings
+
+class StaffProfile(models.Model):
+    EMPLOYMENT_CHOICES = [
+        ('permanent', 'Permanent'), ('contract', 'Contract'), ('probation', 'Probation'),
+        ('volunteer', 'Volunteer'), ('retired', 'Retired'),
+    ]
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='staff_profile')
+    staff_no = models.CharField(max_length=20, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    designation = models.CharField(max_length=100, blank=True)
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_CHOICES, default='permanent')
+    date_joined = models.DateField(null=True, blank=True)
+    national_id = models.CharField(max_length=30, blank=True)
+    basic_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    bank_account = models.CharField(max_length=30, blank=True)
+    next_of_kin_name = models.CharField(max_length=200, blank=True)
+    next_of_kin_phone = models.CharField(max_length=20, blank=True)
+    qualifications = models.TextField(blank=True)
+    specialisation = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'staff_profiles'
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} ({self.designation or self.user.role})"
+
+class LeaveType(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    days_allowed = models.IntegerField(default=21)
+    is_paid = models.BooleanField(default=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'leave_types'
+
+    def __str__(self):
+        return self.name
+
+class LeaveRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('approved', 'Approved'),
+        ('rejected', 'Rejected'), ('cancelled', 'Cancelled'),
+    ]
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'leave_requests'
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f"{self.staff} â€” {self.leave_type} ({self.start_date} to {self.end_date})"
+
+    @property
+    def days(self):
+        return (self.end_date - self.start_date).days + 1
+
+class CPDRecord(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='cpd_records')
+    title = models.CharField(max_length=200)
+    institution = models.CharField(max_length=200, blank=True)
+    cpd_type = models.CharField(max_length=100, choices=[
+        ('workshop', 'Workshop'), ('seminar', 'Seminar'), ('course', 'Course'),
+        ('conference', 'Conference'), ('online', 'Online Training'),
+    ], default='workshop')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    hours = models.DecimalField(max_digits=6, decimal_places=1, default=0)
+    certificate = models.FileField(upload_to='cpd_certificates/', blank=True, null=True)
+    notes = models.TextField(blank=True)
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = 'cpd_records'
+        ordering = ['-start_date']
+
+    def __str__(self):
+        return f"{self.staff} â€” {self.title}"
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# STAFF APPRAISALS â€” Phase 4 addition
+# Benchmarked from: Infinite Campus Staff Evaluations and Frontline Performance
+# (formerly PD&E) â€” both use a scored-area appraisal with SMART objectives as
+# child records reviewed at the next cycle, which is the pattern we replicate here.
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+class StaffAppraisal(TenantModel):
+    """
+    Formal performance appraisal per staff member per appraisal period.
+    Scored across five areas (1-5). SMART objectives are child records
+    (AppraisalObjective) reviewed at the next appraisal cycle.
+    """
+    class StatusChoices(models.TextChoices):
+        DRAFT        = "draft",        "Draft"
+        SUBMITTED    = "submitted",    "Submitted to HR"
+        ACKNOWLEDGED = "acknowledged", "Acknowledged by Staff"
+    staff_member     = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE,
+        related_name="appraisals_received"
+    )
+    appraiser        = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        related_name="appraisals_conducted"
+    )
+    academic_year    = models.ForeignKey(
+        "core.AcademicYear", on_delete=models.PROTECT,
+        related_name="staff_appraisals"
+    )
+    appraisal_period = models.CharField(
+        max_length=50,
+        help_text="e.g. 'Annual 2024-25', 'Mid-Year Term 2 2025'"
+    )
+    appraisal_date   = models.DateField()
+    # Scored areas â€” 1 (Unsatisfactory) to 5 (Excellent)
+    teaching_quality  = models.PositiveSmallIntegerField(null=True, blank=True)
+    punctuality       = models.PositiveSmallIntegerField(null=True, blank=True)
+    student_relations = models.PositiveSmallIntegerField(null=True, blank=True)
+    professional_dev  = models.PositiveSmallIntegerField(null=True, blank=True)
+    teamwork          = models.PositiveSmallIntegerField(null=True, blank=True)
+    strengths             = models.TextField(blank=True)
+    areas_for_improvement = models.TextField(blank=True)
+    appraiser_comments    = models.TextField(blank=True)
+    staff_response        = models.TextField(
+        blank=True,
+        help_text="Staff member can respond before the record is formally acknowledged"
+    )
+    status            = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.DRAFT
+    )
+    acknowledged_date = models.DateField(null=True, blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table        = "staff_appraisal"
+        ordering        = ["-appraisal_date"]
+        unique_together = [("tenant", "staff_member", "academic_year", "appraisal_period")]
+        verbose_name    = "Staff Appraisal"
+    def __str__(self):
+        return f"{self.staff_member} â€” {self.appraisal_period}"
+    @property
+    def average_score(self):
+        scores = [s for s in [
+            self.teaching_quality, self.punctuality,
+            self.student_relations, self.professional_dev, self.teamwork
+        ] if s is not None]
+        return round(sum(scores) / len(scores), 2) if scores else None
+class AppraisalObjective(TenantModel):
+    """SMART objectives set during an appraisal â€” reviewed at the next cycle."""
+    class StatusChoices(models.TextChoices):
+        PENDING      = "pending",      "Pending"
+        IN_PROGRESS  = "in_progress",  "In Progress"
+        ACHIEVED     = "achieved",     "Achieved"
+        NOT_ACHIEVED = "not_achieved", "Not Achieved"
+    appraisal    = models.ForeignKey(
+        StaffAppraisal, on_delete=models.CASCADE,
+        related_name="objectives"
+    )
+    objective    = models.TextField()
+    target_date  = models.DateField()
+    status       = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+    evidence     = models.TextField(blank=True, help_text="Evidence provided by staff member")
+    review_notes = models.TextField(blank=True, help_text="Reviewer notes at next appraisal cycle")
+    objects = TenantManager()
+    class Meta:
+        db_table     = "staff_appraisal_objective"
+        ordering     = ["target_date"]
+        verbose_name = "Appraisal Objective"
+    def __str__(self):
+        truncated = self.objective[:60]
+        return f"{truncated}... ({self.get_status_display()})"
+class TrainingPlan(TenantModel):
+    """
+    Annual professional development plan for a staff member.
+    Approved by HR/principal before items are actioned.
+    completion_rate is computed from child TrainingPlanItem records.
+    """
+    class StatusChoices(models.TextChoices):
+        DRAFT       = "draft",       "Draft"
+        SUBMITTED   = "submitted",   "Submitted for Approval"
+        APPROVED    = "approved",    "Approved"
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED   = "completed",   "Completed"
+    staff_member  = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE,
+        related_name="training_plans"
+    )
+    academic_year = models.ForeignKey(
+        "core.AcademicYear", on_delete=models.PROTECT,
+        related_name="training_plans"
+    )
+    status        = models.CharField(
+        max_length=15, choices=StatusChoices.choices,
+        default=StatusChoices.DRAFT
+    )
+    created_by    = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        related_name="training_plans_created"
+    )
+    approved_by   = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="training_plans_approved"
+    )
+    approved_date = models.DateField(null=True, blank=True)
+    notes         = models.TextField(blank=True)
+    objects = TenantManager()
+    class Meta:
+        db_table        = "staff_training_plan"
+        ordering        = ["-academic_year__start_date"]
+        unique_together = [("tenant", "staff_member", "academic_year")]
+        verbose_name    = "Training Plan"
+    def __str__(self):
+        return f"{self.staff_member} â€” Training Plan {self.academic_year}"
+    @property
+    def completion_rate(self):
+        total = self.items.count()
+        if not total:
+            return 0
+        done = self.items.filter(status=TrainingPlanItem.StatusChoices.COMPLETED).count()
+        return round((done / total) * 100)
+class TrainingPlanItem(TenantModel):
+    """Individual training activity within a plan."""
+    class TrainingTypeChoices(models.TextChoices):
+        INTERNAL_WORKSHOP = "internal_workshop", "Internal Workshop"
+        EXTERNAL_COURSE   = "external_course",   "External Course"
+        ONLINE_LEARNING   = "online_learning",   "Online Learning"
+        CONFERENCE        = "conference",         "Conference / Seminar"
+        MENTORING         = "mentoring",          "Peer Mentoring"
+        PEER_OBSERVATION  = "peer_observation",   "Peer Observation"
+        OTHER             = "other",              "Other"
+    class StatusChoices(models.TextChoices):
+        PLANNED   = "planned",   "Planned"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+    training_plan  = models.ForeignKey(
+        TrainingPlan, on_delete=models.CASCADE,
+        related_name="items"
+    )
+    training_title = models.CharField(max_length=255)
+    training_type  = models.CharField(
+        max_length=20, choices=TrainingTypeChoices.choices,
+        default=TrainingTypeChoices.EXTERNAL_COURSE
+    )
+    provider       = models.CharField(
+        max_length=200, blank=True,
+        help_text="Training provider, institution, or platform name"
+    )
+    planned_date   = models.DateField()
+    actual_date    = models.DateField(null=True, blank=True)
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    cost_ugx       = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Estimated or actual cost in UGX"
+    )
+    status         = models.CharField(
+        max_length=10, choices=StatusChoices.choices,
+        default=StatusChoices.PLANNED
+    )
+    outcome        = models.TextField(
+        blank=True,
+        help_text="What was learned / achieved â€” filled in after completion"
+    )
+    objects = TenantManager()
+    class Meta:
+        db_table     = "staff_training_plan_item"
+        ordering     = ["planned_date"]
+        verbose_name = "Training Plan Item"
+    def __str__(self):
+        return f"{self.training_title} ({self.get_status_display()})"
+
+
+===== apps\counselling\views.py -- first 90 lines (full decorator bodies) =====
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.db.models import Count, Q, Avg
+from django.core.paginator import Paginator
+
+from .models import (
+    WelfareCase, CounsellingSession, WelfareCaseAction,
+    BursaryApplication, CounsellorReferral, AtRiskRegister,
+)
+from .forms import (
+    WelfareCaseForm, CaseUpdateForm, EscalationForm, PrincipalResponseForm,
+    ResolutionForm, CounsellingSessionForm, WelfareCaseActionForm,
+    BursaryApplicationForm, BursaryApprovalForm, CounsellorReferralForm,
+)
+
+COUNSELLOR_ROLES = ('counsellor', 'principal', 'school_admin', 'super_admin', 'vice_principal')
+MANAGEMENT_ROLES = ('principal', 'school_admin', 'super_admin', 'vice_principal')
+
+
+def get_tenant(request):
+    return getattr(request, 'tenant', None)
+
+
+def require_counsellor_access(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        role = getattr(request.user, 'role', None)
+        if role not in COUNSELLOR_ROLES and not request.user.is_staff:
+            messages.error(request, 'Access restricted to counselling staff.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+def require_management(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        role = getattr(request.user, 'role', None)
+        if role not in MANAGEMENT_ROLES and not request.user.is_staff:
+            messages.error(request, 'Only school management can perform this action.')
+            return redirect('counselling:dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Dashboard
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@login_required
+@require_counsellor_access
+def dashboard(request):
+    tenant = get_tenant(request)
+    user_role = getattr(request.user, 'role', '')
+
+    base_qs = WelfareCase.objects.filter(tenant=tenant)
+
+    # Counsellors only see their own cases unless principal/admin
+    if user_role == 'counsellor':
+        my_cases = base_qs.filter(assigned_counsellor=request.user)
+    else:
+        my_cases = base_qs
+
+    stats = {
+        'open_cases': my_cases.filter(status__in=['open', 'in_progress']).count(),
+        'escalated': my_cases.filter(status='escalated').count(),
+        'high_priority': my_cases.filter(
+            priority__in=['high', 'critical'], status__in=['open', 'in_progress', 'escalated']
+        ).count(),
+        'overdue_review': my_cases.filter(
+            next_review_date__lt=timezone.now().date(),
+            status__in=['open', 'in_progress']
+        ).count(),
+        'pending_bursary': BursaryApplication.objects.filter(
+            tenant=tenant, status='submitted'
+        ).count(),
+        'total_this_year': base_qs.count(),
+        'resolved_this_year': base_qs.filter(status__in=['resolved', 'closed']).count(),
+        'safeguarding': base_qs.filter(
+            involves_safeguarding=True, status__in=['open', 'in_progress', 'escalated']
+        ).count(),
+    }
+
+
+===== Repo-wide search: visitor / health wired anywhere outside their own folders =====
+E:\DJANGO\ASMS\asms\audit_health_schema.py:18:print(f"  App '{app_label}' not found — check the label (e.g. apps.health, health, nurse, etc.)")
+E:\DJANGO\ASMS\asms\expand_parent_portal.py:207:class="pp-nav-link{% if active_section == 'health' %} active{% endif %}">
+E:\DJANGO\ASMS\asms\patch_visitor_apps.py:16:name = "apps.visitor"
+E:\DJANGO\ASMS\asms\patch_visitor_apps.py:21:name = "apps.visitor"
+E:\DJANGO\ASMS\asms\apps\core\views.py:595:from apps.visitor.models import Visitor, VisitorLog, ExpectedVisitor, VisitorWatchlistEntry
+E:\DJANGO\ASMS\asms\apps\core\views.py:603:.select_related('visitor', 'host')
+E:\DJANGO\ASMS\asms\apps\counselling\models.py:62:('health', 'Health / Nurse Referral'),
+E:\DJANGO\ASMS\asms\apps\counselling\migrations\0001_initial.py:30:('trigger', models.CharField(choices=[('manual', 'Opened by Counsellor / Staff'), ('discipline', 'Auto: 3+ Discipline Incidents'), ('attendance', 'Auto: Attendance Below 70%'), ('attendance_consecutive', 'Auto: 3+ Consecutive Absences'), ('finance', 'Auto: Fee Arrears > 45 Days'), ('academic', 'Auto: Academic Failure in 2+ Subjects'), ('risk_score', 'Auto: Risk Score > 70'), ('parent_referral', 'Parent / Guardian Referral'), ('teacher_referral', 'Teacher Referral'), ('self_referral', 'Student Self-Referral'), ('health', 'Health / Nurse Referral')], default='manual', max_length=30)),
+E:\DJANGO\ASMS\asms\apps\student_portal\models.py:315:HEALTH     = 'health',     _('Health / Nurse')
+E:\DJANGO\ASMS\asms\apps\student_portal\migrations\0001_initial.py:24:('department', models.CharField(choices=[('library', 'Library'), ('finance', 'Finance / Accounts'), ('academics', 'Academic Registrar'), ('sports', 'Sports / PE'), ('health', 'Health / Nurse'), ('hostel', 'Hostel / Boarding'), ('it', 'ICT Department'), ('custom', 'Other Department')], max_length=15)),
+E:\DJANGO\ASMS\asms\config\settings.py:61:'apps.visitor',
+E:\DJANGO\ASMS\asms\config\settings.py:62:'apps.health',
+E:\DJANGO\ASMS\asms\config\settings.py:244:"task": "apps.visitor.tasks.flag_overstay_visitors",
+E:\DJANGO\ASMS\asms\config\urls.py:28:path('visitor/', include('apps.visitor.urls', namespace='visitor')),
+E:\DJANGO\ASMS\asms\phase 3\phase A1\0002_visitor_watchlist_and_scan_fields.py:4:#     python manage.py makemigrations apps.visitor
+E:\DJANGO\ASMS\asms\phase 3\phase A1\0002_visitor_watchlist_and_scan_fields.py:18:('visitor', '0001_initial'),
+E:\DJANGO\ASMS\asms\phase 3\phase A1\0002_visitor_watchlist_and_scan_fields.py:23:model_name='visitor',
+E:\DJANGO\ASMS\asms\phase 3\phase A1\0002_visitor_watchlist_and_scan_fields.py:28:model_name='visitor',
+E:\DJANGO\ASMS\asms\phase 3\phase A1\apps.py:4:name = "apps.visitor"
+E:\DJANGO\ASMS\asms\phase 3\phase A1\tasks.py:12:"task": "apps.visitor.tasks.flag_overstay_visitors",
+E:\DJANGO\ASMS\asms\phase 3\phase A2\patch_visitor_apps.py:16:name = "apps.visitor"
+E:\DJANGO\ASMS\asms\phase 3\phase A2\patch_visitor_apps.py:21:name = "apps.visitor"
+E:\DJANGO\ASMS\asms\phase 3\phase A2\tasks.py:18:"task": "apps.visitor.tasks.flag_overstay_visitors",
+E:\DJANGO\ASMS\asms\phase 3\visitor A1\patch_base_html.py:40:<a href="{% url 'visitor:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'visitor' %} active{% endif %}">
+E:\DJANGO\ASMS\asms\templates\visitor\patch_base_html.py:40:<a href="{% url 'visitor:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'visitor' %} active{% endif %}">

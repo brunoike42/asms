@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+{% load platform_billing_extras %}
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 2.2cm; }
+  body { font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1B3A6B; padding-bottom: 16px; margin-bottom: 24px; }
+  .brand { font-size: 20pt; font-weight: bold; color: #1B3A6B; }
+  .brand-sub { font-size: 9pt; color: #666; margin-top: 2px; }
+  .invoice-meta { text-align: right; }
+  .invoice-meta .label { font-size: 9pt; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+  .invoice-meta .value { font-size: 11pt; margin-bottom: 6px; }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 3px; font-size: 9pt; font-weight: bold; }
+  .status-paid { background: #d1e7dd; color: #0a3622; }
+  .status-issued { background: #fff3cd; color: #664d03; }
+  .status-failed { background: #f8d7da; color: #58151c; }
+  .parties { display: flex; justify-content: space-between; margin-bottom: 28px; }
+  .parties .label { font-size: 9pt; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  table.items th { text-align: left; background: #f4f6f9; padding: 8px 10px; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.5px; color: #555; border-bottom: 2px solid #ddd; }
+  table.items td { padding: 10px; border-bottom: 1px solid #eee; }
+  table.items td.amount, table.items th.amount { text-align: right; }
+  .totals { width: 260px; margin-left: auto; }
+  .totals .row { display: flex; justify-content: space-between; padding: 4px 10px; }
+  .totals .row.total { border-top: 2px solid #1B3A6B; font-weight: bold; font-size: 12pt; padding-top: 8px; margin-top: 4px; }
+  .payment-note { background: #f4f6f9; padding: 14px 16px; border-radius: 4px; margin-top: 20px; font-size: 10pt; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 8.5pt; color: #888; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand">ASMS</div>
+    <div class="brand-sub">Advanced School Management System &middot; ASMS Ltd, Kampala, Uganda</div>
+  </div>
+  <div class="invoice-meta">
+    <div class="label">Invoice</div>
+    <div class="value"><strong>{{ invoice.invoice_number }}</strong></div>
+    <div class="label">Status</div>
+    <div class="value">
+      {% if invoice.status == 'paid' %}<span class="status-badge status-paid">PAID</span>
+      {% elif invoice.status == 'failed' %}<span class="status-badge status-failed">FAILED</span>
+      {% else %}<span class="status-badge status-issued">ISSUED</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="parties">
+  <div>
+    <div class="label">Bill To</div>
+    <div><strong>{{ tenant.name }}</strong></div>
+    {% if tenant.address %}<div>{{ tenant.address }}</div>{% endif %}
+    {% if tenant.district %}<div>{{ tenant.district }}, {{ tenant.country }}</div>{% endif %}
+    {% if tenant.email %}<div>{{ tenant.email }}</div>{% endif %}
+  </div>
+  <div style="text-align: right;">
+    <div class="label">Invoice Date</div>
+    <div>{{ invoice.issued_date|date:"d F Y" }}</div>
+    <div class="label" style="margin-top: 8px;">Billing Period</div>
+    <div>{{ invoice.period_start|date:"d M Y" }} &ndash; {{ invoice.period_end|date:"d M Y" }}</div>
+  </div>
+</div>
+
+<table class="items">
+  <thead>
+    <tr><th>Description</th><th class="amount">Amount (UGX)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        ASMS {{ invoice.plan.name }} subscription<br>
+        <span style="color:#888; font-size: 9.5pt;">{{ invoice.period_start|date:"d M Y" }} &ndash; {{ invoice.period_end|date:"d M Y" }}</span>
+      </td>
+      <td class="amount">{{ invoice.amount|commas }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="totals">
+  <div class="row"><span>Subtotal</span><span>UGX {{ invoice.amount|commas }}</span></div>
+  <!-- No VAT line: ASMS Ltd's turnover is well under Uganda's UGX 150M
+       mandatory VAT registration threshold at this stage. Revisit with
+       an accountant once that changes — this row is where a VAT line
+       would go without needing to redesign the layout. -->
+  <div class="row total"><span>Total Due</span><span>UGX {{ invoice.amount|commas }}</span></div>
+</div>
+
+{% if payment %}
+<div class="payment-note">
+  <strong>Payment received</strong> &mdash; {{ payment.get_method_display }} on {{ payment.payment_date|date:"d F Y" }}
+  {% if payment.reference %}(ref: {{ payment.reference }}){% endif %}. Receipt {{ payment.receipt_number }}.
+</div>
+{% endif %}
+
+<div class="footer">
+  ASMS Ltd &middot; Kampala, Uganda &middot; This is a system-generated invoice for platform subscription fees, separate from any school fees owed by parents.
+</div>
+
+</body>
+</html>

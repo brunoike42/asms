@@ -154,7 +154,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.RoleChoices.ACCOUNTANT:     '/dashboard/finance/',
             self.RoleChoices.COUNSELLOR:     '/dashboard/welfare/',
             self.RoleChoices.LIBRARIAN:      '/dashboard/library/',
-            self.RoleChoices.PARENT:         '/dashboard/parent/',
-            self.RoleChoices.STUDENT:        '/dashboard/student/',
+            self.RoleChoices.PARENT:         '/parent/',
+            self.RoleChoices.STUDENT:        '/portal/',
         }
         return role_urls.get(self.role, '/dashboard/')

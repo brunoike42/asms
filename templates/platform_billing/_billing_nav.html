@@ -1,0 +1,7 @@
+<nav class="mb-4">
+  <div class="btn-group" role="group">
+    <a href="{% url 'platform_billing:billing_status' %}" class="btn btn-sm {% if active_tab == 'overview' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Overview</a>
+    <a href="{% url 'platform_billing:invoice_list' %}" class="btn btn-sm {% if active_tab == 'invoices' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Invoices</a>
+    <a href="{% url 'platform_billing:payment_history' %}" class="btn btn-sm {% if active_tab == 'history' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Payment History</a>
+  </div>
+</nav>

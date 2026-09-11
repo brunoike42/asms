@@ -198,6 +198,11 @@
       <a href="{% url 'counselling:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'counselling' %} active{% endif %}">
         <i class="bi bi-heart-pulse"></i> Counselling & Welfare
       </a>
+
+      <div class="nav-section-label">Front Desk</div>
+    <a href="{% url 'visitor:dashboard' %}" class="sidebar-link{% if request.resolver_match.namespace == 'visitor' %} active{% endif %}">
+      <i class="bi bi-door-open"></i> Visitor Management
+    </a>
       
       {% if can_see_finance %}<div class="nav-section-label">Finance</div>
       <a href="{% url 'finance:invoice_list' %}" class="sidebar-link"><i class="bi bi-cash-stack"></i> Fee Management</a>

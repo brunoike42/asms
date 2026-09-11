@@ -28,7 +28,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class TenantManager(models.Manager):
     """Filters every QuerySet to the active tenant stored in thread-local."""
     def get_queryset(self):
-        from utils.tenant import get_current_tenant  # existing Phase 1 utility
+        from apps.core.models import get_current_tenant
         qs = super().get_queryset()
         tenant = get_current_tenant()
         if tenant:
@@ -57,8 +57,8 @@ class TermEnrollment(models.Model):
         COMPLETED    = 'completed',   _('Programme Completed')
 
     tenant        = models.ForeignKey('core.Tenant', on_delete=models.CASCADE, db_index=True)
-    student       = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='enrollments')
-    term          = models.ForeignKey('core.Term', on_delete=models.CASCADE, related_name='enrollments')
+    student       = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='portal_term_enrollments')
+    term          = models.ForeignKey('core.Term', on_delete=models.CASCADE, related_name='portal_term_enrollments')
     status        = models.CharField(max_length=20, choices=Status.choices, default=Status.CONTINUING)
     study_year    = models.PositiveSmallIntegerField(help_text='Year of study (1, 2, 3…)')
     enrolled_at   = models.DateTimeField(auto_now_add=True)
@@ -486,3 +486,4 @@ class PortalNotification(models.Model):
 
     def __str__(self):
         return f"[{self.category}] {self.title} → {self.student}"
+

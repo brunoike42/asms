@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+{% block title %}Expected Visitors{% endblock %}
+{% block page_title %}Today's Expected Visitors{% endblock %}
+
+{% block content %}
+<div class="asms-card">
+  <div class="asms-card-header">
+    <h6><i class="bi bi-calendar-event-fill me-1"></i> Expected — {{ today|date:"d M Y" }}</h6>
+    <a href="{% url 'visitor:expected_create' %}" class="btn btn-sm btn-primary"><i class="bi bi-calendar-plus"></i> Pre-Register</a>
+  </div>
+  <div class="asms-card-body p-0">
+    <table class="table asms-table mb-0">
+      <thead><tr><th>Visitor</th><th>Time</th><th>Purpose</th><th>Visiting</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for exp in expected %}
+        <tr>
+          <td>{{ exp.visitor_name }}</td>
+          <td>
+            {% if exp.expected_time_from %}{{ exp.expected_time_from|time:"H:i" }}{% if exp.expected_time_to %}–{{ exp.expected_time_to|time:"H:i" }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ exp.purpose|default:"—" }}</td>
+          <td>{{ exp.student|default:"—" }}</td>
+          <td>
+            {% if exp.status == 'pending' %}<span class="badge badge-trial">Expected</span>
+            {% elif exp.status == 'arrived' %}<span class="badge badge-active">Arrived</span>
+            {% elif exp.status == 'cancelled' %}<span class="badge badge-inactive">Cancelled</span>
+            {% else %}<span class="badge badge-inactive">No Show</span>{% endif %}
+          </td>
+          <td class="d-flex gap-1">
+            {% if exp.status == 'pending' %}
+            <a href="{% url 'visitor:checkin' %}?expected={{ exp.pk }}" class="btn btn-sm btn-primary">Arrived</a>
+            <form method="post" action="{% url 'visitor:expected_cancel' exp.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Cancel</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No visitors expected today.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

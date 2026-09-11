@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+{% block title %}On-Site Visitors{% endblock %}
+{% block page_title %}Currently On-Site{% endblock %}
+
+{% block content %}
+<div class="asms-card">
+  <div class="asms-card-header">
+    <h6><i class="bi bi-person-check-fill me-1"></i> On-Site Visitors</h6>
+    <a href="{% url 'visitor:checkin' %}" class="btn btn-sm btn-primary"><i class="bi bi-door-open"></i> Check In</a>
+  </div>
+  <div class="asms-card-body p-0">
+    <table class="table asms-table mb-0">
+      <thead>
+        <tr><th>Badge</th><th>Visitor</th><th>Purpose</th><th>Host</th><th>Student</th><th>Since</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.badge_number }}</td>
+          <td>{{ log.visitor.full_name }}{% if log.visitor.is_flagged %} <i class="bi bi-flag-fill text-danger"></i>{% endif %}</td>
+          <td>{{ log.get_purpose_display }}</td>
+          <td>{{ log.host|default:"—" }}</td>
+          <td>{{ log.student|default:"—" }}</td>
+          <td>{{ log.check_in_time|date:"d M, H:i" }}</td>
+          <td>
+            {% if log.status == 'overstay' %}<span class="badge badge-inactive">Overstay</span>
+            {% else %}<span class="badge badge-active">On-Site</span>{% endif %}
+          </td>
+          <td class="d-flex gap-1">
+            <a href="{% url 'visitor:badge_print' log.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i></a>
+            <form method="post" action="{% url 'visitor:checkout' log.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">Check Out</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">No one is currently on-site.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,185 @@
+﻿=== grep: can_manage_emis anywhere in apps + templates ===
+
+Path                                         LineNumber Line                                                
+----                                         ---------- ----                                                
+E:\DJANGO\ASMS\asms\apps\core\views.py               13 from apps.emis.permissions import can_manage_emis   
+E:\DJANGO\ASMS\asms\apps\core\views.py              221         'can_manage_emis':    can_manage_emis(user),
+E:\DJANGO\ASMS\asms\apps\emis\permissions.py         30 def can_manage_emis(user):                          
+E:\DJANGO\ASMS\asms\apps\emis\permissions.py         45         if not can_manage_emis(request.user):       
+E:\DJANGO\ASMS\asms\templates\dashboard\d...        301           {% if can_manage_emis %}                  
+
+
+
+=== apps\core\views.py -- dashboard() context dict ===
+
+  apps\core\views.py:216:        pass
+  apps\core\views.py:217:
+> apps\core\views.py:218:    context = {
+  apps\core\views.py:219:        'title':              'Dashboard',
+  apps\core\views.py:220:        
+  apps\core\views.py:221:        'can_manage_emis':    can_manage_emis(user),
+  apps\core\views.py:222:        # Students
+  apps\core\views.py:223:        'total_students':     total_students,
+  apps\core\views.py:224:        'male_students':      male_students,
+  apps\core\views.py:225:        'female_students':    female_students,
+  apps\core\views.py:226:        'recent_students':    recent_students,
+  apps\core\views.py:227:        'total_classes':      total_classes,
+  apps\core\views.py:228:        'at_risk_count':      at_risk_count,
+  apps\core\views.py:229:        # Staff
+  apps\core\views.py:230:        'total_staff':        total_staff,
+  apps\core\views.py:231:        'staff_male':         staff_male,
+  apps\core\views.py:232:        'staff_female':       staff_female,
+  apps\core\views.py:233:        'teaching_staff':     teaching_staff,
+  apps\core\views.py:234:        'non_teaching_staff': non_teaching_staff,
+  apps\core\views.py:235:        # Finance
+  apps\core\views.py:236:        'total_collected':    int(total_collected),
+  apps\core\views.py:237:        'total_outstanding':  int(total_outstanding),
+  apps\core\views.py:238:        # Chart JSON
+  apps\core\views.py:239:        'enrollment_json':    _json.dumps(enrollment_by_class),
+  apps\core\views.py:240:        # Activity
+  apps\core\views.py:241:        'recent_activities':  recent_activities,
+  apps\core\views.py:242:        # Academic period
+  apps\core\views.py:243:        'term':               term,
+
+
+
+=== templates\dashboard\dashboard.html -- Quick Actions section ===
+
+  templates\dashboard\dashboard.html:202:
+  templates\dashboard\dashboard.html:203:</div>
+  templates\dashboard\dashboard.html:204:
+> templates\dashboard\dashboard.html:205:<!-- ── Bottom row: Recent students + Quick actions + Activity ────────────── -->
+  templates\dashboard\dashboard.html:206:<div class="row g-3">
+  templates\dashboard\dashboard.html:207:
+  templates\dashboard\dashboard.html:208:  <!-- Recently Added Students table -->
+  templates\dashboard\dashboard.html:209:  <div class="col-lg-7">
+  templates\dashboard\dashboard.html:210:    <div class="card border-0 shadow-sm">
+  templates\dashboard\dashboard.html:211:      <div class="card-header bg-transparent border-0 d-flex justify-content-between 
+align-items-center py-3">
+  templates\dashboard\dashboard.html:212:        <h6 class="fw-semibold mb-0">
+  templates\dashboard\dashboard.html:213:          <i class="bi bi-person-lines-fill text-success me-2"></i>
+  templates\dashboard\dashboard.html:214:          Recently Added Students
+  templates\dashboard\dashboard.html:215:        </h6>
+  templates\dashboard\dashboard.html:216:        <a href="{% url 'students:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+  templates\dashboard\dashboard.html:217:      </div>
+  templates\dashboard\dashboard.html:218:      <div class="table-responsive">
+  templates\dashboard\dashboard.html:219:        <table class="table table-hover align-middle mb-0">
+  templates\dashboard\dashboard.html:220:          <thead class="table-light">
+  templates\dashboard\dashboard.html:221:            <tr>
+  templates\dashboard\dashboard.html:222:              <th class="border-0">Student</th>
+  templates\dashboard\dashboard.html:223:              <th class="border-0">ID</th>
+  templates\dashboard\dashboard.html:224:              <th class="border-0">Class</th>
+  templates\dashboard\dashboard.html:225:              <th class="border-0">Status</th>
+  templates\dashboard\dashboard.html:226:              <th class="border-0">Admitted</th>
+  templates\dashboard\dashboard.html:227:            </tr>
+  templates\dashboard\dashboard.html:228:          </thead>
+  templates\dashboard\dashboard.html:229:          <tbody>
+  templates\dashboard\dashboard.html:230:            {% for student in recent_students %}
+  templates\dashboard\dashboard.html:231:            <tr>
+  templates\dashboard\dashboard.html:232:              <td>
+  templates\dashboard\dashboard.html:233:                <div class="d-flex align-items-center gap-2">
+  templates\dashboard\dashboard.html:234:                  <div class="rounded-circle d-flex align-items-center justify-content-center 
+fw-bold text-white"
+  templates\dashboard\dashboard.html:235:                       style="width:34px;height:34px;font-size:.8rem;
+  templates\dashboard\dashboard.html:265:    </div>
+  templates\dashboard\dashboard.html:266:  </div>
+  templates\dashboard\dashboard.html:267:
+> templates\dashboard\dashboard.html:268:  <!-- Right column: Quick Actions + Activity Feed -->
+  templates\dashboard\dashboard.html:269:  <div class="col-lg-5">
+  templates\dashboard\dashboard.html:270:
+> templates\dashboard\dashboard.html:271:    <!-- Quick Actions — EMIS Action Center style -->
+  templates\dashboard\dashboard.html:272:    <div class="card border-0 shadow-sm mb-3">
+  templates\dashboard\dashboard.html:273:      <div class="card-header bg-transparent border-0 py-3">
+  templates\dashboard\dashboard.html:274:        <h6 class="fw-semibold mb-0">
+> templates\dashboard\dashboard.html:275:          <i class="bi bi-lightning-fill text-warning me-2"></i>Quick Actions
+  templates\dashboard\dashboard.html:276:        </h6>
+  templates\dashboard\dashboard.html:277:      </div>
+  templates\dashboard\dashboard.html:278:      <div class="card-body pt-0">
+  templates\dashboard\dashboard.html:279:        <div class="d-grid gap-2">
+  templates\dashboard\dashboard.html:280:          <a href="{% url 'students:create' %}" class="btn btn-outline-success text-start">
+  templates\dashboard\dashboard.html:281:            <i class="bi bi-person-plus me-2"></i>Enrol New Student
+  templates\dashboard\dashboard.html:282:          </a>
+  templates\dashboard\dashboard.html:283:          <a href="{% url 'students:classrooms' %}" class="btn btn-outline-primary text-start">
+  templates\dashboard\dashboard.html:284:            <i class="bi bi-building me-2"></i>Manage Classes
+  templates\dashboard\dashboard.html:285:          </a>
+  templates\dashboard\dashboard.html:286:          <a href="{% url 'attendance:home' %}" class="btn btn-outline-info text-start">
+  templates\dashboard\dashboard.html:287:            <i class="bi bi-calendar-check me-2"></i>Mark Attendance
+  templates\dashboard\dashboard.html:288:          </a>
+  templates\dashboard\dashboard.html:289:          <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary text-start">
+  templates\dashboard\dashboard.html:290:            <i class="bi bi-clipboard2-data me-2"></i>Enter Exam Marks
+  templates\dashboard\dashboard.html:291:          </a>
+  templates\dashboard\dashboard.html:292:          <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-warning text-start">
+  templates\dashboard\dashboard.html:293:            <i class="bi bi-receipt-cutoff me-2"></i>View Invoices
+  templates\dashboard\dashboard.html:294:          </a>
+  templates\dashboard\dashboard.html:295:        </div>
+  templates\dashboard\dashboard.html:296:      </div>
+  templates\dashboard\dashboard.html:297:
+  templates\dashboard\dashboard.html:298:      <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-warning text-start">
+  templates\dashboard\dashboard.html:299:            <i class="bi bi-receipt-cutoff me-2"></i>View Invoices
+  templates\dashboard\dashboard.html:300:          </a>
+  templates\dashboard\dashboard.html:301:          {% if can_manage_emis %}
+  templates\dashboard\dashboard.html:302:          <a href="{% url 'emis:dashboard' %}" class="btn btn-outline-dark text-start">
+  templates\dashboard\dashboard.html:303:            <i class="bi bi-file-earmark-bar-graph me-2"></i>EMIS Reporting
+  templates\dashboard\dashboard.html:304:          </a>
+  templates\dashboard\dashboard.html:305:          {% endif %}
+
+
+
+=== apps\emis\permissions.py (full — checking the redirect fix landed too) ===
+"""
+EMIS access control.
+
+EMIS census data (national IDs, disability, orphan/refugee status) is
+deliberately narrower than general school-admin access:
+  - school_admin / principal, via User.is_school_admin (existing property)
+  - network_admin
+are allowed. platform_admin is explicitly excluded — EMIS data belongs to
+the school and its network, not the platform operator. This checks
+user.is_platform_admin (not just role == 'platform_admin') because that
+property already covers is_superuser=True accounts too — a superuser whose
+role field happens to be something else is still a platform admin by the
+codebase's own definition, and still gets excluded here.
+
+Does NOT redefine a MANAGEMENT_ROLES tuple like discipline/views.py and
+counselling/views.py do (both contain 'super_admin' and 'vice_principal',
+neither of which exists in accounts.User.RoleChoices).
+"""
+from django.contrib.auth.views import redirect_to_login
+from django.contrib import messages
+from django.shortcuts import redirect
+
+EMIS_NETWORK_ROLES = ("network_admin",)
+
+
+def get_tenant(request):
+    return getattr(request, "tenant", None)
+
+
+def can_manage_emis(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_platform_admin:
+        return False
+    return user.is_school_admin or user.role in EMIS_NETWORK_ROLES
+
+
+# apps/emis/permissions.py — add this import, replace require_emis_access with this
+from django.urls import NoReverseMatch
+
+def require_emis_access(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not can_manage_emis(request.user):
+            messages.error(request, "EMIS reporting is restricted to school and network administrators.")
+            try:
+                return redirect("dashboard")
+            except NoReverseMatch:
+                return redirect("/")
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+=== python manage.py check ===
+System check identified no issues (0 silenced).
+System check identified no issues (0 silenced).

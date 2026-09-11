@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+{% block title %}Visitor Watchlist{% endblock %}
+{% block page_title %}Visitor Watchlist{% endblock %}
+
+{% block content %}
+<div class="asms-card">
+  <div class="asms-card-header">
+    <h6><i class="bi bi-eye-fill me-1"></i> Watchlist Entries</h6>
+    <a href="{% url 'visitor:watchlist_create' %}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Add Entry</a>
+  </div>
+  <div class="asms-card-body p-0">
+    <table class="table asms-table mb-0">
+      <thead><tr><th>Name</th><th>Phone</th><th>Reason</th><th>Scope</th><th>Added By</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td>{{ entry.full_name }}</td>
+          <td>{{ entry.phone|default:"—" }}</td>
+          <td>{{ entry.get_reason_display }}</td>
+          <td>{% if entry.related_student %}{{ entry.related_student }} only{% else %}School-wide{% endif %}</td>
+          <td>{{ entry.added_by|default:"—" }}</td>
+          <td>
+            {% if entry.is_active %}<span class="badge badge-active">Active</span>
+            {% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+          </td>
+          <td>
+            {% if entry.is_active %}
+            <form method="post" action="{% url 'visitor:watchlist_deactivate' entry.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Deactivate</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No watchlist entries.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

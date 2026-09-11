@@ -6,6 +6,8 @@ Django Settings
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.conf import settings
+settings.ALLOWED_HOSTS.append('testserver')
 
 load_dotenv()
 
@@ -17,6 +19,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # ── Application Definition ────────────────────────────
 DJANGO_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -25,6 +28,7 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django_extensions',
+    'channels',
 ]
 
 THIRD_PARTY_APPS = [
@@ -51,8 +55,20 @@ LOCAL_APPS = [
     'apps.discipline',
     'apps.counselling',
     'apps.payments',
+    'apps.canteen',
+    'apps.transport',
+    'apps.assets',
+    'apps.visitor',
+    'apps.health',
+    'apps.emis',
     'apps.parent_portal',
     'apps.student_portal',
+    'apps.notifications',
+    'apps.platform_billing',
+    'rest_framework.authtoken',
+    'apps.networks',
+    'apps.curriculum',
+    
     
 ]
 
@@ -180,6 +196,30 @@ AFRICASTALKING_API_KEY = os.getenv('AFRICASTALKING_API_KEY', '')
 AFRICASTALKING_USERNAME = os.getenv('AFRICASTALKING_USERNAME', 'sandbox')
 AFRICASTALKING_SENDER_ID = os.getenv('AFRICASTALKING_SENDER_ID', 'ASMS')
 
+NOTIFICATIONS_PROVIDERS = [
+    {
+        "type": "africastalking",
+        "username": AFRICASTALKING_USERNAME,
+        "api_key": AFRICASTALKING_API_KEY,
+        "sender_id": AFRICASTALKING_SENDER_ID,
+    },
+]
+
+_twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
+if _twilio_sid:
+    NOTIFICATIONS_PROVIDERS.append({
+        "type": "twilio",
+        "account_sid": _twilio_sid,
+        "auth_token": os.getenv("TWILIO_AUTH_TOKEN", ""),
+        "from_number": os.getenv("TWILIO_FROM_NUMBER", ""),
+    })
+
+NOTIFICATIONS_CACHE_ALIAS = "default"
+NOTIFICATIONS_CIRCUIT_BREAKER = {"failure_threshold": 5, "recovery_timeout_seconds": 30, "half_open_max_calls": 1}
+NOTIFICATIONS_RATE_LIMIT = {"rate_per_second": 5, "capacity": 20}
+NOTIFICATIONS_IDEMPOTENCY = {"enabled": True, "ttl_seconds": 3600}
+NOTIFICATIONS_DEFAULT_REGION = "UG"
+
 # ── Payments ──────────────────────────────────────────
 PESAPAL_CONSUMER_KEY    = os.getenv('PESAPAL_CONSUMER_KEY', '')
 PESAPAL_CONSUMER_SECRET = os.getenv('PESAPAL_CONSUMER_SECRET', '')
@@ -191,9 +231,34 @@ PLATFORM_DOMAIN = os.getenv('PLATFORM_DOMAIN', 'asms.app')
 PLATFORM_ADMIN_EMAIL = os.getenv('PLATFORM_ADMIN_EMAIL', 'admin@asms.app')
 
 # ── Cache / Celery ────────────────────────────────────
+# ── Celery ────────────────────────────────────────────
+
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # Dev (use Redis in prod)
-    }
+
+from celery.schedules import crontab
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "flag-visitor-overstays": {
+        "task": "apps.visitor.tasks.flag_overstay_visitors",
+        "schedule": crontab(minute="*/15"),   "compute-network-rollups": {
+        "task": "apps.networks.tasks.compute_network_rollups",
+        "schedule": crontab(hour=0, minute=30),  # run after extract_tenant_patterns
+        },
+    },
+    "check-subscription-due": {
+        "task": "apps.platform_billing.tasks.check_subscription_due",
+        "schedule": crontab(hour=6, minute=0),
+    },
 }
+
+# Read by apps/visitor/tasks.py — hours before a visitor is flagged as overstaying
+VISITOR_OVERSTAY_THRESHOLD_HOURS = 4
+
+ASGI_APPLICATION = 'config.asgi.application'
+

@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""
+ASMS Phase 5 patch — register.html polish (found via screenshot, not
+part of any lettered phase).
+
+Two small things wrong with the plan-picker on /register/, caught only
+by actually rendering the page and looking at it rather than trusting
+the code:
+  1. Price showed as "150000" instead of "150,000" — register.html
+     predates the `commas` filter (added in 5E) and was never updated
+     to use it.
+  2. The Free Trial card showed "UGX 0/custom / by engagement" — the
+     billing-interval suffix logic assumed every plan reads sensibly as
+     "/monthly" or "/annual"; Trial's CUSTOM interval doesn't.
+
+Requires 5A through 5F already applied (needs the `commas` filter from
+5E and the register.html file from 5B to exist).
+
+Usage:
+    python phase5_register_polish_patch.py --root /path/to/asms
+"""
+import argparse
+import sys
+from pathlib import Path
+
+
+def read(path: Path) -> str:
+    return path.read_text(encoding='utf-8')
+
+
+def write(path: Path, content: str) -> None:
+    path.write_text(content, encoding='utf-8')
+
+
+def replace_file(path: Path, old: str, new: str, marker: str, label: str) -> bool:
+    if not path.exists():
+        print(f'  [SKIP] {label}: {path} does not exist')
+        return False
+    content = read(path)
+    if marker in content:
+        print(f'  [OK] {label}: already applied, skipping')
+        return False
+    if old not in content:
+        print(f'  [BLOCKED] {label}: anchor not found in {path}')
+        return False
+    write(path, content.replace(old, new, 1))
+    print(f'  [DONE] {label}: patched {path}')
+    return True
+
+
+LOAD_OLD = '<meta charset="UTF-8">'
+LOAD_NEW = '<meta charset="UTF-8">\n{% load platform_billing_extras %}'
+LOAD_MARKER = '{% load platform_billing_extras %}'
+
+PRICE_OLD = '<div class="price-tag">UGX {{ p.base_price|floatformat:0 }}<span class="fs-6 text-muted">/{{ p.get_billing_interval_display|lower }}</span></div>'
+PRICE_NEW = '<div class="price-tag">UGX {{ p.base_price|commas }}{% if p.billing_interval == \'monthly\' %}<span class="fs-6 text-muted">/month</span>{% elif p.billing_interval == \'annual\' %}<span class="fs-6 text-muted">/year</span>{% endif %}</div>'
+PRICE_MARKER = "p.base_price|commas"
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', default='.')
+    args = parser.parse_args()
+    root = Path(args.root).resolve()
+    path = root / 'templates/platform_billing/register.html'
+
+    print(f'register.html polish patch — root: {root}\n')
+    changed = []
+    changed.append(replace_file(path, LOAD_OLD, LOAD_NEW, LOAD_MARKER, 'load commas filter'))
+    changed.append(replace_file(path, PRICE_OLD, PRICE_NEW, PRICE_MARKER, 'price display fix'))
+
+    if any(changed):
+        print('\nDone. No migration needed — template-only change.')
+    else:
+        print('\nNothing to do — already applied, or the anchor has changed.')
+
+
+if __name__ == '__main__':
+    main()

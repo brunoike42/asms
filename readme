@@ -1,0 +1,94 @@
+# Visitor Module Patch — How to Apply
+
+This adds photo/ID-scan capture, a structured watchlist, host SMS
+notifications, overstay detection, and the full check-in/out/reception
+screens on top of the visitor module you already had (`Visitor`,
+`ExpectedVisitor`, `VisitorLog` — unchanged in shape, only extended).
+
+## Design notes
+
+- The watchlist (`VisitorWatchlistEntry`) and the existing `Visitor.is_flagged`
+  ban are both actually queried now, at check-in and at expected-arrival
+  confirmation (`views.get_entry_block`) — neither was wired to anything
+  before. A hit blocks the check-in unless a School Admin or Principal ticks
+  an explicit override, and the override gets written into `VisitorLog.notes`
+  so there's an audit trail without a new column.
+- Host notification (`signals.py`) fires once, on check-in only (not on the
+  later check-out update to the same row), and respects `accounts.User.notify_sms`.
+
+## File manifest
+
+### `apps/visitor/` — modifies files you already have
+| File | What changed |
+|---|---|
+| `models.py` | Added `Visitor.photo`, `Visitor.id_scan_raw`; added `VisitorWatchlistEntry` |
+| `admin.py` | Registered `VisitorWatchlistEntry` |
+| `apps.py` | Added `ready()` so `signals.py` actually loads |
+
+### `apps/visitor/` — new files
+| File | Purpose |
+|---|---|
+| `signals.py` | SMS's the host on check-in via `apps.notifications.sms.send_sms` |
+| `tasks.py` | Celery task — flips stale check-ins to `OVERSTAY` |
+| `forms.py` | `VisitorIdentityForm`, `VisitorCheckinForm`, `VisitorWatchlistEntryForm` |
+| `views.py` | Check-in/out, expected-visitor arrival, badge, muster list, watchlist management |
+| `urls.py` | `app_name = "visitor"` URL patterns |
+| `migrations/0002_visitor_watchlist_and_scan_fields.py` | Schema for the above — **hand-written, see step 3 below** |
+
+### `templates/` — modifies a file you already have
+| File | What changed |
+|---|---|
+| `base.html` | Added one "Reception" sidebar section linking to check-in (between Welfare and Finance) |
+
+### `templates/visitor/` — new files
+`checkin.html` · `checkout.html` · `checkout_confirm.html` · `expected_today.html` ·
+`expected_arrived_confirm.html` · `watchlist_list.html` · `watchlist_form.html` ·
+`badge_print.html`* · `muster_list.html`*
+
+\* standalone documents, not extending `base.html` — see "Not built yet" below.
+
+## How to apply
+
+1. **Back up `apps/visitor/` and `templates/base.html` first** — both get edited, not just added to.
+2. Copy everything under `visitor/` in this delivery into your real `apps/visitor/` (this overwrites `models.py`, `admin.py`, `apps.py`; the rest are net-new files).
+3. Regenerate the migration rather than trusting mine outright:
+   ```
+   python manage.py makemigrations apps.visitor
+   ```
+   Diff the result against `migrations/0002_visitor_watchlist_and_scan_fields.py` before running `migrate` — I wrote it without your actual project or database in front of me, the same check that would have caught the transport app's schema drift earlier in this project.
+4. Copy `templates/visitor/*.html` into your project's `templates/visitor/` directory.
+5. **Don't overwrite your real `base.html` wholesale** — I only have the copy you pasted me, and yours may have moved on since. Open `templates/base.html` from this delivery, find the "Reception" block (right after the Counselling & Welfare link), and copy just that block into your live file in the same spot.
+6. Add the URL include to your project's main `urls.py` (I don't have this file — match whatever pattern `discipline`/`counselling` already use there, likely something like):
+   ```python
+   path("visitor/", include("apps.visitor.urls")),
+   ```
+7. Add the Celery beat entry for overstay detection — the exact block is in the docstring at the top of `tasks.py`.
+8. Run `python manage.py migrate`.
+
+## Quick smoke test
+
+- [ ] `/visitor/` loads and shows the check-in form for a receptionist user
+- [ ] Checking in a new visitor generates a badge number and redirects to the badge page
+- [ ] The host (if one has `notify_sms=True` and a `phone` set) gets an SMS attempt — check the console/logs if `NOTIFICATIONS_PROVIDERS` isn't configured, since `sms.py` defaults to `ConsoleProvider` in that case
+- [ ] Adding a watchlist entry, then trying to check in someone matching it by phone/ID/name, shows the red block banner
+- [ ] A School Admin or Principal can tick the override and complete the check-in anyway; a receptionist cannot
+- [ ] Checking out a visitor removes them from `/visitor/checkout/`'s list
+- [ ] `/visitor/muster/` lists everyone currently on-site
+
+## Things to verify about the new code
+
+- `VisitorWatchlistEntry.related_student`'s `related_name="watchlist_entries"` — I don't have `students/models.py`, so confirm it doesn't collide with an existing related name there.
+- `tasks.py` uses `@shared_task`. If `transport/tasks.py` or `notifications/tasks.py` import a specific Celery `app` instance instead (e.g. `from asms.celery import app`), switch this to match.
+- `views.py`'s `RECEPTION_ROLES = ("receptionist", "school_admin", "principal")` and `MANAGEMENT_ROLES = ("school_admin", "principal")` are my call, not yours — adjust if reception should be staffed differently.
+- The migration's dependency on `('students', '0002_student_profile_verified')` — confirm that's still your latest students migration.
+
+## Pre-existing issues noticed (not fixed — not mine to touch without being asked)
+
+- `templates/base.html`: the closing `</div>` for the sidebar's `pt-1 pb-4` wrapper lands right after the "Account" section, before "Staff & Library" — that section renders outside the padded wrapper. My new "Reception" block sits clear of this, inside the correctly-wrapped area.
+- `'super_admin'` shows up as a role check in both `discipline/views.py` (`STAFF_ROLES`/`MANAGEMENT_ROLES`) and `base.html` (`request.user.role == 'super_admin'`), but it isn't a value in `accounts.User.RoleChoices` (the 12 roles are `platform_admin`, `network_admin`, `school_admin`, `principal`, `teacher`, `accountant`, `counsellor`, `librarian`, `receptionist`, `nurse`, `parent`, `student`) — those specific checks can never match anything.
+- `discipline/views.py` does `from apps.academics.models import Term` in two places, but `discipline/models.py` itself FKs to `'core.Term'`, and `Term` is actually defined in `apps/core/models.py` — that import looks like it's pointing at the wrong app.
+
+## Not built yet
+
+- **ID/MRZ scanning** — the "Scan ID" button on the check-in screen is a stub that just shows an alert. It needs wiring to whatever scanner/library you use; the decoded payload should land in the hidden `id_scan_raw` field.
+- **PDF rendering** — `badge_print.html` and `muster_list.html` are print-ready HTML (browser print button included) but not yet piped through WeasyPrint. I haven't seen the rendering helper the Report Card / Transport Card pipeline already uses for that, so `views.badge_print` / `views.muster_list_view` just render the HTML directly for now.

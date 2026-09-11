@@ -1,82 +1,70 @@
-{% extends "parent/base.html" %}
-{% block title %}Timetable — {{ student.first_name }}{% endblock %}
+﻿{% extends 'parent/base.html' %}
+{% block title %}Timetable &middot; {{ student.first_name }}{% endblock %}
 {% block content %}
-<p class="pp-stitle">
-  <i class="bi bi-clock-fill" style="color:#185FA5;margin-right:6px"></i>
-  Weekly Timetable — {{ student.first_name }} {{ student.last_name }}
-  {% if student.current_class %}
-  <span style="font-size:11px;font-weight:400;color:var(--pp-muted)">· {{ student.current_class }}</span>
-  {% endif %}
-</p>
-
-{% if student.current_class %}
-<div class="pp-card" style="overflow-x:auto">
-  <table class="pp-tbl" style="min-width:500px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+  <div style="width:34px;height:34px;border-radius:8px;background:#E6F0FB;
+              display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <i class="bi bi-clock-fill" style="color:var(--pp-accent);font-size:15px"></i>
+  </div>
+  <div>
+    <div class="pp-stitle" style="margin:0">Class Timetable</div>
+    <div style="font-size:11px;color:var(--pp-muted)">
+      {{ student.first_name }} {{ student.last_name }}
+      {% if student.current_class %}&middot; {{ student.current_class }}{% endif %}
+    </div>
+  </div>
+</div>
+{% if not student.current_class %}
+<div class="pp-alert info">
+  <i class="bi bi-info-circle-fill"></i>
+  <span>No classroom assigned yet. Timetable will appear once a class is linked to this student.</span>
+</div>
+{% else %}
+{% for day, slots in timetable_by_day.items %}
+<div class="pp-card" style="padding:0;overflow:hidden;margin-bottom:9px">
+  <div style="padding:8px 14px;background:#F4F7FB;border-bottom:0.5px solid var(--pp-border);
+              display:flex;align-items:center;gap:8px">
+    <span style="font-size:12px;font-weight:500;color:var(--pp-text)">{{ day }}</span>
+    <span style="font-size:10px;color:var(--pp-muted)">
+      {{ slots|length }} period{{ slots|length|pluralize }}
+    </span>
+  </div>
+  {% if slots %}
+  <table class="pp-tbl">
     <thead>
       <tr>
-        <th style="width:80px">Period</th>
-        {% for day in days %}<th>{{ day|slice:":3" }}</th>{% endfor %}
+        <th style="width:100px">Time</th>
+        <th>Subject</th>
+        <th>Teacher</th>
       </tr>
     </thead>
     <tbody>
-      {% for slot in time_slots %}
+      {% for slot in slots %}
       <tr>
-        <td style="font-size:10px;color:var(--pp-muted)">{{ slot }}</td>
-        {% for day in days %}
-          {% with entries=timetable_by_day|dict_get:day %}
-          <td>
-            {% for e in entries %}
-              {% if e.start_time|time:"H:i" == slot %}
-              <div class="tt-cell" style="background:#E6F0FB;color:#0C447C">
-                {{ e.class_subject.subject.name }}
-                <div style="font-size:9px;opacity:.7">
-                  {% if e.class_subject.teacher %}{{ e.class_subject.teacher.get_short_name }}{% endif %}
-                </div>
-              </div>
-              {% endif %}
-            {% endfor %}
-          </td>
-        {% endwith %}
-        {% endfor %}
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="{{ days|length|add:1 }}" style="text-align:center;padding:20px;color:var(--pp-muted)">
-          No timetable periods configured yet.
+        <td style="white-space:nowrap;font-size:11px;font-family:monospace">
+          {{ slot.start_time|time:"H:i" }}
+          {% if slot.end_time %}
+          <span style="color:var(--pp-muted)">&ndash;{{ slot.end_time|time:"H:i" }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="tt-cell" style="background:#E6F0FB;color:var(--pp-accent)">
+            {{ slot.class_subject.subject.name }}
+          </span>
+        </td>
+        <td style="font-size:11px;color:var(--pp-muted)">
+          {{ slot.class_subject.teacher|default:"&mdash;" }}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
-
-{% comment %}Fallback: flat list if no time_slots context{% endcomment %}
-{% for day in days %}
-  {% with entries=timetable_by_day|dict_get:day %}
-  {% if entries %}
-  <div class="pp-card">
-    <p class="pp-stitle" style="font-size:12px;margin-bottom:8px">{{ day }}</p>
-    <table class="pp-tbl">
-      <thead><tr><th>Time</th><th>Subject</th><th>Teacher</th></tr></thead>
-      <tbody>
-        {% for e in entries %}
-        <tr>
-          <td style="font-size:11px;color:var(--pp-muted)">{{ e.start_time|time:"H:i" }}–{{ e.end_time|time:"H:i" }}</td>
-          <td style="font-weight:500">{{ e.class_subject.subject.name }}</td>
-          <td>{% if e.class_subject.teacher %}{{ e.class_subject.teacher.get_full_name }}{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% else %}
+  <div style="padding:10px 14px;font-size:11px;color:var(--pp-muted)">
+    <i class="bi bi-dash-circle" style="margin-right:4px"></i>No periods scheduled
   </div>
   {% endif %}
-  {% endwith %}
-{% endfor %}
-
-{% else %}
-<div class="pp-alert info">
-  <i class="bi bi-info-circle-fill"></i>
-  <div>{{ student.first_name }} is not currently assigned to a class. Timetable will appear once the school registers them in a class.</div>
 </div>
+{% endfor %}
 {% endif %}
 {% endblock %}

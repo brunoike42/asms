@@ -1,0 +1,895 @@
+﻿Folder PATH listing for volume New Volume
+Volume serial number is 000000E4 B004:B063
+E:\DJANGO\ASMS\ASMS\APPS
+|   __init__.py
+|   
++---academics
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---templatetags
+|   |   |   academic_filters.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           academic_filters.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---accounts
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---admissions
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---assets
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---assignments
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---attendance
+|   |   admin.py
+|   |   apps.py
+|   |   biometric_api.py
+|   |   forms.py
+|   |   models.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   simulate_scan.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           simulate_scan.cpython-312.pyc
+|   |   |           __init__.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_biometricdevice_biometrictemplate_biometricscanlog.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_biometricdevice_biometrictemplate_biometricscanlog.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           biometric_api.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---canteen
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   signals.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   backfill_meal_accounts.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           backfill_meal_accounts.cpython-312.pyc
+|   |   |           __init__.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---communication
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   services.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           services.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---core
+|   |   admin.py
+|   |   apps.py
+|   |   context_processors.py
+|   |   forms.py
+|   |   middleware.py
+|   |   mixins.py
+|   |   models.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   seed_sample_data.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           seed_sample_data.cpython-312.pyc
+|   |   |           __init__.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---views_dir
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           context_processors.cpython-312.pyc
+|           middleware.cpython-312.pyc
+|           mixins.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---counselling
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   signals.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---discipline
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   signals.py
+|   |   urls.py
+|   |   utils.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |       seed_discipline_categories.py
+|   |   |       __init__.py
+|   |   |       
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           utils.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---emis
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   generate_emis_export.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           generate_emis_export.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---exams
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---finance
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---health
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   signals.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   backfill_health_records.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           backfill_health_records.cpython-312.pyc
+|   |   |           __init__.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---library
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---lms
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---notifications
+|   |   admin.py
+|   |   apps.py
+|   |   cache_backend.py
+|   |   circuitbreaker.py
+|   |   exceptions.py
+|   |   idempotency.py
+|   |   models.py
+|   |   phone.py
+|   |   ratelimit.py
+|   |   service.py
+|   |   settings_template.py
+|   |   sms.py
+|   |   tasks.py
+|   |   urls.py
+|   |   webhooks.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---providers
+|   |   |   africastalking.py
+|   |   |   base.py
+|   |   |   console.py
+|   |   |   twilio.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           africastalking.cpython-312.pyc
+|   |           base.cpython-312.pyc
+|   |           console.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---tests
+|   |       test_circuitbreaker.py
+|   |       test_console_provider.py
+|   |       test_idempotency.py
+|   |       test_phone.py
+|   |       test_ratelimit.py
+|   |       test_service_failover.py
+|   |       test_sms_facade.py
+|   |       __init__.py
+|   |       
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           cache_backend.cpython-312.pyc
+|           circuitbreaker.cpython-312.pyc
+|           exceptions.cpython-312.pyc
+|           idempotency.cpython-312.pyc
+|           models.cpython-312.pyc
+|           phone.cpython-312.pyc
+|           ratelimit.cpython-312.pyc
+|           service.cpython-312.pyc
+|           sms.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           webhooks.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---parent_portal
+|   |   admin.py
+|   |   apps.py
+|   |   context_processors.py
+|   |   models.py
+|   |   signals.py
+|   |   urls.py
+|   |   utils.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_parentmessage.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_parentmessage.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---templates
+|   |   \---parent
+|   |       |   base.html
+|   |       |   dashboard.html
+|   |       |   notifications.html
+|   |       |   profile.html
+|   |       |   
+|   |       \---child
+|   |               academic.html
+|   |               assignments.html
+|   |               attendance.html
+|   |               behaviour.html
+|   |               book_meeting.html
+|   |               documents.html
+|   |               fees.html
+|   |               meetings.html
+|   |               
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           context_processors.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           utils.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---payments
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   pesapal.py
+|   |   signals.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |       register_pesapal_ipn.py
+|   |   |       __init__.py
+|   |   |       
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           pesapal.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---staff_hr
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_trainingplan_trainingplanitem_staffappraisal_and_more.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_trainingplan_trainingplanitem_staffappraisal_and_more.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---students
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   models.py
+|   |   signals.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   |   __init__.py
+|   |   |   
+|   |   +---commands
+|   |   |   |   link_student_users.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           link_student_users.cpython-312.pyc
+|   |   |           __init__.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_student_profile_verified.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_student_profile_verified.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---student_portal
+|   |   admin.py
+|   |   apps.py
+|   |   forms.py
+|   |   INTEGRATION.py
+|   |   models.py
+|   |   signals.py
+|   |   urls.py
+|   |   views.py
+|   |   views.py.bak
+|   |   views.py.bak2
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0001_initial.py.bak
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---templates
+|   |   \---student_portal
+|   |       |   academic_calendar.html
+|   |       |   ai_assistant.html
+|   |       |   appeals_list.html
+|   |       |   appeal_form.html
+|   |       |   assignments.html
+|   |       |   assignment_detail.html
+|   |       |   attendance.html
+|   |       |   base.html
+|   |       |   career_guidance.html
+|   |       |   certificates.html
+|   |       |   classes.html
+|   |       |   clearance.html
+|   |       |   course_registration.html
+|   |       |   dashboard.html
+|   |       |   documents.html
+|   |       |   enrollment.html
+|   |       |   exam_permit.html
+|   |       |   excuse_absence.html
+|   |       |   fee_account.html
+|   |       |   leave_absence.html
+|   |       |   library.html
+|   |       |   meal_account.html
+|   |       |   merits.html
+|   |       |   messages.html
+|   |       |   message_detail.html
+|   |       |   noticeboard.html
+|   |       |   profile.html
+|   |       |   program_change.html
+|   |       |   quizzes.html
+|   |       |   results.html
+|   |       |   timetable.html
+|   |       |   transcript.html
+|   |       |   transport.html
+|   |       |   
+|   |       \---partials
+|   +---templatetags
+|   |   |   portal_extras.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           portal_extras.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---views
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---transport
+|   |   admin.py
+|   |   apps.py
+|   |   consumers.py
+|   |   models.py
+|   |   README_INTEGRATION.md
+|   |   routing.py
+|   |   serializers.py
+|   |   signals.py
+|   |   tasks.py
+|   |   urls.py
+|   |   views.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_rename_transport_s_tenant__6832ac_idx_transport_s_tenant__ca2010_idx_and_more.py
+|   |   |   _backfill_draft_0004.txt
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_rename_transport_s_tenant__6832ac_idx_transport_s_tenant__ca2010_idx_and_more.cpython-312.pyc
+|   |           0002_rename_transport_s_tenant__6832ac_idx_transport_s_tenant__d3e5dd_idx_and_more.cpython-312.pyc
+|   |           0003_add_missing_stop_columns.cpython-312.pyc
+|   |           0004_rename_transport_s_tenant__d3e5dd_idx_transport_s_tenant__ca2010_idx_and_more.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---templates
+|   |   \---transport
+|   |           driver_app.html
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           consumers.cpython-312.pyc
+|           models.cpython-312.pyc
+|           routing.cpython-312.pyc
+|           serializers.cpython-312.pyc
+|           signals.cpython-312.pyc
+|           tasks.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           
++---visitor
+|   |   admin.py
+|   |   apps.py
+|   |   models.py
+|   |   __init__.py
+|   |   
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           models.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---__pycache__
+|       __init__.cpython-312.pyc
+|       
+\---{core,accounts,students,academics,admissions,attendance,finance,communication}

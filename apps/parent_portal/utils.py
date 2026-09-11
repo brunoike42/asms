@@ -224,3 +224,77 @@ def create_parent_notification(parent_user, student, category, title, body,
         )
     except Exception:
         pass
+
+
+# ══════════════════════════════════════════════════════
+# PHASE 4 — Canteen / Transport / Health (parent-facing)
+# ══════════════════════════════════════════════════════
+
+def get_child_canteen_data(student):
+    """
+    Meal wallet balance + recent transaction history + this week's published menu.
+    meal_account is fetched defensively — Django's reverse one-to-one descriptor
+    raises an AttributeError subclass when missing, so getattr(..., None) is safe.
+    """
+    import datetime
+    from django.utils import timezone
+    from apps.canteen.models import WeeklyMenu
+
+    meal_account = getattr(student, 'meal_account', None)
+    transactions = []
+    if meal_account:
+        transactions = list(meal_account.transactions.select_related('menu_item')[:10])
+
+    today = timezone.now().date()
+    week_start = today - datetime.timedelta(days=today.weekday())  # Monday of current week
+    weekly_menu = WeeklyMenu.objects.filter(
+        published=True, week_start_date=week_start
+    ).prefetch_related('items')
+
+    return {
+        'meal_account': meal_account,
+        'transactions': transactions,
+        'weekly_menu': weekly_menu,
+    }
+
+
+def get_child_transport_data(student):
+    """
+    Active route/stop assignment + last known GPS ping of the assigned vehicle.
+    Vehicle is nullable on TransportRoute, and GPS is opt-in per vehicle
+    (gps_device_id), so both are checked defensively before pulling a ping.
+    """
+    assignment = student.transport_assignments.filter(
+        active=True
+    ).select_related('route', 'route__vehicle', 'pickup_stop', 'dropoff_stop').first()
+
+    vehicle = None
+    last_ping = None
+    if assignment and assignment.route and assignment.route.vehicle:
+        vehicle = assignment.route.vehicle
+        if vehicle.is_gps_enabled:
+            last_ping = vehicle.last_known_location()
+
+    return {
+        'assignment': assignment,
+        'vehicle': vehicle,
+        'last_ping': last_ping,
+    }
+
+
+def get_child_health_data(student):
+    """
+    Persistent health profile + recent nurse visits + vaccination history.
+    health_record is fetched defensively for the same reason as meal_account.
+    """
+    health_record = getattr(student, 'health_record', None)
+    recent_visits = student.nurse_visits.select_related('attended_by')[:5]
+    vaccinations = student.vaccination_records.all()
+    vaccinations_due = health_record.vaccinations_due if health_record else None
+
+    return {
+        'health_record': health_record,
+        'recent_visits': recent_visits,
+        'vaccinations': vaccinations,
+        'vaccinations_due': vaccinations_due,
+    }

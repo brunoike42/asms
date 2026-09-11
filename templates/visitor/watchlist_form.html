@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+{% block title %}Add Watchlist Entry{% endblock %}
+{% block page_title %}Add Watchlist Entry{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-section">
+        <div class="form-section-title">Restriction Details</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name</label>
+            {{ form.full_name }}
+            {{ form.full_name.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone (if known)</label>
+            {{ form.phone }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Reason</label>
+            {{ form.reason }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.related_student.label }}</label>
+            {{ form.related_student }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Detail</label>
+            {{ form.reason_detail }}
+          </div>
+          <div class="col-12 form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-shield-fill-exclamation"></i> Add to Watchlist</button>
+        <a href="{% url 'visitor:watchlist_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

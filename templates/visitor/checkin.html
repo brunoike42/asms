@@ -1,0 +1,158 @@
+{% extends "base/base.html" %}
+{% block title %}Check In Visitor{% endblock %}
+{% block page_title %}Check In Visitor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    {% if watchlist_hit %}
+    <div class="alert alert-danger">
+      <i class="bi bi-flag-fill me-1"></i>
+      <strong>{{ visitor.full_name }}</strong> matches the visitor watchlist. A reason is required to admit them.
+    </div>
+    {% endif %}
+
+    {% if not visitor and not watchlist_hit %}
+    <div class="form-section">
+      <div class="form-section-title">Known Visitor?</div>
+      <div class="input-group">
+        <input type="text" id="lookup-phone" class="form-control" placeholder="Search by phone number">
+        <button type="button" id="lookup-btn" class="btn btn-outline-secondary">
+          <i class="bi bi-search"></i> Look Up
+        </button>
+      </div>
+      <div id="lookup-results" class="mt-2"></div>
+      <div class="form-text">Skip this if it's someone reception hasn't seen before — fill in the form below instead.</div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {% if watchlist_hit %}
+        <input type="hidden" name="pending_visitor_id" value="{{ pending_visitor_id }}">
+      {% endif %}
+
+      {% if visitor %}
+      <div class="form-section">
+        <div class="form-section-title">Visitor</div>
+        <p class="mb-0">
+          <strong>{{ visitor.full_name }}</strong> — {{ visitor.get_id_type_display }}: {{ visitor.id_number|default:"no ID on file" }}
+          {% if visitor.visit_count %}<span class="text-muted">· {{ visitor.visit_count }} previous visit{{ visitor.visit_count|pluralize }}</span>{% endif %}
+        </p>
+      </div>
+      {% elif visitor_form %}
+      <div class="form-section">
+        <div class="form-section-title">Visitor Details</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name</label>
+            {{ visitor_form.full_name }}
+            {{ visitor_form.full_name.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            {{ visitor_form.phone }}
+            {{ visitor_form.phone.errors }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ID Type</label>
+            {{ visitor_form.id_type }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ID Number</label>
+            {{ visitor_form.id_number }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Photo</label>
+            {{ visitor_form.photo }}
+          </div>
+          {{ visitor_form.id_scan_raw }}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-section">
+        <div class="form-section-title">Visit Details</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Purpose</label>
+            {{ log_form.purpose }}
+            {{ log_form.purpose.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Who are they visiting? (staff)</label>
+            {{ log_form.host }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Student being visited (if applicable)</label>
+            {{ log_form.student }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Vehicle Registration</label>
+            {{ log_form.vehicle_registration }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Items Carried</label>
+            {{ log_form.items_carried }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            {{ log_form.notes }}
+          </div>
+        </div>
+      </div>
+
+      {% if watchlist_hit %}
+      <div class="form-section border border-danger">
+        <div class="form-section-title text-danger">Override Reason (Required)</div>
+        {{ override_form.override_reason }}
+        {{ override_form.override_reason.errors }}
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-door-open"></i> {% if watchlist_hit %}Confirm & Check In Anyway{% else %}Check In{% endif %}
+        </button>
+        <a href="{% url 'visitor:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var lookupBtn = document.getElementById('lookup-btn');
+  if (!lookupBtn) return;
+  var checkinKnownTemplate = "{% url 'visitor:checkin_known' visitor_pk=0 %}";
+
+  lookupBtn.addEventListener('click', function () {
+    var phone = document.getElementById('lookup-phone').value.trim();
+    if (!phone) return;
+    fetch("{% url 'visitor:visitor_lookup' %}?phone=" + encodeURIComponent(phone))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var box = document.getElementById('lookup-results');
+        box.innerHTML = '';
+        if (!data.results.length) {
+          box.innerHTML = '<div class="text-muted small">No match — use the form below for a new visitor.</div>';
+          return;
+        }
+        data.results.forEach(function (v) {
+          var a = document.createElement('a');
+          a.href = checkinKnownTemplate.replace('/0/', '/' + v.id + '/');
+          a.className = 'd-block p-2 border rounded mb-1 text-decoration-none';
+          a.innerHTML = '<strong>' + v.full_name + '</strong> — ' + v.id_type + ': ' + (v.id_number || '—') +
+            (v.is_flagged ? ' <span class="badge bg-danger ms-1">Flagged</span>' : '') +
+            '<div class="small text-muted">' + v.visit_count + ' previous visit(s)</div>';
+          box.appendChild(a);
+        });
+      });
+  });
+})();
+</script>
+{% endblock %}

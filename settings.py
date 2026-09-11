@@ -104,3 +104,9 @@ AT_SENDER_ID = os.environ.get('AT_SENDER_ID', 'ASMS')
 # File upload limits
 DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400
+
+
+"transport-daily-document-expiry-check": {
+    "task": "transport.tasks.daily_document_expiry_check",
+    "schedule": crontab(hour=6, minute=0),
+},

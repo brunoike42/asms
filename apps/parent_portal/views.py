@@ -5,6 +5,7 @@ All views require:
   1. User is authenticated
   2. User has role 'parent' (or is a guardian linked to students)
 
+
 Features benchmarked and added:
   ClassDojo    — activity feed, instant alerts, child switcher
   PowerSchool  — grade trends, teacher comments, attendance calendar
@@ -21,6 +22,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
+from apps.students.models import Student
+
 
 from .models import (
     ParentMeetingBooking, AbsenceExcuse, ParentNotification, ActivityPost,
@@ -30,8 +33,8 @@ from .utils import (
     get_parent_students, get_student_queryset, get_unread_notification_count,
     get_child_quick_stats, get_child_attendance_calendar,
     get_child_academic_summary, get_activity_feed,
+    get_child_canteen_data, get_child_transport_data, get_child_health_data,
 )
-
 
 # ──────────────────────────────────────────────────────────────────
 #  Access control
@@ -126,7 +129,7 @@ def dashboard(request):
 
     context = {
         'page_title':       'Parent Portal',
-        'children_data': children_data, 'students': children_data,
+        'children_data': children_data, 'students': students,
         'notifications':    notifications,
         'unread_count':     unread_count,
         'upcoming_meetings': upcoming_meetings,
@@ -727,11 +730,11 @@ def child_timetable(request, student_pk):
     timetable_by_day = {}
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     try:
-        from apps.academics.models import Timetable as TT
+        from apps.academics.models import TimetableSlot as TT
         for day in days:
             qs = TT.objects.filter(
                 class_subject__classroom=student.current_class,
-                day_of_week=day
+                day=day
             ).select_related(
                 'class_subject__subject', 'class_subject__teacher'
             ).order_by('start_time') if student.current_class else []
@@ -880,30 +883,36 @@ def _require_parent_access(request, student):
 def child_canteen(request, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
     _require_parent_access(request, student)
-    return render(request, "parent/child/canteen.html", {
+    context = {
         "active_section": "canteen",
         "student": student,
         "phase": 4,
-    })
+    }
+    context.update(get_child_canteen_data(student))
+    return render(request, "parent/child/canteen.html", context)
 
-# ── Health (Phase 4 placeholder) ─────────────────────────────────────────────
+# ── Health ────────────────────────────────────────────────────────────────
 @login_required
 def child_health(request, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
     _require_parent_access(request, student)
-    return render(request, "parent/child/health.html", {
+    context = {
         "active_section": "health",
         "student": student,
         "phase": 4,
-    })
+    }
+    context.update(get_child_health_data(student))
+    return render(request, "parent/child/health.html", context)
 
-# ── Transport (Phase 4 placeholder) ──────────────────────────────────────────
+# ── Transport ─────────────────────────────────────────────────────────────
 @login_required
 def child_transport(request, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
     _require_parent_access(request, student)
-    return render(request, "parent/child/transport.html", {
+    context = {
         "active_section": "transport",
         "student": student,
         "phase": 4,
-    })
+    }
+    context.update(get_child_transport_data(student))
+    return render(request, "parent/child/transport.html", context)

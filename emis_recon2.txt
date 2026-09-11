@@ -1,0 +1,267 @@
+﻿=== apps\core\models.py (full) ===
+from django.db import models
+from django.utils import timezone
+
+import contextvars
+
+_current_tenant_var: contextvars.ContextVar = contextvars.ContextVar('current_tenant', default=None)
+
+def get_current_tenant():
+    return _current_tenant_var.get()
+
+def set_current_tenant(tenant):
+    """Returns a Token -- pass it to clear_current_tenant() to restore the prior value."""
+    return _current_tenant_var.set(tenant)
+
+def clear_current_tenant(token=None):
+    if token is not None:
+        try:
+            _current_tenant_var.reset(token)
+            return
+        except ValueError:
+            pass
+    _current_tenant_var.set(None)
+
+
+# ══════════════════════════════════════════════════════
+# TENANT — The School Entity
+# ══════════════════════════════════════════════════════
+
+class Tenant(models.Model):
+    """
+    A Tenant is one school (or school network group).
+    Everything in ASMS belongs to a Tenant.
+    """
+
+    class PlanChoices(models.TextChoices):
+        TRIAL      = 'trial',        'Free Trial'
+        STARTER    = 'starter',      'Starter (≤300 students)'
+        GROWTH     = 'growth',       'Growth (≤800 students)'
+        PROFESSIONAL = 'professional', 'Professional (≤2000 students)'
+        NETWORK    = 'network',      'Network / School Group'
+        GOVERNMENT = 'government',   'Government / EMIS'
+
+    class StatusChoices(models.TextChoices):
+        ACTIVE         = 'active',         'Active'
+        TRIAL          = 'trial',          'Trial'
+        GRACE_PERIOD   = 'grace_period',   'Grace Period'
+        SUSPENDED      = 'suspended',      'Suspended'
+        CANCELLED      = 'cancelled',      'Cancelled'
+
+    class SchoolTypeChoices(models.TextChoices):
+        PRIMARY      = 'primary',     'Primary School'
+        SECONDARY    = 'secondary',   'Secondary School'
+        COMBINED     = 'combined',    'Combined (P+S)'
+        UNIVERSITY   = 'university',  'University / College'
+        VOCATIONAL   = 'vocational',  'Vocational / Technical'
+        NURSERY      = 'nursery',     'Nursery / Pre-Primary'
+
+    class EMISCountryChoices(models.TextChoices):
+        """
+        Which ministry template this school reports to. Separate from the
+        free-text `country` field below (address/display) — this one drives
+        apps.emis's exporter selection and student-registration field logic.
+        """
+        UGANDA   = 'uganda_moes',    'Uganda (MoES)'
+        KENYA    = 'kenya_moe',      'Kenya (MoE / KEMIS)'
+        RWANDA   = 'rwanda_reb',     'Rwanda (REB)'
+        TANZANIA = 'tanzania_moevt', 'Tanzania (MoEST / ESMIS)'
+
+    # Identity
+    id           = models.BigAutoField(primary_key=True)
+    name         = models.CharField(max_length=200, verbose_name='School Name')
+    slug         = models.SlugField(max_length=100, unique=True, verbose_name='Subdomain')
+    logo         = models.ImageField(upload_to='tenants/logos/', null=True, blank=True)
+    motto        = models.CharField(max_length=200, blank=True)
+
+    # Classification
+    school_type  = models.CharField(max_length=20, choices=SchoolTypeChoices.choices,
+                                    default=SchoolTypeChoices.PRIMARY)
+    country      = models.CharField(max_length=50, default='Uganda')
+    region       = models.CharField(max_length=100, blank=True)
+    district     = models.CharField(max_length=100, blank=True)
+    address      = models.TextField(blank=True)
+    phone        = models.CharField(max_length=20, blank=True)
+    email        = models.EmailField(blank=True)
+    website      = models.URLField(blank=True)
+
+    # Branding (white-label)
+    primary_color   = models.CharField(max_length=7, default='#1B3A6B')
+    secondary_color = models.CharField(max_length=7, default='#0A7B8C')
+    custom_domain   = models.CharField(max_length=200, blank=True,
+                                       help_text='Custom domain e.g. sms.stamarys.ac.ug')
+
+    # Subscription
+    plan         = models.CharField(max_length=20, choices=PlanChoices.choices,
+                                    default=PlanChoices.TRIAL)
+    status       = models.CharField(max_length=20, choices=StatusChoices.choices,
+                                    default=StatusChoices.TRIAL)
+    trial_end    = models.DateTimeField(null=True, blank=True)
+    plan_end     = models.DateTimeField(null=True, blank=True)
+
+    # EMIS / Government IDs
+    emis_code    = models.CharField(max_length=50, blank=True, verbose_name='EMIS School Code')
+    registration_number = models.CharField(max_length=100, blank=True)
+    emis_country = models.CharField(
+        max_length=20, choices=EMISCountryChoices.choices, blank=True,
+        verbose_name='EMIS Reporting Country',
+        help_text='Controls which ministry export format and registration fields apply.'
+    )
+
+    # Timestamps
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+    is_active    = models.BooleanField(default=True)
+
+    class Meta:
+        db_table   = 'core_tenant'
+        ordering   = ['name']
+        verbose_name = 'Tenant (School)'
+        verbose_name_plural = 'Tenants (Schools)'
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+    def is_on_trial(self):
+        return self.status == self.StatusChoices.TRIAL
+
+    def trial_days_remaining(self):
+        if self.trial_end:
+            delta = self.trial_end - timezone.now()
+            return max(0, delta.days)
+        return 0
+
+    def get_portal_url(self):
+        from django.conf import settings
+        return f'https://{self.slug}.{settings.PLATFORM_DOMAIN}'
+
+
+# ══════════════════════════════════════════════════════
+# ACADEMIC YEAR & TERM
+# ══════════════════════════════════════════════════════
+
+class AcademicYear(models.Model):
+    tenant      = models.ForeignKey(Tenant, on_delete=models.CASCADE,
+                                    related_name='academic_years')
+    name        = models.CharField(max_length=20, verbose_name='e.g. 2024/2025')
+    start_date  = models.DateField()
+    end_date    = models.DateField()
+    is_current  = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table            = 'core_academic_year'
+        ordering            = ['-start_date']
+        unique_together     = [('tenant', 'name')]
+        verbose_name        = 'Academic Year'
+        verbose_name_plural = 'Academic Years'
+
+    def __str__(self):
+        return f'{self.name} — {self.tenant.name}'
+
+    def save(self, *args, **kwargs):
+        # Only one current year per tenant
+        if self.is_current:
+            AcademicYear.objects.filter(
+                tenant=self.tenant, is_current=True
+            ).exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+
+class Term(models.Model):
+    class TermChoices(models.TextChoices):
+        TERM_1 = 'term_1', 'Term 1'
+        TERM_2 = 'term_2', 'Term 2'
+        TERM_3 = 'term_3', 'Term 3'
+
+    tenant        = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='terms')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='terms')
+    name          = models.CharField(max_length=20, choices=TermChoices.choices)
+    start_date    = models.DateField()
+    end_date      = models.DateField()
+    is_current    = models.BooleanField(default=False)
+
+    class Meta:
+        db_table        = 'core_term'
+        ordering        = ['academic_year', 'name']
+        unique_together = [('academic_year', 'name')]
+
+    def __str__(self):
+        return f'{self.get_name_display()} — {self.academic_year.name}'
+
+    def save(self, *args, **kwargs):
+        if self.is_current:
+            Term.objects.filter(
+                tenant=self.tenant, is_current=True
+            ).exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+
+# ══════════════════════════════════════════════════════
+# TENANT-AWARE BASE MODEL
+# ══════════════════════════════════════════════════════
+
+class TenantModel(models.Model):
+    """
+    Abstract base class for ALL models in ASMS.
+    Provides automatic tenant scoping and the TenantManager.
+    Every concrete model must inherit this.
+    """
+    tenant     = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='+',
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class TenantManager(models.Manager):
+    """Automatically filters querysets by the current request tenant."""
+    def get_queryset(self):
+        qs = super().get_queryset()
+        tenant = get_current_tenant()
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs
+
+=== repo-wide: EMISCountryChoices references (.py) ===
+
+Path                                                                       LineNumber Line                                                 
+----                                                                       ---------- ----                                                 
+E:\DJANGO\ASMS\asms\apps\core\models.py                                            58     class EMISCountryChoices(models.TextChoices):    
+E:\DJANGO\ASMS\asms\apps\core\models.py                                           105         max_length=20, choices=EMISCountryChoices....
+E:\DJANGO\ASMS\asms\apps\core\management\commands\populate_emis_country.py         15     "uganda": Tenant.EMISCountryChoices.UGANDA,      
+E:\DJANGO\ASMS\asms\apps\core\management\commands\populate_emis_country.py         16     "kenya": Tenant.EMISCountryChoices.KENYA,        
+E:\DJANGO\ASMS\asms\apps\core\management\commands\populate_emis_country.py         17     "rwanda": Tenant.EMISCountryChoices.RWANDA,      
+E:\DJANGO\ASMS\asms\apps\core\management\commands\populate_emis_country.py         18     "tanzania": Tenant.EMISCountryChoices.TANZANIA,  
+E:\DJANGO\ASMS\asms\apps\emis\models.py                                            89         max_length=20, choices=Tenant.EMISCountryC...
+E:\DJANGO\ASMS\asms\apps\emis\models.py                                            90         default=Tenant.EMISCountryChoices.UGANDA     
+
+
+
+=== repo-wide: EMISCountryChoices references (.html) ===
+
+=== config\urls.py -- emis mentions ===
+
+=== config\settings.py -- emis / INSTALLED_APPS mentions ===
+
+config\settings.py:63:    'apps.emis',
+
+
+
+=== which app owns 0002_tenant_emis_country ===
+
+FullName                                                            
+--------                                                            
+E:\DJANGO\ASMS\asms\apps\core\migrations\0002_tenant_emis_country.py
+
+
+
+=== python manage.py check (full output, errors included) ===
+System check identified no issues (0 silenced).
+System check identified no issues (0 silenced).

@@ -1,4 +1,4 @@
-"""
+﻿"""
 ASMS Student Management Module
 The Student model is the heart of the system.
 All other modules reference it.
@@ -6,7 +6,7 @@ All other modules reference it.
 
 from django.db import models
 from django.utils import timezone
-from apps.core.models import TenantModel
+from apps.core.models import TenantModel, TenantManager
 
 
 class ClassLevel(TenantModel):
@@ -22,6 +22,7 @@ class ClassLevel(TenantModel):
         ('secondary', 'Secondary / High School'),
         ('college',   'College / University'),
     ], default='primary')
+    objects = TenantManager()
 
     class Meta:
         db_table        = 'students_class_level'
@@ -48,7 +49,8 @@ class ClassRoom(TenantModel):
                                       null=True, blank=True, related_name='class_teacher_of',
                                       limit_choices_to={'role': 'teacher'})
     capacity     = models.PositiveSmallIntegerField(default=45)
-
+    objects = TenantManager()
+    
     class Meta:
         db_table        = 'students_classroom'
         ordering        = ['level__order', 'stream']
@@ -126,6 +128,11 @@ class Student(TenantModel):
         ('mother',  'Maternal Orphan'),
     ])
     is_refugee           = models.BooleanField(default=False)
+    refugee_or_pass_id    = models.CharField(
+        max_length=50, blank=True, default="",
+        verbose_name="Refugee ID / student pass number",
+        help_text="Refugee ID number or special student pass number, for refugee/asylum students.",
+    )
     receives_bursary     = models.BooleanField(default=False)
 
     # ── Medical ───────────────────────────────────────────────────
@@ -147,6 +154,7 @@ class Student(TenantModel):
     # ── Status ────────────────────────────────────────────────────
     status       = models.CharField(max_length=15, choices=StatusChoices.choices,
                                     default=StatusChoices.ACTIVE)
+    profile_verified = models.BooleanField(default=False, help_text="Admin has verified student biodata")
     admission_date = models.DateField(default=timezone.now)
     exit_date    = models.DateField(null=True, blank=True)
     exit_reason  = models.TextField(blank=True)
@@ -157,6 +165,7 @@ class Student(TenantModel):
         null=True, blank=True, related_name='student_profile',
         help_text='Portal login account for this student'
     )
+    objects = TenantManager()
 
     class Meta:
         db_table            = 'students_student'
@@ -182,6 +191,7 @@ class Student(TenantModel):
             return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         return None
 
+    @property
     def current_class(self):
         enrollment = self.enrollments.filter(is_active=True).select_related('classroom').first()
         return enrollment.classroom if enrollment else None
@@ -204,7 +214,8 @@ class Enrollment(TenantModel):
     is_repeating = models.BooleanField(default=False,
                                        help_text='True if student is repeating this class level')
     notes        = models.TextField(blank=True)
-
+    objects = TenantManager()
+    
     class Meta:
         db_table        = 'students_enrollment'
         ordering        = ['-academic_year__start_date']
@@ -254,7 +265,8 @@ class Guardian(TenantModel):
         null=True, blank=True, related_name='guardian_of',
         help_text='Portal login account for this parent'
     )
-
+    objects = TenantManager()
+    
     class Meta:
         db_table = 'students_guardian'
         ordering = ['-is_primary', 'last_name']
@@ -264,3 +276,4 @@ class Guardian(TenantModel):
 
     def get_full_name(self):
         return f'{self.first_name} {self.last_name}'
+

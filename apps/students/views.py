@@ -9,6 +9,7 @@ from apps.core.mixins import require_roles
 
 
 @login_required
+@require_roles('school_admin', 'principal', 'receptionist')
 def student_list(request):
     tenant = request.tenant
     queryset = Student.objects.filter(tenant=tenant, status='active').prefetch_related('enrollments__classroom__level')
@@ -40,11 +41,44 @@ def student_list(request):
 @login_required
 def student_detail(request, pk):
     tenant = request.tenant
-    student = get_object_or_404(Student, pk=pk, tenant=tenant)
-    enrollment = student.enrollments.filter(is_active=True).select_related(
-        'classroom__level', 'academic_year'
+    user = request.user
+
+    if user.role in (
+        'school_admin',
+        'principal',
+        'receptionist',
+    ):
+        student = get_object_or_404(
+            Student,
+            pk=pk,
+            tenant=tenant,
+        )
+
+    elif user.role == 'teacher':
+        student = get_object_or_404(
+            Student.objects.filter(
+                tenant=tenant,
+                pk=pk,
+                enrollments__is_active=True,
+                enrollments__classroom__class_teacher=user,
+            ).distinct()
+        )
+
+    else:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    enrollment = student.enrollments.filter(
+        is_active=True
+    ).select_related(
+        'classroom__level',
+        'academic_year'
     ).first()
-    guardians = student.guardians.filter(tenant=tenant)
+
+    guardians = student.guardians.filter(
+        tenant=tenant
+    )
+
     return render(request, 'students/student_detail.html', {
         'student': student,
         'enrollment': enrollment,
@@ -88,6 +122,8 @@ def student_edit(request, pk):
 
 
 @login_required
+@require_roles('school_admin', 'principal', 'teacher')
+
 def classroom_list(request):
     tenant = request.tenant
     classrooms = ClassRoom.objects.filter(tenant=tenant).select_related(

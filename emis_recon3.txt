@@ -1,0 +1,479 @@
+﻿=== apps\emis\forms.py ===
+from django import forms
+from apps.core.models import AcademicYear
+from .models import EMISSubmission, SchoolInfrastructureRecord
+
+
+class EMISExportForm(forms.Form):
+    """
+    country_template is deliberately NOT a form field â€” it's always
+    tenant.emis_country. A school should never be able to generate an
+    export in the wrong ministry's format by picking the wrong dropdown
+    option.
+    """
+    academic_year = forms.ModelChoiceField(queryset=AcademicYear.objects.none())
+
+    def __init__(self, *args, tenant=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tenant = tenant
+        if tenant is not None:
+            self.fields["academic_year"].queryset = AcademicYear.objects.filter(
+                tenant=tenant
+            ).order_by("-start_date")
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.tenant and not self.tenant.emis_country:
+            raise forms.ValidationError(
+                "This school has no EMIS reporting country set. "
+                "Set Tenant.emis_country (Django admin) before generating an export."
+            )
+        return cleaned
+
+
+class SchoolInfrastructureRecordForm(forms.ModelForm):
+    class Meta:
+        model = SchoolInfrastructureRecord
+        exclude = ["tenant", "created_at", "updated_at", "last_updated_by"]
+
+
+class SubmissionStatusForm(forms.ModelForm):
+    class Meta:
+        model = EMISSubmission
+        fields = ["status", "submission_reference", "submitted_date", "notes"]
+        widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
+
+=== apps\emis\permissions.py ===
+"""
+EMIS access control.
+
+EMIS census data (national IDs, disability, orphan/refugee status) is
+deliberately narrower than general school-admin access:
+  - school_admin / principal, via User.is_school_admin (existing property)
+  - network_admin
+are allowed. platform_admin is explicitly excluded â€” EMIS data belongs to
+the school and its network, not the platform operator. This checks
+user.is_platform_admin (not just role == 'platform_admin') because that
+property already covers is_superuser=True accounts too â€” a superuser whose
+role field happens to be something else is still a platform admin by the
+codebase's own definition, and still gets excluded here.
+
+Does NOT redefine a MANAGEMENT_ROLES tuple like discipline/views.py and
+counselling/views.py do (both contain 'super_admin' and 'vice_principal',
+neither of which exists in accounts.User.RoleChoices).
+"""
+from django.contrib.auth.views import redirect_to_login
+from django.contrib import messages
+from django.shortcuts import redirect
+
+EMIS_NETWORK_ROLES = ("network_admin",)
+
+
+def get_tenant(request):
+    return getattr(request, "tenant", None)
+
+
+def can_manage_emis(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_platform_admin:
+        return False
+    return user.is_school_admin or user.role in EMIS_NETWORK_ROLES
+
+
+# apps/emis/permissions.py â€” add this import, replace require_emis_access with this
+from django.urls import NoReverseMatch
+
+def require_emis_access(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not can_manage_emis(request.user):
+            messages.error(request, "EMIS reporting is restricted to school and network administrators.")
+            try:
+                return redirect("dashboard")
+            except NoReverseMatch:
+                return redirect("/")
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+=== apps\emis\tasks.py ===
+from celery import shared_task
+from apps.core.models import Tenant, AcademicYear
+from .exporters.registry import get_exporter
+
+
+@shared_task
+def remind_pending_census_submissions():
+    """
+    Runs daily (see CELERY_BEAT_SCHEDULE). For each active tenant with a
+    current academic year, an emis_country set, and unresolved compliance
+    issues, notify school_admin/principal users.
+
+    NOT YET WIRED: the actual send call below. This needs apps.notifications'
+    real interface (function name, args) to avoid guessing at it â€” see the
+    open question in chat. Everything else in this function is final.
+    """
+    for tenant in Tenant.objects.filter(is_active=True).exclude(emis_country=""):
+        year = AcademicYear.objects.filter(tenant=tenant, is_current=True).first()
+        if not year:
+            continue
+        exporter = get_exporter(tenant.emis_country)
+        issues = exporter.compliance_issues(tenant)
+        if not issues:
+            continue
+
+        # PENDING â€” replace with the real apps.notifications call once its
+        # interface is confirmed. Recipients: tenant's school_admin/principal
+        # users, e.g. User.objects.filter(tenant=tenant, role__in=[...]).
+        raise NotImplementedError(
+            "remind_pending_census_submissions: notification send call not "
+            "wired yet â€” needs apps.notifications' interface."
+        )
+
+=== apps\emis\exporters\base.py ===
+"""
+EMIS export base class.
+
+Each country exporter defines: headers (list[str]) and row(student, year) -> list[str].
+The compliance check is shared â€” it's about what data is missing, not how a
+given ministry wants it formatted.
+
+Note on current_class: Student has no class_group FK. Class is reached via
+the active Enrollment: student.current_class returns the ClassRoom or None.
+Always go through that property, never student.class_group.
+"""
+from apps.students.models import Student
+
+
+class BaseExporter:
+    country_template = None       # matches EMISSubmission.CountryTemplateChoices value
+    headers = []
+
+    def get_queryset(self, tenant):
+        return (
+            Student.objects
+            .filter(tenant=tenant, status="active")
+            .select_related()
+            .prefetch_related("enrollments__classroom__level")
+        )
+
+    def row(self, student, year):
+        raise NotImplementedError
+
+    def rows(self, tenant, year):
+        return [self.row(s, year) for s in self.get_queryset(tenant)]
+
+    def compliance_issues(self, tenant):
+        """
+        Shared compliance check â€” ministry-agnostic. Country-specific
+        required fields can be added by overriding this and calling super().
+        """
+        issues = []
+        students = self.get_queryset(tenant)
+
+        missing_nsin = students.filter(nsin="").count()
+        if missing_nsin:
+            issues.append(f"{missing_nsin} active student(s) missing NSIN.")
+
+        missing_gender = students.exclude(gender__in=["M", "F", "O"]).count()
+        if missing_gender:
+            issues.append(f"{missing_gender} student(s) missing gender.")
+
+        missing_dob = students.filter(date_of_birth__isnull=True).count()
+        if missing_dob:
+            issues.append(f"{missing_dob} student(s) missing date of birth.")
+
+        missing_class = [s for s in students if s.current_class is None]
+        if missing_class:
+            issues.append(f"{len(missing_class)} student(s) have no active class enrollment.")
+
+        refugees_missing_id = students.filter(is_refugee=True, refugee_or_pass_id="").count()
+        if refugees_missing_id:
+            issues.append(
+                f"{refugees_missing_id} refugee student(s) missing a refugee ID / student pass number."
+            )
+
+        return issues
+
+    @staticmethod
+    def class_label(student):
+        cc = student.current_class
+        return str(cc) if cc else ""
+
+    @staticmethod
+    def yn(value):
+        return "Yes" if value else "No"
+
+=== apps\emis\exporters\registry.py ===
+from .uganda import UgandaExporter
+from .kenya import KenyaExporter
+from .rwanda import RwandaExporter
+from .tanzania import TanzaniaExporter
+
+EXPORTERS = {
+    "uganda_moes": UgandaExporter,
+    "kenya_moe": KenyaExporter,
+    "rwanda_reb": RwandaExporter,
+    "tanzania_moevt": TanzaniaExporter,
+}
+
+
+def get_exporter(country_template):
+    try:
+        return EXPORTERS[country_template]()
+    except KeyError:
+        raise ValueError(
+            f"No exporter registered for '{country_template}'. "
+            f"Available: {', '.join(EXPORTERS)}"
+        )
+
+=== apps\emis\exporters\uganda.py ===
+from .base import BaseExporter
+
+
+class UgandaExporter(BaseExporter):
+    country_template = "uganda_moes"
+    headers = [
+        "NSIN", "NIN", "Surname", "First Name", "Other Names",
+        "Date of Birth", "Gender", "Nationality",
+        "Disability Status", "Orphan Status", "Refugee Status", "Refugee/Pass ID",
+        "Class", "Admission Number", "Enrolment Status", "Academic Year",
+    ]
+
+    def row(self, student, year):
+        return [
+            student.nsin or "",
+            getattr(student, "nin", "") or "",
+            student.last_name,
+            student.first_name,
+            student.middle_name or "",
+            student.date_of_birth.strftime("%Y-%m-%d") if student.date_of_birth else "",
+            student.gender or "",
+            student.nationality or "",
+            self.yn(student.has_disability),
+            self.yn(student.is_orphan),
+            self.yn(student.is_refugee),
+            getattr(student, "refugee_or_pass_id", "") or "",
+            self.class_label(student),
+            student.student_id or "",
+            student.status,
+            str(year),
+        ]
+
+    def compliance_issues(self, tenant):
+        # Uganda-specific addition: NIN required for students 16+, on top of shared checks.
+        issues = super().compliance_issues(tenant)
+        students = self.get_queryset(tenant)
+        missing_nin_adult = [
+            s for s in students
+            if s.age() and s.age() >= 16 and not getattr(s, "nin", "")
+        ]
+        if missing_nin_adult:
+            issues.append(f"{len(missing_nin_adult)} student(s) 16+ missing a National ID (NIN).")
+        return issues
+
+=== apps\emis\exporters\kenya.py ===
+from .base import BaseExporter
+
+
+class KenyaExporter(BaseExporter):
+    country_template = "kenya_moe"
+    headers = [
+        "UPI", "Surname", "First Name", "Middle Name",
+        "DOB", "Gender", "Nationality",
+        "Special Needs", "Class", "Admission No",
+        "Status", "Year",
+    ]
+
+    def row(self, student, year):
+        return [
+            student.nsin or "",  # UPI stored in the same field as NSIN â€” one national-ID slot per student
+            student.last_name,
+            student.first_name,
+            student.middle_name or "",
+            student.date_of_birth.strftime("%Y-%m-%d") if student.date_of_birth else "",
+            student.gender or "",
+            student.nationality or "",
+            self.yn(student.has_disability),
+            self.class_label(student),
+            student.student_id or "",
+            student.status,
+            str(year),
+        ]
+
+=== apps\emis\exporters\rwanda.py ===
+from .base import BaseExporter
+
+
+class RwandaExporter(BaseExporter):
+    country_template = "rwanda_reb"
+    headers = [
+        "Student ID", "Surname", "First Name",
+        "DOB", "Gender", "Nationality",
+        "Disability", "Class", "Status", "Academic Year",
+    ]
+
+    def row(self, student, year):
+        return [
+            student.nsin or student.student_id or "",
+            student.last_name,
+            student.first_name,
+            student.date_of_birth.strftime("%Y-%m-%d") if student.date_of_birth else "",
+            student.gender or "",
+            student.nationality or "",
+            self.yn(student.has_disability),
+            self.class_label(student),
+            student.status,
+            str(year),
+        ]
+
+=== apps\emis\exporters\tanzania.py ===
+from .base import BaseExporter
+
+
+class TanzaniaExporter(BaseExporter):
+    country_template = "tanzania_moevt"
+    headers = [
+        "Student ID", "Surname", "First Name",
+        "DOB", "Gender", "Nationality",
+        "Disability", "Orphan Status", "Class", "Status", "Academic Year",
+    ]
+
+    def row(self, student, year):
+        return [
+            student.nsin or student.student_id or "",
+            student.last_name,
+            student.first_name,
+            student.date_of_birth.strftime("%Y-%m-%d") if student.date_of_birth else "",
+            student.gender or "",
+            student.nationality or "",
+            self.yn(student.has_disability),
+            self.yn(student.is_orphan),
+            self.class_label(student),
+            student.status,
+            str(year),
+        ]
+
+=== apps\emis\management\commands\generate_emis_export.py ===
+"""
+generate_emis_export — pre-flight compliance check + Uganda MoES CSV generation.
+Usage:
+    python manage.py generate_emis_export --tenant-id 1 --year-id 2
+    python manage.py generate_emis_export --tenant-id 1 --year-id 2 --template kenya_moe
+    python manage.py generate_emis_export --tenant-id 1 --year-id 2 --output exports/uganda_2025.csv
+"""
+import csv
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
+from apps.core.models import AcademicYear, Tenant
+from apps.students.models import Student
+from apps.emis.models import EMISSubmission
+COLUMNS = {
+    "uganda_moes": [
+        "NSIN", "Surname", "First Name", "Other Names",
+        "Date of Birth", "Gender", "Nationality",
+        "Disability Status", "Orphan Status",
+        "Class", "Admission Number", "Enrolment Status", "Academic Year",
+    ],
+    "kenya_moe": [
+        "UPI", "Surname", "First Name", "Middle Name",
+        "DOB", "Gender", "Nationality",
+        "Special Needs", "Class", "Admission No",
+        "Status", "Year",
+    ],
+}
+class Command(BaseCommand):
+    help = "Run EMIS compliance check and generate a CSV census export."
+    def add_arguments(self, parser):
+        parser.add_argument("--tenant-id", type=int, required=True)
+        parser.add_argument("--year-id",   type=int, required=True)
+        parser.add_argument(
+            "--template",
+            choices=["uganda_moes", "kenya_moe", "rwanda_reb", "tanzania_moevt"],
+            default="uganda_moes",
+        )
+        parser.add_argument("--output", type=str, default="emis_export.csv")
+    def handle(self, *args, **options):
+        # ── Resolve tenant + year ────────────────────────────────────────
+        try:
+            tenant = Tenant.objects.get(pk=options["tenant_id"])
+        except Tenant.DoesNotExist:
+            raise CommandError(f"Tenant {options['tenant_id']} not found.")
+        try:
+            year = AcademicYear.objects.get(pk=options["year_id"], tenant=tenant)
+        except AcademicYear.DoesNotExist:
+            raise CommandError(f"AcademicYear {options['year_id']} not found for this tenant.")
+        template = options["template"]
+        # ── Pre-export compliance check ──────────────────────────────────
+        self.stdout.write("Running compliance check...")
+        issues = []
+        students = Student.objects.filter(tenant=tenant, status="active")
+        missing_nsin = students.filter(nsin__isnull=True).count() + \
+                       students.filter(nsin="").count()
+        if missing_nsin:
+            issues.append(
+                f"{missing_nsin} active student(s) missing NSIN — required by ministry."
+            )
+        missing_gender = students.filter(gender__isnull=True).count() + \
+                         students.filter(gender="").count()
+        if missing_gender:
+            issues.append(f"{missing_gender} student(s) missing gender field.")
+        missing_dob = students.filter(date_of_birth__isnull=True).count()
+        if missing_dob:
+            issues.append(f"{missing_dob} student(s) missing date of birth.")
+        if issues:
+            self.stdout.write(self.style.WARNING(f"{len(issues)} compliance issue(s) found:"))
+            for i, issue in enumerate(issues, 1):
+                self.stdout.write(f"   {i}. {issue}")
+            self.stdout.write(self.style.WARNING(
+                "Export will proceed — resolve issues before submitting to the ministry."
+            ))
+        else:
+            self.stdout.write(self.style.SUCCESS("Compliance check passed."))
+        # ── Generate CSV ─────────────────────────────────────────────────
+        output_path = options["output"]
+        headers = COLUMNS.get(template, COLUMNS["uganda_moes"])
+        with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(headers)
+            for student in students.select_related("class_group"):
+                row = [
+                    getattr(student, "nsin", "") or "",
+                    student.last_name,
+                    student.first_name,
+                    getattr(student, "middle_name", "") or "",
+                    student.date_of_birth.strftime("%Y-%m-%d") if student.date_of_birth else "",
+                    getattr(student, "gender", "") or "",
+                    getattr(student, "nationality", "") or "",
+                    "Yes" if getattr(student, "has_disability", False) else "No",
+                    "Yes" if getattr(student, "is_orphan", False) else "No",
+                    str(student.class_group) if getattr(student, "class_group_id", None) else "",
+                    getattr(student, "student_id", "") or "",
+                    student.status,
+                    str(year),
+                ]
+                writer.writerow(row)
+        student_count = students.count()
+        self.stdout.write(self.style.SUCCESS(
+            f"Exported {student_count} student(s) to {output_path}"
+        ))
+        # ── Record the submission event ──────────────────────────────────
+        EMISSubmission.objects.create(
+            tenant=tenant,
+            academic_year=year,
+            country_template=template,
+            file_path=output_path,
+            compliance_issues=issues,
+            status="generated",
+        )
+        self.stdout.write(self.style.SUCCESS("Submission record saved to EMIS module."))
+        if issues:
+            self.stdout.write(self.style.WARNING(
+                f"Resolve {len(issues)} issue(s) before submitting the file to the ministry."
+            ))
+
+=== sidebar: EMIS nav link check (templates\base\base.html) ===
+
+=== emis app migration status (isolated) ===

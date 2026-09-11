@@ -10,6 +10,13 @@ from apps.students.models import Student, ClassRoom
 from apps.core.models import AcademicYear, Term
 from apps.accounts.models import User
 from apps.students.models import ClassRoom, Enrollment
+from apps.emis.permissions import can_manage_emis
+import json as _json
+
+
+# edits
+from django.core.exceptions import PermissionDenied
+from functools import wraps
 
 
 # Roles that own the main admin/principal dashboard
@@ -19,6 +26,18 @@ _ADMIN_ROLES = {
     User.RoleChoices.SCHOOL_ADMIN,
     User.RoleChoices.PRINCIPAL,
 }
+
+#edits
+def role_required(*allowed_roles):
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapped(request, *args, **kwargs):
+            if request.user.role not in allowed_roles:
+                raise PermissionDenied
+            return view_func(request, *args, **kwargs)
+        return wrapped
+    return decorator
 
 
 def _base_ctx(request):
@@ -39,17 +58,15 @@ def _base_ctx(request):
 
 # ── Admin / Principal Dashboard ────────────────────────────────────────────────
 
-@login_required
+@role_required(
+    User.RoleChoices.PLATFORM_ADMIN,
+    User.RoleChoices.NETWORK_ADMIN,
+    User.RoleChoices.SCHOOL_ADMIN,
+    User.RoleChoices.PRINCIPAL,
+)
 def dashboard(request):
-    """
-    School Admin dashboard — EMIS-inspired with gender breakdown,
-    class enrollment chart, staff stats, fees, at-risk, and activity feed.
-    """
-    from django.db import models as _m
-    import json as _json
-
-    user    = request.user
-    tenant  = getattr(request, 'tenant', None)
+    user = request.user
+    tenant = getattr(request, 'tenant', None)
 
     def tqs(qs):
         """Filter queryset by tenant if tenant middleware is active."""
@@ -214,6 +231,8 @@ def dashboard(request):
 
     context = {
         'title':              'Dashboard',
+        
+        'can_manage_emis':    can_manage_emis(user),
         # Students
         'total_students':     total_students,
         'male_students':      male_students,
@@ -348,7 +367,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 # ── TEACHER DASHBOARD ────────────────────────────────────────────────────
-@login_required
+@role_required(User.RoleChoices.TEACHER)
 def teacher_dashboard(request):
     from apps.academics.models import ClassSubject
     from apps.assignments.models import Assignment, AssignmentSubmission
@@ -409,7 +428,10 @@ def teacher_dashboard(request):
 
 
 # ── ACCOUNTANT / FINANCE DASHBOARD ───────────────────────────────────────
-@login_required
+@role_required(
+    User.RoleChoices.SCHOOL_ADMIN,
+    User.RoleChoices.ACCOUNTANT,
+)
 def finance_dashboard(request):
     from django.db.models import Sum
     try:
@@ -450,7 +472,10 @@ def finance_dashboard(request):
 
 
 # ── COUNSELLOR / WELFARE DASHBOARD ───────────────────────────────────────
-@login_required
+@role_required(
+    User.RoleChoices.PRINCIPAL,
+    User.RoleChoices.COUNSELLOR,
+)
 def welfare_dashboard(request):
     try:
         from apps.students.models import Student
@@ -484,10 +509,10 @@ def welfare_dashboard(request):
     ).filter(cnt__gte=6)
 
     at_risk_students = Student.objects.filter(
-        pk__in=[x['student_id'] for x in low_attendance],
-        status='active'
-    ).select_related('current_class')[:20]
-
+    pk__in=[x['student_id'] for x in low_attendance],
+    status='active'
+)[:20]
+    
     return render(request, 'dashboard/welfare.html', {
         'recent_absences':   recent_absences,
         'arrears_30':        arrears_30,
@@ -497,7 +522,7 @@ def welfare_dashboard(request):
 
 
 # ── LIBRARIAN DASHBOARD ──────────────────────────────────────────────────
-@login_required
+@role_required(User.RoleChoices.LIBRARIAN)
 def library_dashboard(request):
     from apps.library.models import Book, BorrowRecord, BookCategory
 
@@ -535,7 +560,9 @@ def library_dashboard(request):
 
 
 # ── PRINCIPAL DASHBOARD ──────────────────────────────────────────────────
-@login_required
+@role_required(
+    User.RoleChoices.PRINCIPAL,
+)
 def principal_dashboard(request):
     from django.db.models import Avg
     from apps.exams.models import TermReport, Exam
@@ -586,4 +613,43 @@ def principal_dashboard(request):
         'outstanding':      outstanding,
         'recent_reports':   recent_reports,
         'unpublished_exams':unpublished_exams,
+    })
+    
+  # ── VISITOR DASHBOARD ─────────────────────────────────────────────────
+@role_required(User.RoleChoices.RECEPTIONIST)
+def visitor_dashboard(request):
+    from django.conf import settings
+    from apps.visitor.models import Visitor, VisitorLog, ExpectedVisitor, VisitorWatchlistEntry
+
+    today = timezone.now().date()
+    now = timezone.now()
+    threshold = timedelta(hours=getattr(settings, 'VISITOR_OVERSTAY_THRESHOLD_HOURS', 4))
+
+    on_site = list(
+        VisitorLog.objects.filter(check_out_time__isnull=True)
+        .select_related('visitor', 'host')
+        .order_by('check_in_time')
+    )
+
+    overstay_count = 0
+    for log in on_site:
+        log.is_overstay = (now - log.check_in_time) > threshold
+        if log.is_overstay:
+            overstay_count += 1
+
+    expected_today = ExpectedVisitor.objects.filter(
+        expected_date=today, status=ExpectedVisitor.StatusChoices.PENDING
+    ).select_related('student').order_by('expected_time_from')
+
+    stats = {
+        'on_site_now':      len(on_site),
+        'overstay':         overstay_count,
+        'expected_today':   expected_today.count(),
+        'watchlist_active': VisitorWatchlistEntry.objects.filter(is_active=True).count(),
+    }
+
+    return render(request, 'dashboard/visitor.html', {
+        'stats':          stats,
+        'on_site':        on_site,
+        'expected_today': expected_today,
     })

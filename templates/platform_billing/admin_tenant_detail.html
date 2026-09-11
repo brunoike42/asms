@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+{% load platform_billing_extras %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ page_title }} — ASMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>body { background: #f4f6f9; } .asms-hero { background: #1B3A6B; color: #fff; }</style>
+</head>
+<body>
+
+<div class="asms-hero py-4 mb-4">
+  <div class="container d-flex justify-content-between align-items-center">
+    <h1 class="h4 mb-0">{{ tenant.name }}</h1>
+    <a href="{% url 'platform_admin:tenant_list' %}" class="btn btn-sm btn-outline-light">Back to tenants</a>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><p class="text-muted small mb-1">Plan</p><p class="mb-0">{{ tenant.plan }}</p></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><p class="text-muted small mb-1">Status</p><p class="mb-0">{{ tenant.get_status_display }}</p></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><p class="text-muted small mb-1">Billing method</p><p class="mb-0">{{ tenant.get_billing_method_display|default:"Not set" }}</p></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><p class="text-muted small mb-1">Discount</p><p class="mb-0">{{ tenant.discount_percent }}%</p></div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6">Extend trial</h2>
+          <form method="post" action="{% url 'platform_admin:tenant_extend_trial' pk=tenant.pk %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input type="number" name="days" value="7" min="1" max="90" class="form-control form-control-sm" style="width:80px">
+            <button type="submit" class="btn btn-sm btn-secondary">Extend (days)</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6">Change plan</h2>
+          <form method="post" action="{% url 'platform_admin:tenant_change_plan' pk=tenant.pk %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <select name="plan" class="form-select form-select-sm">
+              {% for p in plans %}<option value="{{ p.slug }}" {% if p.slug == tenant.plan %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-secondary">Change</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6">Apply discount</h2>
+          <form method="post" action="{% url 'platform_admin:tenant_apply_discount' pk=tenant.pk %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input type="number" name="discount_percent" value="{{ tenant.discount_percent }}" min="0" max="100" class="form-control form-control-sm" style="width:80px">
+            <span class="align-self-center">%</span>
+            <button type="submit" class="btn btn-sm btn-secondary">Set</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6">Feature flags</h2>
+          {% for flag in flags %}
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span>{{ flag.module_name }} — {% if flag.enabled %}<span class="text-success">on</span>{% else %}<span class="text-danger">off</span>{% endif %}</span>
+            <form method="post" action="{% url 'platform_admin:tenant_toggle_feature' pk=tenant.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="module_name" value="{{ flag.module_name }}">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Toggle</button>
+            </form>
+          </div>
+          {% endfor %}
+          <form method="post" action="{% url 'platform_admin:tenant_toggle_feature' pk=tenant.pk %}" class="d-flex gap-2 mt-2">
+            {% csrf_token %}
+            <input type="text" name="module_name" placeholder="module name" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-sm btn-secondary">Add / toggle</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6">Recent invoices</h2>
+          <table class="table table-sm">
+            <thead><tr><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for invoice in invoices %}
+              <tr><td>{{ invoice.invoice_number }}</td><td>UGX {{ invoice.amount|commas }}</td><td>{{ invoice.get_status_display }}</td></tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-muted">No invoices yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

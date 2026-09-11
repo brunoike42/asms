@@ -8,6 +8,123 @@ from django.db import models
 from django.utils import timezone
 from apps.core.models import TenantModel
 
+import secrets
+
+
+class BiometricDevice(TenantModel):
+    """
+    One row per physical fingerprint/biometric device deployed at a school.
+    A tenant can have multiple devices (one per gate, per classroom block, etc).
+    The secret_key is used to verify HMAC-SHA256 signed requests from the device
+    (or from the middleware/agent software running the device, e.g. ZKTeco SDK bridge).
+    """
+    class DeviceType(models.TextChoices):
+        ZKTECO   = 'ZKTECO', 'ZKTeco'
+        SUPREMA  = 'SUPREMA', 'Suprema'
+        ANVIZ    = 'ANVIZ', 'Anviz'
+        OTHER    = 'OTHER', 'Other / Generic'
+
+    class DeviceStatus(models.TextChoices):
+        ACTIVE      = 'ACTIVE', 'Active'
+        INACTIVE    = 'INACTIVE', 'Inactive'
+        MAINTENANCE = 'MAINTENANCE', 'Under Maintenance'
+
+    name          = models.CharField(max_length=100)
+    device_type   = models.CharField(max_length=20, choices=DeviceType.choices,
+                                     default=DeviceType.OTHER)
+    serial_number = models.CharField(max_length=100, blank=True)
+    location      = models.CharField(max_length=150, blank=True,
+                                     help_text='e.g. "Main Gate", "Block A Entrance"')
+    classroom     = models.ForeignKey('students.ClassRoom', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='biometric_devices')
+    secret_key    = models.CharField(max_length=64, editable=False)
+    status        = models.CharField(max_length=20, choices=DeviceStatus.choices,
+                                     default=DeviceStatus.ACTIVE)
+    last_seen_at  = models.DateTimeField(null=True, blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table     = 'biometric_device'
+        verbose_name = 'Biometric Device'
+
+    def __str__(self):
+        return f'{self.name} ({self.get_device_type_display()})'
+
+    def save(self, *args, **kwargs):
+        if not self.secret_key:
+            self.secret_key = secrets.token_hex(32)  # 64-char hex secret
+        super().save(*args, **kwargs)
+
+    def mark_seen(self):
+        self.last_seen_at = timezone.now()
+        self.save(update_fields=['last_seen_at'])
+
+
+class BiometricTemplate(TenantModel):
+    """
+    Maps a student to their enrolled fingerprint template ID on a specific device
+    (or a device-agnostic template ID if your SDK issues global IDs).
+    A student may be enrolled on multiple devices (e.g. main gate + classroom block).
+    """
+    student        = models.ForeignKey('students.Student', on_delete=models.CASCADE,
+                                       related_name='biometric_templates')
+    device         = models.ForeignKey(BiometricDevice, on_delete=models.CASCADE,
+                                       related_name='templates')
+    template_id    = models.CharField(max_length=100,
+                                      help_text='Fingerprint/template ID as issued by the device SDK')
+    enrolled_at    = models.DateTimeField(auto_now_add=True)
+    is_active      = models.BooleanField(default=True)
+
+    class Meta:
+        db_table        = 'biometric_template'
+        unique_together = [('device', 'template_id')]
+        verbose_name    = 'Biometric Template'
+
+    def __str__(self):
+        return f'{self.student} on {self.device}'
+
+
+class BiometricScanLog(TenantModel):
+    """
+    Immutable audit log of every raw scan event received from a device.
+    Retained for 2 years per Section 16.3 (Audit Logs — Biometric audit).
+    This is separate from AttendanceRecord: a scan log entry is written for
+    EVERY scan received, even duplicates, failed matches, or out-of-window scans.
+    AttendanceRecord is the derived/processed result.
+    """
+    class ScanResult(models.TextChoices):
+        MATCHED       = 'MATCHED', 'Matched — Attendance Recorded'
+        DUPLICATE     = 'DUPLICATE', 'Duplicate Scan (already marked today)'
+        UNKNOWN       = 'UNKNOWN', 'Unknown Template ID'
+        OUT_OF_WINDOW = 'OUT_OF_WINDOW', 'Outside Attendance Window'
+        INVALID_SIG   = 'INVALID_SIG', 'Invalid Signature — Rejected'
+
+    device          = models.ForeignKey(BiometricDevice, on_delete=models.CASCADE,
+                                        related_name='scan_logs')
+    student         = models.ForeignKey('students.Student', on_delete=models.SET_NULL,
+                                        null=True, blank=True, related_name='biometric_scans')
+    template_id_raw = models.CharField(max_length=100, blank=True)
+    scanned_at      = models.DateTimeField(help_text='Timestamp reported by the device')
+    received_at     = models.DateTimeField(auto_now_add=True, help_text='When ASMS received it')
+    result          = models.CharField(max_length=20, choices=ScanResult.choices)
+    attendance_record = models.ForeignKey('AttendanceRecord', on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name='biometric_scans')
+    raw_payload     = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table     = 'biometric_scan_log'
+        ordering     = ['-received_at']
+        verbose_name = 'Biometric Scan Log'
+        indexes = [
+            models.Index(fields=['device', 'received_at']),
+            models.Index(fields=['student', 'scanned_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.device} â€” {self.get_result_display()} â€” {self.received_at}'
+
+
+
 
 class AttendanceRecord(TenantModel):
     """

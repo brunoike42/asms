@@ -1,0 +1,87 @@
+﻿"""
+ASMS TenantMiddleware
+Resolves the current tenant from the request subdomain or session.
+Sets request.tenant on every request — used by all views and managers.
+"""
+
+from django.conf import settings
+from django.http import Http404
+from apps.core.models import Tenant, set_current_tenant, clear_current_tenant
+
+
+class TenantMiddleware:
+    """
+    Reads the subdomain from the request host and resolves it to a Tenant.
+    Sets request.tenant so all views and managers can filter by it.
+
+    Examples:
+        stamarys.asms.app  → slug='stamarys'
+        localhost:8000     → uses first active tenant (dev mode)
+        127.0.0.1:8000     → uses first active tenant (dev mode)
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.tenant = self._resolve_tenant(request)
+        token = set_current_tenant(request.tenant)
+        try:
+            response = self.get_response(request)
+        finally:
+            clear_current_tenant(token)
+        return response
+
+    def _resolve_tenant(self, request):
+        host = request.get_host().split(':')[0].lower()
+        platform_domain = getattr(settings, 'PLATFORM_DOMAIN', 'asms.app')
+
+        # ── Development: localhost or IP — use session or first tenant ──
+        if host in ('localhost', '127.0.0.1', 'testserver'):
+            return self._dev_tenant(request)
+
+        # ── Custom domain check ──────────────────────────────────────────
+        try:
+            tenant = Tenant.objects.get(custom_domain=host, is_active=True)
+            return tenant
+        except Tenant.DoesNotExist:
+            pass
+
+        # ── Subdomain resolution ─────────────────────────────────────────
+        if host.endswith(f'.{platform_domain}'):
+            slug = host.replace(f'.{platform_domain}', '')
+            try:
+                return Tenant.objects.get(slug=slug, is_active=True)
+            except Tenant.DoesNotExist:
+                return None
+
+        return None
+
+    def _dev_tenant(self, request):
+        """In development, use tenant stored in session or the first available."""
+        tenant_id = request.session.get('dev_tenant_id')
+        if tenant_id:
+            try:
+                return Tenant.objects.get(pk=tenant_id, is_active=True)
+            except Tenant.DoesNotExist:
+                pass
+        return Tenant.objects.filter(is_active=True).first()
+    
+    
+    from apps.core.models import Tenant, set_current_tenant, clear_current_tenant
+
+
+class TenantMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.tenant = self._resolve_tenant(request)
+        token = set_current_tenant(request.tenant)
+        try:
+            response = self.get_response(request)
+        finally:
+            clear_current_tenant(token)
+        return response
+
+    # _resolve_tenant / _dev_tenant unchanged

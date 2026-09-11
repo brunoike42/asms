@@ -1,0 +1,55 @@
+{% extends "base/base.html" %}
+{% block title %}Pre-Register a Visitor{% endblock %}
+{% block page_title %}Pre-Register a Visitor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-section">
+        <div class="form-section-title">Expected Visit</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Visitor Name</label>
+            {{ form.visitor_name }}
+            {{ form.visitor_name.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            {{ form.visitor_phone }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">ID Number (if known)</label>
+            {{ form.visitor_id_number }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Visiting Student (if applicable)</label>
+            {{ form.student }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Date</label>
+            {{ form.expected_date }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">From</label>
+            {{ form.expected_time_from }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">To</label>
+            {{ form.expected_time_to }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Purpose</label>
+            {{ form.purpose }}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Pre-Register</button>
+        <a href="{% url 'visitor:expected_today' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

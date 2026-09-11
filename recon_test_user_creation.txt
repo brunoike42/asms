@@ -1,0 +1,7 @@
+﻿
+===== FILES REFERENCING admin@stamarys.ac.ug =====
+
+===== FILES CALLING create_superuser =====
+E:\DJANGO\ASMS\asms\apps\accounts\models.py:23: def create_superuser(self, email, password=None, **extra_fields):
+E:\DJANGO\ASMS\asms\venv\Lib\site-packages\django\contrib\auth\management\commands\createsuperuser.py:233: self.UserModel._default_manager.db_manager(database).create_superuser(
+E:\DJANGO\ASMS\asms\venv\Lib\site-packages\django\contrib\auth\models.py:163: def create_superuser(self, username, email=None, password=None, **extra_fields):

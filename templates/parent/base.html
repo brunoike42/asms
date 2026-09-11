@@ -366,10 +366,7 @@
      class="pp-nav-lnk {% if 'timetable' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-clock-fill"></i> Timetable
   </a>
-  <a href="{% url 'parent:child_library' student_pk=nav_s.pk %}"
-     class="pp-nav-lnk {% if 'library' in request.resolver_match.url_name %}active{% endif %}">
-    <i class="bi bi-book-fill"></i> Library
-  </a>
+
   <a href="{% url 'parent:child_behaviour' student_pk=nav_s.pk %}"
      class="pp-nav-lnk {% if 'behav' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-shield-fill"></i> Behaviour
@@ -406,20 +403,17 @@
     <p class="al">ACI insight</p>
     <p class="at">"Parents who check this portal weekly see 40% better outcomes in East African schools."</p>
   </div>
-  {# ── Canteen (Phase 4) ── #}
+
+  {# -- Services -- #}
   {% if nav_s %}
   <div class="pp-nav-grp">Services</div>
-  <a href="{% url 'parent:child_canteen' nav_s.pk %}"
-     class="pp-nav-link{% if active_section == 'canteen' %} active{% endif %}">
-    <i class="bi bi-cup-straw"></i> Canteen
+  <a href="{% url 'parent:child_health' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'health' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-heart-pulse-fill"></i> Health
   </a>
-  <a href="{% url 'parent:child_health' nav_s.pk %}"
-     class="pp-nav-link{% if active_section == 'health' %} active{% endif %}">
-    <i class="bi bi-heart-pulse"></i> Health
-  </a>
-  <a href="{% url 'parent:child_transport' nav_s.pk %}"
-     class="pp-nav-link{% if active_section == 'transport' %} active{% endif %}">
-    <i class="bi bi-bus-front"></i> Transport
+  <a href="{% url 'parent:child_transport' student_pk=nav_s.pk %}"
+     class="pp-nav-lnk {% if 'transport' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-bus-front-fill"></i> Transport
   </a>
   {% endif %}
 </nav>

@@ -164,6 +164,8 @@ class PesaPalClient:
         billing_phone: str = '',
         billing_country: str = 'UG',
         branch: str = '',
+        account_number: str = '',
+        subscription_details: dict = None,
     ) -> dict:
         """
         Submit a payment order to PesaPal.
@@ -175,6 +177,13 @@ class PesaPalClient:
 
         The parent visits redirect_url, chooses MTN/Airtel/Card,
         and for mobile money receives a USSD STK push on their phone.
+
+        account_number / subscription_details (Phase 5C, both optional):
+        pass both together to enroll the payer in PesaPal's card auto-debit
+        instead of a one-time charge — subscription_details needs
+        start_date/end_date ('%d-%m-%Y') and frequency
+        (DAILY/WEEKLY/MONTHLY/YEARLY). Only meaningful for card; PesaPal
+        documents this as a card mechanism, not mobile money.
         """
         if not self.ipn_id:
             raise PesaPalError(
@@ -207,6 +216,11 @@ class PesaPalClient:
                 'zip_code':      '',
             },
         }
+
+        if account_number:
+            payload['account_number'] = account_number
+        if subscription_details:
+            payload['subscription_details'] = subscription_details
 
         logger.info(f'Submitting PesaPal order: ref={merchant_reference} amount={amount} {currency}')
         try:

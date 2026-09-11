@@ -1,12 +1,26 @@
-"""
-ASMS Core — Multi-Tenant Foundation
-Every model in the system inherits from TenantModel.
-The Tenant IS the school (or school network).
-"""
-
-import uuid
-from django.db import models
+﻿from django.db import models
 from django.utils import timezone
+from django.conf import settings
+
+import contextvars
+
+_current_tenant_var: contextvars.ContextVar = contextvars.ContextVar('current_tenant', default=None)
+
+def get_current_tenant():
+    return _current_tenant_var.get()
+
+def set_current_tenant(tenant):
+    """Returns a Token -- pass it to clear_current_tenant() to restore the prior value."""
+    return _current_tenant_var.set(tenant)
+
+def clear_current_tenant(token=None):
+    if token is not None:
+        try:
+            _current_tenant_var.reset(token)
+            return
+        except ValueError:
+            pass
+    _current_tenant_var.set(None)
 
 
 # ══════════════════════════════════════════════════════
@@ -18,7 +32,11 @@ class Tenant(models.Model):
     A Tenant is one school (or school network group).
     Everything in ASMS belongs to a Tenant.
     """
-
+    network = models.ForeignKey(
+           "networks.Network", null=True, blank=True,
+           on_delete=models.SET_NULL, related_name="schools",
+    )
+    
     class PlanChoices(models.TextChoices):
         TRIAL      = 'trial',        'Free Trial'
         STARTER    = 'starter',      'Starter (≤300 students)'
@@ -41,6 +59,17 @@ class Tenant(models.Model):
         UNIVERSITY   = 'university',  'University / College'
         VOCATIONAL   = 'vocational',  'Vocational / Technical'
         NURSERY      = 'nursery',     'Nursery / Pre-Primary'
+
+    class EMISCountryChoices(models.TextChoices):
+        """
+        Which ministry template this school reports to. Separate from the
+        free-text `country` field below (address/display) — this one drives
+        apps.emis's exporter selection and student-registration field logic.
+        """
+        UGANDA   = 'uganda_moes',    'Uganda (MoES)'
+        KENYA    = 'kenya_moe',      'Kenya (MoE / KEMIS)'
+        RWANDA   = 'rwanda_reb',     'Rwanda (REB)'
+        TANZANIA = 'tanzania_moevt', 'Tanzania (MoEST / ESMIS)'
 
     # Identity
     id           = models.BigAutoField(primary_key=True)
@@ -74,9 +103,42 @@ class Tenant(models.Model):
     trial_end    = models.DateTimeField(null=True, blank=True)
     plan_end     = models.DateTimeField(null=True, blank=True)
 
+    # Phase 5 — lifecycle timestamps (Section 5.2 / Appendix D.7)
+    # grace_started_at / suspended_at let the daily Celery task compute exact
+    # day-counts instead of re-deriving them from plan_end each run.
+    grace_started_at = models.DateTimeField(null=True, blank=True)
+    suspended_at     = models.DateTimeField(null=True, blank=True)
+
+    class BillingMethodChoices(models.TextChoices):
+        PESAPAL_CARD  = 'pesapal_card', 'Card (PesaPal, auto-renews)'
+        MTN_MOMO      = 'mtn_momo',     'MTN Mobile Money (renewal prompt)'
+        AIRTEL_MONEY  = 'airtel',       'Airtel Money (renewal prompt)'
+        BANK_TRANSFER = 'bank',         'Bank Transfer (manual)'
+        MANUAL        = 'manual',       'Manual / Platform Admin'
+
+    billing_method = models.CharField(
+        max_length=20, choices=BillingMethodChoices.choices, blank=True,
+        help_text='Which rail this tenant renews through — decides whether the '
+                   'daily billing task attempts a silent charge or sends a prompt.'
+    )
+    deletion_warning_sent_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Set once, the first time the 60-day suspension deletion warning '
+                   'goes out — stops the daily sweep re-sending it every day after.'
+    )
+    discount_percent = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='Manual discount (0-100) applied by a platform admin — Section 5.4.'
+    )
+
     # EMIS / Government IDs
     emis_code    = models.CharField(max_length=50, blank=True, verbose_name='EMIS School Code')
     registration_number = models.CharField(max_length=100, blank=True)
+    emis_country = models.CharField(
+        max_length=20, choices=EMISCountryChoices.choices, blank=True,
+        verbose_name='EMIS Reporting Country',
+        help_text='Controls which ministry export format and registration fields apply.'
+    )
 
     # Timestamps
     created_at   = models.DateTimeField(auto_now_add=True)
@@ -189,17 +251,6 @@ class TenantModel(models.Model):
     class Meta:
         abstract = True
 
-# ── Phase 2 compatibility additions ─────────────────────────────────────
-import threading as _threading
-
-_thread_locals = _threading.local()
-
-def get_current_tenant():
-    return getattr(_thread_locals, 'tenant', None)
-
-def set_current_tenant(tenant):
-    _thread_locals.tenant = tenant
-
 
 class TenantManager(models.Manager):
     """Automatically filters querysets by the current request tenant."""
@@ -211,3 +262,17 @@ class TenantManager(models.Manager):
         return qs
 
 
+class AllObjectsManager(models.Manager):
+    """
+    Explicit cross-tenant manager — bypasses the current-tenant filter.
+    For platform-admin views only (e.g. the Platform Owner Admin Portal).
+    Mirrors the manager already defined locally in apps/student_portal/models.py;
+    this is the canonical copy other apps should import going forward.
+    """
+    def get_queryset(self):
+        return super().get_queryset()
+
+class Staff(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    role = models.CharField(max_length=50, default="TEACHER")

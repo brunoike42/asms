@@ -1,0 +1,25 @@
+
+
+# transport/migrations/0004_backfill_stop_columns.py — don't run yet
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('transport', '0003_add_missing_stop_columns'),
+    ]
+
+    operations = [
+        migrations.RunSQL(
+            sql="""
+                UPDATE transport_student_assignment
+                SET pickup_stop_id = stop_id, dropoff_stop_id = stop_id
+                WHERE stop_id IS NOT NULL;
+            """,
+            reverse_sql="""
+                UPDATE transport_student_assignment
+                SET pickup_stop_id = NULL, dropoff_stop_id = NULL;
+            """,
+        ),
+    ]

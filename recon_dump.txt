@@ -1,0 +1,81 @@
+﻿===== 1: permission decorators / get_tenant =====
+
+apps\counselling\views.py:19:MANAGEMENT_ROLES = ('principal', 'school_admin', 'super_admin', 'vice_principal')
+apps\counselling\views.py:22:def get_tenant(request):
+apps\counselling\views.py:26:def require_counsellor_access(view_func):
+apps\counselling\views.py:40:def require_management(view_func):
+apps\discipline\views.py:36:MANAGEMENT_ROLES = ('principal', 'school_admin', 'super_admin', 'vice_principal')
+apps\discipline\views.py:39:def get_tenant(request):
+apps\discipline\views.py:59:def require_management(view_func):
+apps\parent_portal\views.py:57:def get_tenant(request):
+apps\payments\views.py:33:def get_tenant(request):
+
+
+===== 2: apps\counselling\urls.py =====
+from django.urls import path
+from . import views
+
+app_name = 'counselling'
+
+urlpatterns = [
+    # Dashboard
+    path('', views.dashboard, name='dashboard'),
+    path('at-risk/', views.at_risk_dashboard, name='at_risk_dashboard'),
+
+    # Welfare Cases
+    path('cases/', views.case_list, name='case_list'),
+    path('cases/new/', views.case_create, name='case_create'),
+    path('cases/<int:pk>/', views.case_detail, name='case_detail'),
+    path('cases/<int:pk>/update/', views.update_case, name='update_case'),
+    path('cases/<int:pk>/resolve/', views.resolve_case, name='resolve_case'),
+    path('cases/<int:pk>/escalate/', views.escalate_case, name='escalate_case'),
+    path('cases/<int:pk>/principal-response/', views.principal_response, name='principal_response'),
+
+    # Sessions & Actions
+    path('cases/<int:pk>/sessions/add/', views.add_session, name='add_session'),
+    path('cases/<int:pk>/actions/add/', views.add_action, name='add_action'),
+    path('cases/<int:pk>/referrals/add/', views.add_referral, name='add_referral'),
+
+    # Bursary
+    path('cases/<int:pk>/bursary/create/', views.create_bursary, name='create_bursary'),
+    path('cases/<int:pk>/bursary/<int:bursary_pk>/approve/', views.approve_bursary, name='approve_bursary'),
+
+    # Student welfare history
+    path('students/<int:student_pk>/welfare/', views.student_welfare_history, name='student_welfare_history'),
+]
+===== 3: config\urls.py =====
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.shortcuts import redirect
+from apps.attendance.biometric_api import BiometricScanView
+
+urlpatterns = [
+    path('admin/',         admin.site.urls),
+    path('accounts/',      include('apps.accounts.urls',      namespace='accounts')),
+    path('students/',      include('apps.students.urls',      namespace='students')),
+    path('admissions/',    include('apps.admissions.urls',    namespace='admissions')),
+    path('attendance/',    include('apps.attendance.urls',    namespace='attendance')),
+    path('finance/',       include('apps.finance.urls',       namespace='finance')),
+    path('communication/', include('apps.communication.urls', namespace='communication')),
+   path('dashboard/',     include('apps.core.urls',          namespace='core')),
+    path('academics/', include('apps.academics.urls')),
+    path('exams/', include('apps.exams.urls')),
+    path('staff_hr/', include('apps.staff_hr.urls')),
+    path('lms/', include('apps.lms.urls')),
+    path('assignments/', include('apps.assignments.urls')),
+    path('library/', include('apps.library.urls')),
+    path('discipline/', include('apps.discipline.urls', namespace='discipline')),
+    path('counselling/', include('apps.counselling.urls', namespace='counselling')),
+    path('payments/', include('apps.payments.urls', namespace='payments')),
+     path('parent/',       include('apps.parent_portal.urls', namespace='parent')), 
+    path('portal/', include('apps.student_portal.urls', namespace='student_portal')),
+    
+    path('api/v1/transport/', include('transport.urls', namespace='transport')),
+    path('api/biometric/v1/scan/', BiometricScanView.as_view(), name='biometric_scan'),
+
+    path('',               lambda r: redirect('core:dashboard'), name='home'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+

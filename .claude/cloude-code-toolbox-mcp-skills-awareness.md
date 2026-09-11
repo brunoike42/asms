@@ -1,6 +1,6 @@
 # Cloude Code ToolBox — MCP & Skills awareness
 
-_Generated: 2026-06-14T05:20:30.066Z_
+_Generated: 2026-09-11T05:50:45.508Z_
 
 ## How to use this report
 
@@ -33,7 +33,11 @@ _None found (or no workspace open)._
 
 ### User-scoped
 
-_None found._
+- **developing-with-streamlit** — `C:\Users\BRUNO\.claude\skills\developing-with-streamlit`
+  - Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, optimizing, or deploying Streamlit apps. Also custom components, st.components.v2, HTML/JS/CSS work. Discovers and loads version-m
+
+- **developing-with-streamlit** — `C:\Users\BRUNO\.agents\skills\developing-with-streamlit`
+  - Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, optimizing, or deploying Streamlit apps. Also custom components, st.components.v2, HTML/JS/CSS work. Discovers and loads version-m
 
 ---
 
