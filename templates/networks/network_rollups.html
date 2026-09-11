@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ page_title }} - Rollups - ASMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  body { background: #f4f6f9; }
+  .asms-hero { background: #1B3A6B; color: #fff; }
+  .stat-card { text-align: center; }
+  .delta-up { color: #276749; }
+  .delta-down { color: #9b2c2c; }
+</style>
+</head>
+<body>
+
+<div class="asms-hero py-4 mb-4">
+  <div class="container">
+    <h1 class="h4 mb-0">{{ network.name }}</h1>
+    <div class="mt-2"><a href="{% url 'network_admin:dashboard' %}" class="text-white-50 small">&larr; All networks</a></div>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% include 'networks/_network_nav.html' %}
+
+  <form method="get" class="row g-2 mb-4 align-items-end">
+    <div class="col-auto">
+      <label class="form-label small mb-1">Metric</label>
+      <select name="metric" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Choose a metric</option>
+        {% for m in available_metrics %}
+        <option value="{{ m }}" {% if m == selected_metric %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-1">From</label>
+      <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-1">To</label>
+      <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Apply</button></div>
+  </form>
+
+  {% if not selected_metric %}
+  <div class="alert alert-info">Pick a metric above to see the network total and school ranking.</div>
+  {% else %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm stat-card">
+        <div class="card-body">
+          <p class="text-muted mb-1 small">{{ selected_metric }} - network-wide</p>
+          <p class="h3 mb-0">{{ network_latest.value|default:"-" }}</p>
+          {% if delta is not None %}
+          <p class="small mb-0 {% if delta >= 0 %}delta-up{% else %}delta-down{% endif %}">
+            {% if delta >= 0 %}&uarr;{% else %}&darr;{% endif %} {{ delta }}% vs previous reading
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <p class="text-muted mb-2 small">Trend</p>
+          <canvas id="trendChart" height="60"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <p class="text-muted mb-2 small">Schools ranked by {{ selected_metric }}</p>
+      <canvas id="rankingChart" height="{{ ranking_chart_height }}"></canvas>
+    </div>
+  </div>
+
+  <script>
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: { labels: {{ sparkline_labels|safe }}, datasets: [{ data: {{ sparkline_values|safe }}, borderColor: '#0A7B8C', tension: 0.3, pointRadius: 0 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
+    });
+    new Chart(document.getElementById('rankingChart'), {
+      type: 'bar',
+      data: { labels: {{ ranking_labels|safe }}, datasets: [{ data: {{ ranking_values|safe }}, backgroundColor: '#1B3A6B' }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+    });
+  </script>
+  {% endif %}
+</div>
+
+</body>
+</html>

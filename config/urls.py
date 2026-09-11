@@ -35,7 +35,7 @@ urlpatterns = [
 
     path('register/', include('apps.platform_billing.urls', namespace='platform_billing')),
     path('platform-admin/', include('apps.platform_billing.admin_urls', namespace='platform_admin')),
-    
+    path('network-admin/', include('apps.networks.dashboard_urls', namespace='network_admin')),
 
     path('',               lambda r: redirect('core:dashboard'), name='home'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

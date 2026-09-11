@@ -1,0 +1,8 @@
+<nav class="mb-4">
+  <div class="btn-group" role="group">
+    <a href="{% url 'network_admin:network_schools' network.pk %}" class="btn btn-sm {% if active_tab == 'schools' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Schools</a>
+    <a href="{% url 'network_admin:network_admins' network.pk %}" class="btn btn-sm {% if active_tab == 'admins' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Admins</a>
+    <a href="{% url 'network_admin:network_rollups' network.pk %}" class="btn btn-sm {% if active_tab == 'rollups' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Rollups</a>
+    <a href="{% url 'network_admin:network_curriculum' network.pk %}" class="btn btn-sm {% if active_tab == 'curriculum' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Curriculum</a>
+  </div>
+</nav>

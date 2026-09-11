@@ -134,6 +134,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.RoleChoices.SCHOOL_ADMIN,
             self.RoleChoices.PRINCIPAL,
             self.RoleChoices.ACCOUNTANT,
+            
         )
 
     def can_manage_students(self):
@@ -142,6 +143,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.RoleChoices.PRINCIPAL,
             self.RoleChoices.TEACHER,
             self.RoleChoices.RECEPTIONIST,
+            
         )
 
     def get_dashboard_url(self):
@@ -156,5 +158,6 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.RoleChoices.LIBRARIAN:      '/dashboard/library/',
             self.RoleChoices.PARENT:         '/parent/',
             self.RoleChoices.STUDENT:        '/portal/',
+            self.RoleChoices.NETWORK_ADMIN: '/network-admin/',
         }
         return role_urls.get(self.role, '/dashboard/')
